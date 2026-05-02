@@ -1,4 +1,4 @@
-<img width="305" height="305" alt="possum" src="https://github.com/user-attachments/assets/5b78eef3-169b-4cd0-ab07-a47b41861f73" />
+<img width="388" height="388" alt="possum" src="https://github.com/user-attachments/assets/8de48455-8dab-4e9b-993c-2f2807db51d6" />
 
 # PossumBets
 
