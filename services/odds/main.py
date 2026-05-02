@@ -1,40 +1,28 @@
 import asyncio
 import logging
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from pydantic_settings import BaseSettings
+import os
+import threading
+from flask import Flask, jsonify
+from poller import run_poller
 
-
-class Settings(BaseSettings):
-    redis_url: str = "redis://localhost:6379"
-    the_odds_api_key: str = "demo"
-    poll_interval_seconds: int = 30
-
-    class Config:
-        env_file = ".env"
-
-
-settings = Settings()
 logging.basicConfig(level=logging.INFO)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    from poller import run_poller
-    task = asyncio.create_task(
-        run_poller(settings.the_odds_api_key, settings.redis_url, settings.poll_interval_seconds)
-    )
-    yield
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
+THE_ODDS_API_KEY = os.environ.get("THE_ODDS_API_KEY", "demo")
+POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "30"))
 
 
-app = FastAPI(title="Betting Odds Service", lifespan=lifespan)
+def _start_poller():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(run_poller(THE_ODDS_API_KEY, REDIS_URL, POLL_INTERVAL_SECONDS))
+
+
+threading.Thread(target=_start_poller, daemon=True, name="odds-poller").start()
+
+app = Flask(__name__)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return jsonify({"status": "ok"})
