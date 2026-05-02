@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package betting.events;
+
+// Odds Service → Core API
+message OddsUpdatedEvent {
+  string event_id   = 1;
+  string sport      = 2;
+  string home_team  = 3;
+  string away_team  = 4;
+  double home_odds  = 5;
+  double away_odds  = 6;
+  double draw_odds  = 7; // 0.0 when no draw market (e.g. basketball)
+  int64  updated_at = 8; // Unix ms
+}
+
+// Core API → Wallet Service
+message BetPlacedEvent {
+  string bet_id    = 1;
+  string user_id   = 2;
+  string event_id  = 3;
+  string selection = 4; // "home" | "away" | "draw"
+  double odds      = 5;
+  double stake     = 6;
+  int64  placed_at = 7; // Unix ms
+}
+
+// Core API → Wallet Service
+message BetSettledEvent {
+  string bet_id     = 1;
+  string user_id    = 2;
+  bool   won        = 3;
+  double payout     = 4; // 0.0 if lost
+  int64  settled_at = 5; // Unix ms
+}
+
+// Wallet Service → Core API
+message TransactionConfirmedEvent {
+  string tx_id        = 1;
+  string bet_id       = 2;
+  string user_id      = 3;
+  string type         = 4; // "hold" | "release" | "payout"
+  double amount       = 5;
+  int64  confirmed_at = 6; // Unix ms
+}
