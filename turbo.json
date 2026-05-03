@@ -1,7 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
+    "build": {
+      "inputs": ["../../proto/**/*.proto"],
+      "outputs": ["src/**/*_pb2.py"]
+    },
     "typecheck": {
+      "dependsOn": ["build"],
       "inputs": [
         "**/*.ts",
         "**/*.tsx",

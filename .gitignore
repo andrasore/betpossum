@@ -3,4 +3,5 @@ node_modules/
 dist/
 tsconfig.tsbuildinfo
 *.egg-info/
+*_pb2.py
 .turbo/

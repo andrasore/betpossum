@@ -9,6 +9,7 @@
   ],
   "packageManager": "npm@11.12.1",
   "scripts": {
+    "build": "turbo run build",
     "typecheck": "turbo run typecheck --continue",
     "init": "npm install && git config core.hooksPath .githooks && turbo run init --continue"
   },

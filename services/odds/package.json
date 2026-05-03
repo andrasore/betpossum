@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "scripts": {
     "init": "python -m venv .venv && .venv/bin/pip install -e '.[dev]'",
+    "build": ".venv/bin/python -m grpc_tools.protoc -I../../proto --python_out=src ../../proto/events.proto",
     "typecheck": ".venv/bin/python -m mypy src/"
   }
 }
