@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "inputs": ["../../proto/**/*.proto"],
-      "outputs": ["src/**/*_pb2.py"]
+      "outputs": ["src/**/*_pb2.py", "src/**/*_pb2.pyi"]
     },
     "typecheck": {
       "dependsOn": ["build"],

@@ -9,9 +9,9 @@
   ],
   "packageManager": "npm@11.12.1",
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --continue",
     "typecheck": "turbo run typecheck --continue",
-    "init": "npm install && git config core.hooksPath .githooks && turbo run init --continue"
+    "init": "npm install && turbo run init --continue"
   },
   "devDependencies": {
     "turbo": "^2.5.4"
