@@ -1,0 +1,19 @@
+[project]
+name = "wallet-service"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "flask==3.0.3",
+  "gunicorn==22.0.0",
+  "redis[hiredis]==5.0.4",
+  "requests==2.32.2",
+  "protobuf==5.26.1",
+  "grpcio-tools==1.63.0",
+]
+
+[project.optional-dependencies]
+dev = ["mypy"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true

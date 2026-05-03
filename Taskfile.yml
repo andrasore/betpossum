@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+vars:
+  GREETING: Hello, world!
+
+tasks:
+  default:
+    desc: Print a greeting message
+    cmds:
+      - echo "{{.GREETING}}"
+    silent: true
+
+  init:
+    desc: Install dependencies for all services in parallel
+    deps:
+      - init:core
+      - init:frontend
+      - init:odds
+      - init:wallet
+
+  init:core:
+    desc: Install npm dependencies for core service
+    dir: services/core
+    cmds:
+      - npm install
+
+  init:frontend:
+    desc: Install npm dependencies for frontend
+    dir: frontend
+    cmds:
+      - npm install
+
+  init:odds:
+    desc: Create virtualenv and install dependencies for odds service
+    dir: services/odds
+    cmds:
+      - python -m venv .venv
+      - .venv/bin/pip install -e ".[dev]"
+
+  init:wallet:
+    desc: Create virtualenv and install dependencies for wallet service
+    dir: services/wallet
+    cmds:
+      - python -m venv .venv
+      - .venv/bin/pip install -e ".[dev]"
+
+  typecheck:
+    desc: Run type checking for all services (TypeScript + mypy) in parallel
+    deps:
+      - typecheck:core
+      - typecheck:frontend
+      - typecheck:odds
+      - typecheck:wallet
+
+  typecheck:core:
+    desc: TypeScript type checking for core service
+    dir: services/core
+    cmds:
+      - npx tsc --noEmit
+
+  typecheck:frontend:
+    desc: TypeScript type checking for frontend
+    dir: frontend
+    cmds:
+      - npx tsc --noEmit
+# TODO use one virtualenv for python projects to use less resources
+  typecheck:odds:
+    desc: mypy type checking for odds service
+    dir: services/odds
+    cmds:
+      - python -m mypy .
+
+  typecheck:wallet:
+    desc: mypy type checking for wallet service
+    dir: services/wallet
+    cmds:
+      - python -m mypy .
