@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "scripts": {
     "init": "python -m venv .venv && .venv/bin/pip install -e '.[dev]'",
-    "typecheck": ".venv/bin/python -m mypy src/"
+    "typecheck": ".venv/bin/python -m mypy --check-untyped-defs src/"
   }
 }

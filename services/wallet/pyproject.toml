@@ -13,6 +13,7 @@ dependencies = [
   "requests==2.33.1",
   "protobuf==6.33.6",
   "grpcio-tools==1.80.0",
+  "types-requests==2.33.0.20260503",
 ]
 
 [project.optional-dependencies]
