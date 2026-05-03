@@ -1,6 +1,6 @@
-<img width="382" height="382" alt="possum" src="https://github.com/user-attachments/assets/85373d6e-8b75-451d-b423-f03da5350838" />
+<img width="351" height="351" alt="possum" src="https://github.com/user-attachments/assets/566b93a3-0084-4021-aeb9-606210bc4f55" />
 
-# PossumBets
+# BetPossum
 
 An example betting site using Node.js and Python (Flask) on the backend.
 
