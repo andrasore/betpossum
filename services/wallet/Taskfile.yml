@@ -13,4 +13,4 @@ tasks:
   typecheck:
     desc: mypy type checking
     cmds:
-      - python -m mypy src/
+      - .venv/bin/python -m mypy src/
