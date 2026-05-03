@@ -11,9 +11,9 @@ import { EventsGateway } from '../events/events.gateway';
 @Injectable()
 export class BetsService implements OnModuleInit {
   private readonly logger = new Logger(BetsService.name);
-  private BetPlacedEvent: protobuf.Type;
-  private BetSettledEvent: protobuf.Type;
-  private TransactionConfirmedEvent: protobuf.Type;
+  private BetPlacedEvent!: protobuf.Type;
+  private BetSettledEvent!: protobuf.Type;
+  private TransactionConfirmedEvent!: protobuf.Type;
 
   constructor(
     @InjectRepository(Bet) private readonly repo: Repository<Bet>,
