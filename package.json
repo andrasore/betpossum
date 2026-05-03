@@ -1,0 +1,18 @@
+{
+  "name": "@betting/root",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "services/core",
+    "services/odds",
+    "services/wallet"
+  ],
+  "packageManager": "npm@11.12.1",
+  "scripts": {
+    "typecheck": "turbo run typecheck --continue",
+    "init": "npm install && git config core.hooksPath .githooks && turbo run init --continue"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  }
+}

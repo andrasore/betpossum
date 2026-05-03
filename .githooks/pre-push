@@ -1,2 +1,2 @@
 #!/bin/sh
-task typecheck
+npm run typecheck
