@@ -70,10 +70,10 @@ tasks:
     desc: mypy type checking for odds service
     dir: services/odds
     cmds:
-      - python -m mypy .
+      - python -m mypy src/
 
   typecheck:wallet:
     desc: mypy type checking for wallet service
     dir: services/wallet
     cmds:
-      - python -m mypy .
+      - python -m mypy src/
