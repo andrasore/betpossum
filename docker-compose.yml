@@ -47,19 +47,6 @@ services:
 
   # ── Application Services ───────────────────────────────────────────────────
 
-  tigerbeetle-sidecar:
-    build:
-      context: ./services/wallet/sidecar
-    environment:
-      TIGERBEETLE_ADDRESS: tigerbeetle:3000
-      TIGERBEETLE_CLUSTER_ID: 0
-      PORT: 8080
-    ports:
-      - "8080:8080"
-    depends_on:
-      tigerbeetle:
-        condition: service_healthy
-
   core:
     build:
       context: ./services/core
@@ -76,8 +63,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./proto:/proto:ro
 
   odds:
     build:
@@ -86,25 +71,19 @@ services:
       REDIS_URL: redis://redis:6379
       THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-demo}
       POLL_INTERVAL_SECONDS: 30
+      MOCK: "false"
     depends_on:
       redis:
         condition: service_healthy
-    volumes:
-      - ./proto:/proto:ro
 
   wallet:
     build:
       context: ./services/wallet
     environment:
       REDIS_URL: redis://redis:6379
-      SIDECAR_URL: http://tigerbeetle-sidecar:8080
     depends_on:
       redis:
         condition: service_healthy
-      tigerbeetle-sidecar:
-        condition: service_started
-    volumes:
-      - ./proto:/proto:ro
 
   frontend:
     build:
