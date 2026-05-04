@@ -11,6 +11,7 @@
   "scripts": {
     "build": "turbo run build --continue",
     "typecheck": "turbo run typecheck --continue",
+    "prepare": "mkdir -p .git/hooks && cp .githooks/pre-* .git/hooks/ && chmod +x .git/hooks/pre-*",
     "init": "npm install && turbo run init --continue"
   },
   "devDependencies": {
