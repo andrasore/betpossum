@@ -11,7 +11,8 @@ dependencies = [
   "gunicorn==25.3.0",
   "redis[hiredis]==7.4.0",
   "protobuf==6.33.6",
-  "tigerbeetle",
+  "tigerbeetle==0.17.3",
+  "pex==2.93.4",
 ]
 
 [project.optional-dependencies]

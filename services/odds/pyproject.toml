@@ -12,6 +12,7 @@ dependencies = [
   "aiohttp==3.13.5",
   "redis[hiredis]==7.4.0",
   "protobuf==6.33.6",
+  "pex==2.93.4",
 ]
 
 [project.optional-dependencies]
