@@ -1,4 +1,5 @@
 import os
+import uuid
 import logging
 from flask import Flask, jsonify, request
 from ledger import LedgerClient
@@ -9,10 +10,10 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
-SIDECAR_URL = os.environ.get("SIDECAR_URL", "http://localhost:8080")
-ledger = LedgerClient(SIDECAR_URL)
+TB_ADDRESS = os.environ.get("TIGERBEETLE_ADDRESS", "3000")
+TB_CLUSTER_ID = int(os.environ.get("TIGERBEETLE_CLUSTER_ID", "0"))
 
-# Start Redis subscriber in a background thread
+ledger = LedgerClient(TB_ADDRESS, TB_CLUSTER_ID)
 subscriber.start_background(REDIS_URL, ledger)
 
 
@@ -24,8 +25,8 @@ def health():
 @app.post("/accounts")
 def create_account():
     data = request.get_json(force=True)
-    result = ledger.create_account(data["user_id"])
-    return jsonify(result), 201
+    ledger.create_account(data["user_id"])
+    return jsonify({"status": "ok"}), 201
 
 
 @app.get("/accounts/<user_id>/balance")
@@ -39,5 +40,5 @@ def deposit():
     data = request.get_json(force=True)
     user_id: str = data["user_id"]
     amount_cents = int(float(data["amount"]) * 100)
-    result = ledger.payout(user_id, "deposit", amount_cents)
-    return jsonify(result), 201
+    ledger.payout(user_id, str(uuid.uuid4()), amount_cents)
+    return jsonify({"status": "ok"}), 201

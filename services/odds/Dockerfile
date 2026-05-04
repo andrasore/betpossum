@@ -1,8 +1,9 @@
 FROM python:3.12-slim
 WORKDIR /app
-COPY services/odds/pyproject.toml .
+COPY pyproject.toml .
 RUN pip install --no-cache-dir .
-COPY services/odds/src/ src/
+COPY docsrc/ src/
+#TODO fix
 COPY proto/ proto/
 RUN python -m grpc_tools.protoc -Iproto --python_out=src proto/events.proto
 WORKDIR /app/src

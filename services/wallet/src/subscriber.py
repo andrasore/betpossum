@@ -1,32 +1,19 @@
 """Redis subscriber — runs in a background thread alongside Flask."""
 import logging
-import os
 import threading
 import time
-import redis
 import uuid
+import redis
+from events_pb2 import BetPlacedEvent, BetSettledEvent, TransactionConfirmedEvent
 
 logger = logging.getLogger(__name__)
 
 
-def _load_proto():
-    import subprocess, sys
-    out = "/tmp/proto_gen"
-    os.makedirs(out, exist_ok=True)
-    subprocess.check_call([
-        sys.executable, "-m", "grpc_tools.protoc",
-        "-I/proto", f"--python_out={out}", "/proto/events.proto",
-    ])
-    sys.path.insert(0, out)
-    import events_pb2
-    return events_pb2
-
-
-def _handle_bet_placed(event, ledger, r_pub, TxConfirmed):
+def _handle_bet_placed(event: BetPlacedEvent, ledger, r_pub: redis.Redis) -> None:
     amount_cents = int(float(event.stake) * 100)
     try:
         ledger.hold(event.user_id, event.bet_id, amount_cents)
-        msg = TxConfirmed(
+        msg = TransactionConfirmedEvent(
             tx_id=str(uuid.uuid4()),
             bet_id=event.bet_id,
             user_id=event.user_id,
@@ -40,16 +27,15 @@ def _handle_bet_placed(event, ledger, r_pub, TxConfirmed):
         logger.error("hold failed for bet %s: %s", event.bet_id, e)
 
 
-def _handle_bet_settled(event, ledger, r_pub, TxConfirmed):
+def _handle_bet_settled(event: BetSettledEvent, ledger, r_pub: redis.Redis) -> None:
     amount_cents = int(float(event.payout) * 100) if event.won else 0
     try:
         if event.won:
             ledger.payout(event.user_id, event.bet_id, amount_cents)
             tx_type = "payout"
         else:
-            # Held funds were already consumed; nothing to release for a loss.
             tx_type = "release"
-        msg = TxConfirmed(
+        msg = TransactionConfirmedEvent(
             tx_id=str(uuid.uuid4()),
             bet_id=event.bet_id,
             user_id=event.user_id,
@@ -62,8 +48,7 @@ def _handle_bet_settled(event, ledger, r_pub, TxConfirmed):
         logger.error("settle failed for bet %s: %s", event.bet_id, e)
 
 
-def run(redis_url: str, ledger):
-    pb2 = _load_proto()
+def run(redis_url: str, ledger) -> None:
     r_sub = redis.from_url(redis_url)
     r_pub = redis.from_url(redis_url)
     pubsub = r_sub.pubsub()
@@ -77,15 +62,12 @@ def run(redis_url: str, ledger):
         data: bytes = message["data"]
         try:
             if channel == "bet.placed":
-                event = pb2.BetPlacedEvent.FromString(data)
-                _handle_bet_placed(event, ledger, r_pub, pb2.TransactionConfirmedEvent)
+                _handle_bet_placed(BetPlacedEvent.FromString(data), ledger, r_pub)
             elif channel == "bet.settled":
-                event = pb2.BetSettledEvent.FromString(data)
-                _handle_bet_settled(event, ledger, r_pub, pb2.TransactionConfirmedEvent)
+                _handle_bet_settled(BetSettledEvent.FromString(data), ledger, r_pub)
         except Exception as e:
             logger.error("Failed to process %s: %s", channel, e)
 
 
-def start_background(redis_url: str, ledger):
-    t = threading.Thread(target=run, args=(redis_url, ledger), daemon=True)
-    t.start()
+def start_background(redis_url: str, ledger) -> None:
+    threading.Thread(target=run, args=(redis_url, ledger), daemon=True).start()
