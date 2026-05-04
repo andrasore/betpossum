@@ -1,6 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import * as protobuf from 'protobufjs';
-import * as path from 'path';
+import { OddsUpdatedEvent } from '../generated/events.pb';
 import { RedisService } from '../redis/redis.service';
 import { EventsGateway } from '../events/events.gateway';
 
@@ -13,14 +12,10 @@ export class OddsService implements OnModuleInit {
     private readonly gateway: EventsGateway,
   ) {}
 
-  async onModuleInit() {
-    const root = await protobuf.load(path.join('/proto', 'events.proto'));
-    const OddsUpdatedEvent = root.lookupType('betting.events.OddsUpdatedEvent');
-
+  onModuleInit() {
     this.redis.subscribe('odds.updated', (raw) => {
       try {
-        const event = OddsUpdatedEvent.decode(raw) as any;
-        // Cache key matches what the odds service writes
+        const event = OddsUpdatedEvent.fromBinary(raw);
         this.redis.pub.set(`odds:${event.eventId}`, JSON.stringify(event));
         this.gateway.broadcast('odds.updated', event);
       } catch (e) {

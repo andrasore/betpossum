@@ -1,6 +1,6 @@
 import redis.asyncio as aioredis
 from models import OddsEvent
-from events_pb2 import OddsUpdatedEvent
+from generated.events_pb2 import OddsUpdatedEvent
 import json
 
 

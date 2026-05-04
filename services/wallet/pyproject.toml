@@ -11,12 +11,11 @@ dependencies = [
   "gunicorn==25.3.0",
   "redis[hiredis]==7.4.0",
   "protobuf==6.33.6",
-  "grpcio-tools==1.80.0",
   "tigerbeetle",
 ]
 
 [project.optional-dependencies]
-dev = ["mypy", "mypy-protobuf"]
+dev = ["mypy", "mypy-protobuf", "grpcio-tools==1.80.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/"]

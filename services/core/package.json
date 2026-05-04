@@ -2,7 +2,8 @@
   "name": "@betting/core",
   "version": "0.1.0",
   "scripts": {
-    "build": "nest build",
+    "proto:gen": "protoc --ts_out ./src/generated --ts_opt long_type_number --proto_path ../../proto ../../proto/events.proto",
+    "build": "npm run proto:gen && nest build",
     "start": "node dist/main",
     "start:dev": "nest start --watch",
     "lint": "eslint src --ext .ts",
@@ -26,7 +27,7 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "pg": "^8.20.0",
-    "protobufjs": "^8.0.3",
+    "@protobuf-ts/runtime": "^2.9.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.3",
@@ -34,6 +35,8 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
+    "@protobuf-ts/plugin": "^2.9.4",
+    "@protobuf-ts/protoc": "^2.9.4",
     "@nestjs/cli": "^11.0.21",
     "@nestjs/schematics": "^11.1.0",
     "@types/bcrypt": "^6.0.0",

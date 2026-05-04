@@ -4,7 +4,7 @@ import threading
 import time
 import uuid
 import redis
-from events_pb2 import BetPlacedEvent, BetSettledEvent, TransactionConfirmedEvent
+from generated.events_pb2 import BetPlacedEvent, BetSettledEvent, TransactionConfirmedEvent
 
 logger = logging.getLogger(__name__)
 

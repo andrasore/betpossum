@@ -2,8 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import * as protobuf from 'protobufjs';
-import * as path from 'path';
+import { BetPlacedEvent, BetSettledEvent, TransactionConfirmedEvent } from '../generated/events.pb';
 import { Bet } from './bet.entity';
 import { RedisService } from '../redis/redis.service';
 import { EventsGateway } from '../events/events.gateway';
@@ -11,9 +10,6 @@ import { EventsGateway } from '../events/events.gateway';
 @Injectable()
 export class BetsService implements OnModuleInit {
   private readonly logger = new Logger(BetsService.name);
-  private BetPlacedEvent!: protobuf.Type;
-  private BetSettledEvent!: protobuf.Type;
-  private TransactionConfirmedEvent!: protobuf.Type;
 
   constructor(
     @InjectRepository(Bet) private readonly repo: Repository<Bet>,
@@ -21,11 +17,7 @@ export class BetsService implements OnModuleInit {
     private readonly gateway: EventsGateway,
   ) {}
 
-  async onModuleInit() {
-    const root = await protobuf.load(path.join('/proto', 'events.proto'));
-    this.BetPlacedEvent = root.lookupType('betting.events.BetPlacedEvent');
-    this.BetSettledEvent = root.lookupType('betting.events.BetSettledEvent');
-    this.TransactionConfirmedEvent = root.lookupType('betting.events.TransactionConfirmedEvent');
+  onModuleInit() {
     this.subscribeToTransactionConfirmed();
   }
 
@@ -40,7 +32,7 @@ export class BetsService implements OnModuleInit {
       this.repo.create({ userId, eventId, selection, odds, stake, status: 'pending' }),
     );
 
-    const msg = this.BetPlacedEvent.create({
+    const msg = BetPlacedEvent.create({
       betId: bet.id,
       userId,
       eventId,
@@ -49,7 +41,7 @@ export class BetsService implements OnModuleInit {
       stake,
       placedAt: Date.now(),
     });
-    await this.redis.publish('bet.placed', this.BetPlacedEvent.encode(msg).finish() as Buffer);
+    await this.redis.publish('bet.placed', Buffer.from(BetPlacedEvent.toBinary(msg)));
     return bet;
   }
 
@@ -60,14 +52,14 @@ export class BetsService implements OnModuleInit {
     });
     const bet = await this.repo.findOneByOrFail({ id: betId });
 
-    const msg = this.BetSettledEvent.create({
+    const msg = BetSettledEvent.create({
       betId,
       userId: bet.userId,
       won,
       payout,
       settledAt: Date.now(),
     });
-    await this.redis.publish('bet.settled', this.BetSettledEvent.encode(msg).finish() as Buffer);
+    await this.redis.publish('bet.settled', Buffer.from(BetSettledEvent.toBinary(msg)));
     this.gateway.sendToUser(bet.userId, 'bet.settled', { betId, won, payout });
   }
 
@@ -78,8 +70,8 @@ export class BetsService implements OnModuleInit {
   private subscribeToTransactionConfirmed() {
     this.redis.subscribe('tx.confirmed', async (raw) => {
       try {
-        const event = this.TransactionConfirmedEvent.decode(raw);
-        const { betId, userId, type } = event as any;
+        const event = TransactionConfirmedEvent.fromBinary(raw);
+        const { betId, userId, type } = event;
         if (type === 'hold') {
           await this.repo.update(betId, { status: 'held' });
           this.gateway.sendToUser(userId, 'bet.held', { betId });

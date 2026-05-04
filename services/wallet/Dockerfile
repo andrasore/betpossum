@@ -3,9 +3,6 @@ WORKDIR /app
 COPY pyproject.toml .
 RUN pip install --no-cache-dir .
 COPY src/ src/
-#TODO fix
-COPY proto/ proto/
-RUN python -m grpc_tools.protoc -Iproto --python_out=src proto/events.proto
 WORKDIR /app/src
 EXPOSE 5000
 # Subscriber runs as a background thread inside gunicorn; app.py starts it.
