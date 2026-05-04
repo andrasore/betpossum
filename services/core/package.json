@@ -3,17 +3,19 @@
   "version": "0.1.0",
   "scripts": {
     "proto:gen": "protoc --ts_out ./src/generated --ts_opt long_type_number --proto_path ../../proto ../../proto/events.proto",
-    "build": "nest build && esbuild dist/main.js --bundle --platform=node --format=cjs --outfile=dist/bundle.js",
+    "build": "nest build && esbuild ./dist/main.js --bundle --platform=node --format=cjs --external:amqp-connection-manager --external:amqplib --external:class-transformer --external:class-validator --external:@grpc/grpc-js --external:@grpc/proto-loader --external:ioredis --external:kafkajs --external:mqtt --external:nats --external:@nestjs/platform-express --external:@nestjs/websockets/socket-module --outfile=./dist/bundle.js",
     "start": "node dist/bundle",
     "start:dev": "nest start --watch",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"
   },
+  "packageManager": "^npm@11",
   "dependencies": {
     "@nestjs/common": "^11.1.19",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.19",
     "@nestjs/jwt": "^11.0.2",
+    "@nestjs/microservices": "^11.1.19",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.19",
     "@nestjs/platform-socket.io": "^11.1.19",

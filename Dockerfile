@@ -21,11 +21,14 @@ FROM node:25-alpine AS core
 WORKDIR /app
 ENV NODE_ENV=development
 COPY --from=builder-node /app/services/core/dist ./dist
+CMD ["node", "./dist/bundle.js"]
 
 FROM python:3.13-alpine AS builder-python
 WORKDIR /app
 COPY services/wallet/pyproject.toml ./services/wallet/
+COPY services/wallet/src ./services/wallet/src
 COPY services/odds/pyproject.toml ./services/odds/
+COPY services/odds/src ./services/odds/src
 WORKDIR /app/services/wallet
 RUN python -m venv .venv && .venv/bin/pip freeze > requirements.txt && .venv/bin/pip install -e .
 RUN .venv/bin/pex . -r requirements.txt -e gunicorn -o gunicorn_app.pex
@@ -36,9 +39,10 @@ RUN .venv/bin/pex . -r requirements.txt -e gunicorn -o gunicorn_app.pex
 FROM python:3.13-alpine AS odds
 WORKDIR /app
 COPY --from=builder-python /app/services/odds/gunicorn_app.pex ./
-CMD ["/app/gunicorn_app.pex", "main:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
+CMD ["/app/gunicorn_app.pex", "app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
 
 FROM python:3.13-alpine AS wallet
+
 WORKDIR /app
 COPY --from=builder-python /app/services/wallet/gunicorn_app.pex ./
-CMD ["/app/gunicorn_app.pex", "main:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
+CMD ["/app/gunicorn_app.pex", "app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
