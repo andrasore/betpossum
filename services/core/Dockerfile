@@ -7,8 +7,6 @@ RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist/bundle.js ./dist/bundle.js
 EXPOSE 4000
-CMD ["node", "dist/main"]
+CMD ["node", "dist/bundle"]

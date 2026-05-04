@@ -1,5 +1,6 @@
 version: '3.9'
 
+  # This compose file contains the services for local development
 services:
   # ── Infrastructure ─────────────────────────────────────────────────────────
 
@@ -44,57 +45,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-
-  # ── Application Services ───────────────────────────────────────────────────
-
-  core:
-    build:
-      context: .
-    environment:
-      PORT: 4000
-      DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: dev_jwt_secret_change_in_prod
-      JWT_EXPIRES_IN: 7d
-    ports:
-      - "4000:4000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  odds:
-    build:
-      context: .
-    environment:
-      REDIS_URL: redis://redis:6379
-      THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-demo}
-      POLL_INTERVAL_SECONDS: 30
-      MOCK: "false"
-    depends_on:
-      redis:
-        condition: service_healthy
-
-  wallet:
-    build:
-      context: .
-    environment:
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      redis:
-        condition: service_healthy
-
-  frontend:
-    build:
-      context: .
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:4000
-      NEXT_PUBLIC_WS_URL: ws://localhost:4000
-    ports:
-      - "3001:3001"
-    depends_on:
-      - core
 
 volumes:
   postgres_data:

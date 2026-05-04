@@ -11,7 +11,8 @@
   "scripts": {
     "build": "turbo run build --continue",
     "typecheck": "turbo run typecheck --continue",
-    "prepare": "mkdir -p .git/hooks && cp .githooks/pre-* .git/hooks/ && chmod +x .git/hooks/pre-*",
+    "hooks:setup": "mkdir -p .git/hooks && cp .githooks/pre-* .git/hooks/ && chmod +x .git/hooks/pre-*",
+    "dev:environment": "docker compose up -d ",
     "init": "npm install && turbo run init --continue"
   },
   "devDependencies": {

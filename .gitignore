@@ -6,3 +6,4 @@ tsconfig.tsbuildinfo
 .turbo/
 .next/
 next-env.d.ts
+.env
