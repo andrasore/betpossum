@@ -7,12 +7,16 @@
     "services/odds",
     "services/wallet"
   ],
+  "engines" : {
+    "npm" : "~11.12.1",
+    "node" : "25"
+  },
   "packageManager": "npm@11.12.1",
   "scripts": {
     "build": "turbo run build --continue",
     "typecheck": "turbo run typecheck --continue",
     "hooks:setup": "mkdir -p .git/hooks && cp .githooks/pre-* .git/hooks/ && chmod +x .git/hooks/pre-*",
-    "dev:environment": "docker compose up -d ",
+    "up:dev": "docker compose -f ./docker-compose-dev.yml up -d",
     "init": "npm install && turbo run init --continue"
   },
   "devDependencies": {
