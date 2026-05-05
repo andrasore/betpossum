@@ -28,20 +28,17 @@ services:
       retries: 10
 
   tigerbeetle:
-    image: ghcr.io/tigerbeetle/tigerbeetle:0.16.11
+    image: ghcr.io/tigerbeetle/tigerbeetle:0.17.3
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      "tigerbeetle format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle 2>/dev/null || true &&
-       tigerbeetle start --addresses=0.0.0.0:6000 /data/0_0.tigerbeetle"
+      "/tigerbeetle format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle 2>/dev/null || true &&
+       /tigerbeetle start --addresses=0.0.0.0:6000 /data/0_0.tigerbeetle"
     volumes:
       - tigerbeetle_data:/data
     ports:
       - "6000:6000"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 6000 || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
+    security_opt:
+      - seccomp=unconfined  # TigerBeetle requires io_uring; Docker's default seccomp profile blocks it
 
   # ── Application Services ───────────────────────────────────────────────────
 
@@ -71,7 +68,7 @@ services:
       REDIS_URL: redis://redis:6379
       THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-demo}
       POLL_INTERVAL_SECONDS: 30
-      MOCK: "false"
+      MOCK: "true"
     depends_on:
       redis:
         condition: service_healthy
@@ -82,9 +79,15 @@ services:
       target: wallet
     environment:
       REDIS_URL: redis://redis:6379
+      TIGERBEETLE_ADDRESS: tigerbeetle:6000
+    security_opt:
+      - seccomp=unconfined  # TigerBeetle requires io_uring; Docker's default seccomp profile blocks it
     depends_on:
       redis:
         condition: service_healthy
+    # TODO add a healthcheck maybe so we can depend here   
+    #  tigerbeetle:
+    #    condition: service_healthy
 
   frontend:
     build:
