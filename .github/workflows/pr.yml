@@ -1,0 +1,21 @@
+name: PR checks
+
+on:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'npm'
+
+      - run: npm run init
+
+      - run: npm run typecheck
+
+      - run: npm run build
