@@ -19,14 +19,14 @@ class LedgerClient:
                 debits_pending=0, debits_posted=0,
                 credits_pending=0, credits_posted=0,
                 user_data_128=0, user_data_64=0, user_data_32=0,
-                flags=0, timestamp=0,
+                flags=tb.AccountFlags(value=0), timestamp=0,
             ),
             tb.Account(
                 id=HOUSE_ID, ledger=1, code=101,
                 debits_pending=0, debits_posted=0,
                 credits_pending=0, credits_posted=0,
                 user_data_128=0, user_data_64=0, user_data_32=0,
-                flags=0, timestamp=0,
+                flags=tb.AccountFlags(value=0), timestamp=0,
             ),
         ])
 
@@ -37,7 +37,7 @@ class LedgerClient:
                 debits_pending=0, debits_posted=0,
                 credits_pending=0, credits_posted=0,
                 user_data_128=0, user_data_64=0, user_data_32=0,
-                flags=0, timestamp=0,
+                flags=tb.AccountFlags(value=0), timestamp=0,
             )
         ])
 
@@ -74,7 +74,7 @@ class LedgerClient:
                 timeout=0,
                 ledger=1,
                 code=code,
-                flags=0,
+                flags=tb.TransferFlags(value=0),
                 timestamp=0,
             )
         ])
