@@ -3,10 +3,9 @@
   "version": "0.1.0",
   "scripts": {
     "proto:gen": "protoc --ts_out ./src/generated --ts_opt long_type_number --proto_path ../../proto ../../proto/events.proto",
-    "build": "nest build && esbuild ./dist/main.js --bundle --platform=node --format=cjs --external:amqp-connection-manager --external:amqplib --external:class-transformer --external:class-validator --external:@grpc/grpc-js --external:@grpc/proto-loader --external:ioredis --external:kafkajs --external:mqtt --external:nats --external:@nestjs/platform-express --external:@nestjs/websockets/socket-module --outfile=./dist/bundle.js",
+    "build": "npm run proto:gen && nest build && esbuild ./dist/main.js --bundle --platform=node --format=cjs --external:amqp-connection-manager --external:amqplib --external:class-transformer --external:class-validator --external:@grpc/grpc-js --external:@grpc/proto-loader --external:ioredis --external:kafkajs --external:mqtt --external:nats --external:@nestjs/platform-express --external:@nestjs/websockets/socket-module --outfile=./dist/bundle.js",
     "start": "node dist/bundle",
     "start:dev": "nest start --watch",
-    "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "^npm@11",

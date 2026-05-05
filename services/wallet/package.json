@@ -4,6 +4,7 @@
   "scripts": {
     "init": "python -m venv .venv && .venv/bin/pip install -e '.[dev]'",
     "proto:gen": ".venv/bin/python -m grpc_tools.protoc -I../../proto --python_out=src/generated --mypy_out=src/generated --plugin=protoc-gen-mypy=.venv/bin/protoc-gen-mypy ../../proto/events.proto",
+    "build": "npm run proto:gen",
     "typecheck": ".venv/bin/python -m mypy --check-untyped-defs src/"
   }
 }

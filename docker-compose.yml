@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # ── Infrastructure ─────────────────────────────────────────────────────────
 
@@ -50,6 +48,7 @@ services:
   core:
     build:
       context: .
+      target: core
     environment:
       PORT: 4000
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
@@ -67,6 +66,7 @@ services:
   odds:
     build:
       context: .
+      target: odds
     environment:
       REDIS_URL: redis://redis:6379
       THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-demo}
@@ -79,6 +79,7 @@ services:
   wallet:
     build:
       context: .
+      target: wallet
     environment:
       REDIS_URL: redis://redis:6379
     depends_on:
@@ -88,6 +89,7 @@ services:
   frontend:
     build:
       context: .
+      target: frontend
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:4000
       NEXT_PUBLIC_WS_URL: ws://localhost:4000
