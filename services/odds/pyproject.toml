@@ -13,10 +13,12 @@ dependencies = [
   "redis[hiredis]==7.4.0",
   "protobuf==6.33.6",
   "pex==2.93.4",
+  "grpcio-tools==1.80.0",
+  "mypy-protobuf",
 ]
 
 [project.optional-dependencies]
-dev = ["mypy", "mypy-protobuf", "grpcio-tools==1.80.0"]
+dev = ["mypy"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
