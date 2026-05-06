@@ -4,18 +4,18 @@ import logging
 from flask import Flask, jsonify, request
 from ledger import LedgerClient
 import subscriber
+from util import resolve_to_ip
 
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
-TB_ADDRESS = os.environ.get("TIGERBEETLE_ADDRESS", "3000")
+TB_ADDRESS = os.environ.get("TIGERBEETLE_ADDRESS", "localhost:6000")
 TB_CLUSTER_ID = int(os.environ.get("TIGERBEETLE_CLUSTER_ID", "0"))
 
-ledger = LedgerClient(TB_ADDRESS, TB_CLUSTER_ID)
+ledger = LedgerClient(resolve_to_ip(TB_ADDRESS), TB_CLUSTER_ID)
 subscriber.start_background(REDIS_URL, ledger)
-
 
 @app.get("/health")
 def health():

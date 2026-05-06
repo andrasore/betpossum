@@ -1,4 +1,7 @@
+import logging
 import tigerbeetle as tb
+
+logger = logging.getLogger(__name__)
 
 ESCROW_ID = 1
 HOUSE_ID = 2
@@ -6,6 +9,7 @@ HOUSE_ID = 2
 
 class LedgerClient:
     def __init__(self, tb_address: str, cluster_id: int = 0):
+        logger.info("Connecting to TigerBeetle cluster_id=%d address=%s", cluster_id, tb_address)
         self._client = tb.ClientSync(
             cluster_id=cluster_id,
             replica_addresses=tb_address,

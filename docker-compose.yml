@@ -39,6 +39,12 @@ services:
       - "6000:6000"
     security_opt:
       - seccomp=unconfined  # TigerBeetle requires io_uring; Docker's default seccomp profile blocks it
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q ':1770' /proc/net/tcp || grep -q ':1770' /proc/net/tcp6"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
   # ── Application Services ───────────────────────────────────────────────────
 
@@ -85,9 +91,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    # TODO add a healthcheck maybe so we can depend here   
-    #  tigerbeetle:
-    #    condition: service_healthy
+      tigerbeetle:
+        condition: service_healthy
 
   frontend:
     build:
