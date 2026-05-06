@@ -17,25 +17,29 @@ RUN npm run build
 
 # Stage 2: Next.js frontend served via its standalone output.
 FROM node:25-alpine AS frontend
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 ENV NODE_ENV=development
-COPY --from=builder-node /app/frontend/.next/standalone ./
+COPY --chown=appuser:appgroup --from=builder-node /app/frontend/.next/standalone ./
+USER appuser
 EXPOSE 3001
 CMD ["node", "frontend/server.js"]
 
 # Stage 3: Core Node.js service (bundled single file).
 FROM node:25-alpine AS core
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 ENV NODE_ENV=development
-COPY --from=builder-node /app/services/core/dist/bundle.js ./dist/
+COPY --chown=appuser:appgroup --from=builder-node /app/services/core/dist/bundle.js ./dist/
+USER appuser
 CMD ["node", "./dist/bundle.js"]
 
 # Stage 4: Build Python services into self-contained PEX executables.
 # PEX bundles the virtualenv so runtime images need no pip install.
 FROM python:3.13-slim AS builder-python
-WORKDIR /app
-# We do an npm install so we can access our tooling
+# We install node and npm so we can access our build scripts
 RUN apt-get update && apt-get install -y nodejs npm
+WORKDIR /app
 COPY package.json package-lock.json ./
 COPY services/wallet/package.json ./services/wallet/
 COPY services/odds/package.json ./services/odds/
@@ -51,13 +55,17 @@ RUN npm run build
 
 # Stage 5: Odds service runtime — just the PEX, nothing else.
 FROM python:3.13-slim AS odds
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 WORKDIR /app
-COPY --from=builder-python /app/services/odds/dist/gunicorn_app.pex ./dist/
+COPY --chown=appuser:appgroup --from=builder-python /app/services/odds/dist/gunicorn_app.pex ./dist/
+USER appuser
 CMD ["/app/dist/gunicorn_app.pex", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
 
 # Stage 6: Wallet service runtime — just the PEX, nothing else.
 # python:3.13-slim is Debian (glibc); TigerBeetle ships only glibc-linked wheels.
 FROM python:3.13-slim AS wallet
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 WORKDIR /app
-COPY --from=builder-python /app/services/wallet/dist/gunicorn_app.pex ./dist/
+COPY --chown=appuser:appgroup --from=builder-python /app/services/wallet/dist/gunicorn_app.pex ./dist/
+USER appuser
 CMD ["/app/dist/gunicorn_app.pex", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
