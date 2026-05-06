@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { login, register } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,40 +33,60 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900">
-          {mode === 'login' ? 'Sign in' : 'Create account'}
-        </h1>
-        <form onSubmit={submit} className="space-y-4">
-          <input
-            type="email" required placeholder="Email" value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-          />
-          <input
-            type="password" required placeholder="Password" value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-          />
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <button
-            type="submit" disabled={loading}
-            className="w-full rounded bg-brand py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
-          >
-            {loading ? '…' : mode === 'login' ? 'Sign in' : 'Register'}
-          </button>
+    <div className="flex min-h-screen items-center justify-center bg-muted/40">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>{mode === 'login' ? 'Sign in' : 'Create account'}</CardTitle>
+          <CardDescription>
+            {mode === 'login'
+              ? 'Enter your credentials to access your account.'
+              : 'Create a new account to get started.'}
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={submit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                required
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+          </CardContent>
+          <CardFooter className="flex-col gap-3">
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Register'}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+              <Button
+                type="button"
+                variant="link"
+                className="px-0 h-auto text-xs"
+                onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+              >
+                {mode === 'login' ? 'Register' : 'Sign in'}
+              </Button>
+            </p>
+          </CardFooter>
         </form>
-        <p className="mt-4 text-center text-xs text-gray-500">
-          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-          <button
-            className="text-brand underline"
-            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-          >
-            {mode === 'login' ? 'Register' : 'Sign in'}
-          </button>
-        </p>
-      </div>
+      </Card>
     </div>
   );
 }

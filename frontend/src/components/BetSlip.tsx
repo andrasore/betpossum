@@ -3,6 +3,11 @@
 import { useState } from 'react';
 import type { OddsEvent } from '@/types';
 import { placeBet } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 interface Selection {
   event: OddsEvent;
@@ -22,9 +27,11 @@ export function BetSlip({ selection, token, onPlaced }: Props) {
 
   if (!selection) {
     return (
-      <div className="rounded-lg border bg-gray-50 p-4 text-sm text-gray-400">
-        Click any odds to build your bet slip.
-      </div>
+      <Card className="bg-muted/40 border-dashed">
+        <CardContent className="pt-6 text-sm text-muted-foreground text-center">
+          Click any odds to build your bet slip.
+        </CardContent>
+      </Card>
     );
   }
 
@@ -53,33 +60,39 @@ export function BetSlip({ selection, token, onPlaced }: Props) {
   }
 
   return (
-    <div className="rounded-lg border bg-white p-4 shadow-sm space-y-3">
-      <h2 className="font-semibold text-gray-800">Bet Slip</h2>
-      <div className="text-sm">
-        <p className="font-medium">{event.homeTeam} vs {event.awayTeam}</p>
-        <p className="text-gray-500 capitalize">{choice} @ {odds.toFixed(2)}</p>
-      </div>
-      <input
-        type="number"
-        min="0.01"
-        step="0.01"
-        placeholder="Stake (£)"
-        value={stake}
-        onChange={(e) => setStake(e.target.value)}
-        className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-      />
-      <div className="flex justify-between text-sm text-gray-500">
-        <span>Potential return</span>
-        <span className="font-semibold text-gray-800">£{potentialReturn}</span>
-      </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      <button
-        onClick={submit}
-        disabled={loading || !stake}
-        className="w-full rounded bg-brand py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
-      >
-        {loading ? 'Placing…' : 'Place Bet'}
-      </button>
-    </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Bet Slip</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium">{event.homeTeam} vs {event.awayTeam}</p>
+          <p className="text-xs text-muted-foreground capitalize">{choice} @ {odds.toFixed(2)}</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="stake">Stake (£)</Label>
+          <Input
+            id="stake"
+            type="number"
+            min="0.01"
+            step="0.01"
+            placeholder="0.00"
+            value={stake}
+            onChange={(e) => setStake(e.target.value)}
+          />
+        </div>
+        <Separator />
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Potential return</span>
+          <span className="font-semibold">£{potentialReturn}</span>
+        </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </CardContent>
+      <CardFooter>
+        <Button className="w-full" onClick={submit} disabled={loading || !stake}>
+          {loading ? 'Placing…' : 'Place Bet'}
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }

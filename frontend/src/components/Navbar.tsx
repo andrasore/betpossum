@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function Navbar() {
   const router = useRouter();
@@ -12,11 +14,14 @@ export function Navbar() {
   }
 
   return (
-    <nav className="bg-brand text-white px-6 py-3 flex items-center justify-between">
-      <Link href="/dashboard" className="text-xl font-bold tracking-tight">BetApp</Link>
-      <button onClick={logout} className="text-sm opacity-80 hover:opacity-100">
+    <nav className="border-b bg-background px-6 py-3 flex items-center justify-between">
+      <Link href="/dashboard" className="text-xl font-bold tracking-tight text-foreground">
+        BetApp
+      </Link>
+      <Button variant="ghost" size="sm" onClick={logout} className="gap-2">
+        <LogOut className="h-4 w-4" />
         Sign out
-      </button>
+      </Button>
     </nav>
   );
 }
