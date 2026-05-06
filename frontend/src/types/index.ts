@@ -1,13 +1,4 @@
-export interface OddsEvent {
-  event_id: string;
-  sport: string;
-  home_team: string;
-  away_team: string;
-  home_odds: number;
-  away_odds: number;
-  draw_odds: number;
-  updated_at: number;
-}
+export type { OddsEvent } from '@/lib/schemas';
 
 export interface Bet {
   id: string;

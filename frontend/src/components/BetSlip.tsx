@@ -29,7 +29,7 @@ export function BetSlip({ selection, token, onPlaced }: Props) {
   }
 
   const { event, choice } = selection;
-  const odds = choice === 'home' ? event.home_odds : choice === 'away' ? event.away_odds : event.draw_odds;
+  const odds = choice === 'home' ? event.homeOdds : choice === 'away' ? event.awayOdds : event.drawOdds;
   const potentialReturn = stake ? (parseFloat(stake) * odds).toFixed(2) : '—';
 
   async function submit() {
@@ -38,7 +38,7 @@ export function BetSlip({ selection, token, onPlaced }: Props) {
     setError(null);
     try {
       await placeBet(token, {
-        eventId: event.event_id,
+        eventId: event.eventId,
         selection: choice,
         odds,
         stake: parseFloat(stake),
@@ -56,7 +56,7 @@ export function BetSlip({ selection, token, onPlaced }: Props) {
     <div className="rounded-lg border bg-white p-4 shadow-sm space-y-3">
       <h2 className="font-semibold text-gray-800">Bet Slip</h2>
       <div className="text-sm">
-        <p className="font-medium">{event.home_team} vs {event.away_team}</p>
+        <p className="font-medium">{event.homeTeam} vs {event.awayTeam}</p>
         <p className="text-gray-500 capitalize">{choice} @ {odds.toFixed(2)}</p>
       </div>
       <input
