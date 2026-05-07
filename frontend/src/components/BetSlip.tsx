@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { OddsEvent } from '@/types';
 import { placeBet } from '@/lib/api';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -71,15 +72,36 @@ export function BetSlip({ selection, token, onPlaced }: Props) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="stake">Stake (£)</Label>
-          <Input
-            id="stake"
-            type="number"
-            min="0.01"
-            step="0.01"
-            placeholder="0.00"
-            value={stake}
-            onChange={(e) => setStake(e.target.value)}
-          />
+          <div className="relative flex">
+            <Input
+              id="stake"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="0.00"
+              value={stake}
+              onChange={(e) => setStake(e.target.value)}
+              className="pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <div className="absolute right-0 inset-y-0 flex flex-col border-l border-input">
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setStake(v => (Math.max(0, (parseFloat(v) || 0) + 1)).toFixed(2))}
+                className="flex flex-1 items-center justify-center px-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors rounded-tr-md"
+              >
+                <ChevronUp className="size-3" />
+              </button>
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setStake(v => (Math.max(0, (parseFloat(v) || 0) - 1)).toFixed(2))}
+                className="flex flex-1 items-center justify-center px-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors rounded-br-md border-t border-input"
+              >
+                <ChevronDown className="size-3" />
+              </button>
+            </div>
+          </div>
         </div>
         <Separator />
         <div className="flex justify-between text-sm">
