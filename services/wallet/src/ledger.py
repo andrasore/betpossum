@@ -57,6 +57,13 @@ class LedgerClient:
         """Credit winnings to user (debit house → credit user)."""
         self._transfer(HOUSE_ID, self._to_id(user_id), amount_cents, code=3, ref=self._to_id(bet_id))
 
+    def keep(self, bet_id: str, amount_cents: int) -> None:
+        """House claims held funds after a losing bet (debit escrow → credit house)."""
+        self._transfer(ESCROW_ID, HOUSE_ID, amount_cents, code=4, ref=self._to_id(bet_id))
+
+    def close(self) -> None:
+        self._client.close()
+
     def get_balance(self, user_id: str) -> int:
         accounts = self._client.lookup_accounts([self._to_id(user_id)])
         if not accounts:

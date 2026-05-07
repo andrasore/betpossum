@@ -10,3 +10,4 @@ next-env.d.ts
 requirements.txt
 .projectile
 __pycache__
+.tb_bin/
