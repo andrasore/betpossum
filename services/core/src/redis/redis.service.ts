@@ -33,4 +33,25 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       if (ch.toString() === channel) handler(msg);
     });
   }
+
+  subscribeOnce(channel: string, timeoutMs = 5000): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.sub.unsubscribe(channel);
+        reject(new Error(`Timeout waiting for response on ${channel}`));
+      }, timeoutMs);
+
+      const listener = (ch: Buffer, msg: Buffer) => {
+        if (ch.toString() === channel) {
+          clearTimeout(timer);
+          this.sub.unsubscribe(channel);
+          this.sub.removeListener('messageBuffer', listener);
+          resolve(msg);
+        }
+      };
+
+      this.sub.on('messageBuffer', listener);
+      this.sub.subscribe(channel).catch(reject);
+    });
+  }
 }

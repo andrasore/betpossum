@@ -7,6 +7,7 @@ import { OddsBoard } from '@/components/OddsBoard';
 import { BetSlip } from '@/components/BetSlip';
 import { useOdds } from '@/hooks/useOdds';
 import { useBets } from '@/hooks/useBets';
+import { useBalance } from '@/hooks/useBalance';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { OddsEvent } from '@/types';
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [selection, setSelection] = useState<Selection>(null);
   const odds = useOdds(token);
   const { data: bets, mutate } = useBets(token);
+  const balance = useBalance(token);
 
   useEffect(() => {
     const t = localStorage.getItem('token');
@@ -30,7 +32,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <Navbar />
+      <Navbar balance={balance} />
       <div className="flex flex-1 overflow-hidden">
         <main className="flex-1 overflow-y-auto p-6">
           <h2 className="mb-4 text-lg font-semibold text-foreground">Live Markets</h2>
@@ -53,7 +55,7 @@ export default function DashboardPage() {
                         £{Number(bet.stake).toFixed(2)}
                       </span>
                       {bet.status === 'won' && (
-                        <Badge className="bg-green-600 hover:bg-green-700 text-white capitalize">{bet.status}</Badge>
+                        <Badge variant="success" className="capitalize">{bet.status}</Badge>
                       )}
                       {bet.status === 'lost' && (
                         <Badge variant="destructive" className="capitalize">{bet.status}</Badge>

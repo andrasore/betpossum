@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { BetsModule } from './bets/bets.module';
+import { WalletModule } from './wallet/wallet.module';
 import { OddsModule } from './odds/odds.module';
 import { EventsModule } from './events/events.module';
 import { RedisModule } from './redis/redis.module';
@@ -26,6 +27,7 @@ import { Bet } from './bets/bet.entity';
     UsersModule,
     AuthModule,
     BetsModule,
+    WalletModule,
     OddsModule,
     EventsModule,
   ],

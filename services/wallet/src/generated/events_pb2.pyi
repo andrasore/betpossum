@@ -173,3 +173,78 @@ class TransactionConfirmedEvent(_message.Message):
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 
 Global___TransactionConfirmedEvent: _TypeAlias = TransactionConfirmedEvent  # noqa: Y015
+
+@_typing.final
+class BalanceRequestEvent(_message.Message):
+    """Core API → Wallet Service (request-reply)"""
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    USER_ID_FIELD_NUMBER: _builtins.int
+    REPLY_TO_FIELD_NUMBER: _builtins.int
+    user_id: _builtins.str
+    reply_to: _builtins.str
+    """channel to respond on"""
+    def __init__(
+        self,
+        *,
+        user_id: _builtins.str = ...,
+        reply_to: _builtins.str = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["reply_to", b"reply_to", "user_id", b"user_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___BalanceRequestEvent: _TypeAlias = BalanceRequestEvent  # noqa: Y015
+
+@_typing.final
+class BalanceResponseEvent(_message.Message):
+    """Wallet Service → Core API (reply)"""
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    USER_ID_FIELD_NUMBER: _builtins.int
+    BALANCE_FIELD_NUMBER: _builtins.int
+    user_id: _builtins.str
+    balance: _builtins.float
+    """in currency units (not cents)"""
+    def __init__(
+        self,
+        *,
+        user_id: _builtins.str = ...,
+        balance: _builtins.float = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["balance", b"balance", "user_id", b"user_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___BalanceResponseEvent: _TypeAlias = BalanceResponseEvent  # noqa: Y015
+
+@_typing.final
+class BalanceUpdatedEvent(_message.Message):
+    """Wallet Service → Core API (push after each transaction)"""
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    USER_ID_FIELD_NUMBER: _builtins.int
+    BALANCE_FIELD_NUMBER: _builtins.int
+    user_id: _builtins.str
+    balance: _builtins.float
+    """in currency units (not cents)"""
+    def __init__(
+        self,
+        *,
+        user_id: _builtins.str = ...,
+        balance: _builtins.float = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["balance", b"balance", "user_id", b"user_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___BalanceUpdatedEvent: _TypeAlias = BalanceUpdatedEvent  # noqa: Y015

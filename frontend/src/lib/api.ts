@@ -41,3 +41,10 @@ export async function fetchBets(token: string): Promise<Bet[]> {
   if (!res.ok) throw new Error('Failed to fetch bets');
   return res.json();
 }
+
+export async function fetchBalance(token: string): Promise<number> {
+  const res = await fetch(`${BASE}/wallet/balance`, { headers: authHeaders(token) });
+  if (!res.ok) throw new Error('Failed to fetch balance');
+  const { balance } = await res.json() as { balance: number };
+  return balance;
+}

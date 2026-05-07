@@ -84,22 +84,24 @@ export function BetSlip({ selection, token, onPlaced }: Props) {
               className="pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />
             <div className="absolute right-0 inset-y-0 flex flex-col border-l border-input">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 tabIndex={-1}
                 onClick={() => setStake(v => (Math.max(0, (parseFloat(v) || 0) + 1)).toFixed(2))}
-                className="flex flex-1 items-center justify-center px-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors rounded-tr-md"
+                className="flex-1 h-auto px-1 rounded-none rounded-tr-md text-muted-foreground"
               >
                 <ChevronUp className="size-3" />
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 tabIndex={-1}
                 onClick={() => setStake(v => (Math.max(0, (parseFloat(v) || 0) - 1)).toFixed(2))}
-                className="flex flex-1 items-center justify-center px-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors rounded-br-md border-t border-input"
+                className="fglex-1 h-auto px-1 rounded-none border-t border-input text-muted-foreground"
               >
                 <ChevronDown className="size-3" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>

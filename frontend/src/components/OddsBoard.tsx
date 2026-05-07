@@ -12,7 +12,13 @@ interface Props {
 
 export function OddsBoard({ events, onSelect }: Props) {
   if (events.length === 0) {
-    return <p className="text-muted-foreground text-sm">Waiting for live odds…</p>;
+    return (
+      <Card className="bg-muted/40 border-dashed">
+        <CardContent className="pt-6 text-sm text-muted-foreground text-center">
+          Waiting for live odds…
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

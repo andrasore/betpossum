@@ -142,6 +142,51 @@ export interface TransactionConfirmedEvent {
      */
     confirmedAt: number; // Unix ms
 }
+/**
+ * Core API → Wallet Service (request-reply)
+ *
+ * @generated from protobuf message betting.events.BalanceRequestEvent
+ */
+export interface BalanceRequestEvent {
+    /**
+     * @generated from protobuf field: string user_id = 1
+     */
+    userId: string;
+    /**
+     * @generated from protobuf field: string reply_to = 2
+     */
+    replyTo: string; // channel to respond on
+}
+/**
+ * Wallet Service → Core API (reply)
+ *
+ * @generated from protobuf message betting.events.BalanceResponseEvent
+ */
+export interface BalanceResponseEvent {
+    /**
+     * @generated from protobuf field: string user_id = 1
+     */
+    userId: string;
+    /**
+     * @generated from protobuf field: double balance = 2
+     */
+    balance: number; // in currency units (not cents)
+}
+/**
+ * Wallet Service → Core API (push after each transaction)
+ *
+ * @generated from protobuf message betting.events.BalanceUpdatedEvent
+ */
+export interface BalanceUpdatedEvent {
+    /**
+     * @generated from protobuf field: string user_id = 1
+     */
+    userId: string;
+    /**
+     * @generated from protobuf field: double balance = 2
+     */
+    balance: number; // in currency units (not cents)
+}
 // @generated message type with reflection information, may provide speed optimized methods
 class OddsUpdatedEvent$Type extends MessageType<OddsUpdatedEvent> {
     constructor() {
@@ -506,3 +551,168 @@ class TransactionConfirmedEvent$Type extends MessageType<TransactionConfirmedEve
  * @generated MessageType for protobuf message betting.events.TransactionConfirmedEvent
  */
 export const TransactionConfirmedEvent = new TransactionConfirmedEvent$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class BalanceRequestEvent$Type extends MessageType<BalanceRequestEvent> {
+    constructor() {
+        super("betting.events.BalanceRequestEvent", [
+            { no: 1, name: "user_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "reply_to", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<BalanceRequestEvent>): BalanceRequestEvent {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.userId = "";
+        message.replyTo = "";
+        if (value !== undefined)
+            reflectionMergePartial<BalanceRequestEvent>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: BalanceRequestEvent): BalanceRequestEvent {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string user_id */ 1:
+                    message.userId = reader.string();
+                    break;
+                case /* string reply_to */ 2:
+                    message.replyTo = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: BalanceRequestEvent, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string user_id = 1; */
+        if (message.userId !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.userId);
+        /* string reply_to = 2; */
+        if (message.replyTo !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.replyTo);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message betting.events.BalanceRequestEvent
+ */
+export const BalanceRequestEvent = new BalanceRequestEvent$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class BalanceResponseEvent$Type extends MessageType<BalanceResponseEvent> {
+    constructor() {
+        super("betting.events.BalanceResponseEvent", [
+            { no: 1, name: "user_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "balance", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ }
+        ]);
+    }
+    create(value?: PartialMessage<BalanceResponseEvent>): BalanceResponseEvent {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.userId = "";
+        message.balance = 0;
+        if (value !== undefined)
+            reflectionMergePartial<BalanceResponseEvent>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: BalanceResponseEvent): BalanceResponseEvent {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string user_id */ 1:
+                    message.userId = reader.string();
+                    break;
+                case /* double balance */ 2:
+                    message.balance = reader.double();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: BalanceResponseEvent, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string user_id = 1; */
+        if (message.userId !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.userId);
+        /* double balance = 2; */
+        if (message.balance !== 0)
+            writer.tag(2, WireType.Bit64).double(message.balance);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message betting.events.BalanceResponseEvent
+ */
+export const BalanceResponseEvent = new BalanceResponseEvent$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class BalanceUpdatedEvent$Type extends MessageType<BalanceUpdatedEvent> {
+    constructor() {
+        super("betting.events.BalanceUpdatedEvent", [
+            { no: 1, name: "user_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "balance", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ }
+        ]);
+    }
+    create(value?: PartialMessage<BalanceUpdatedEvent>): BalanceUpdatedEvent {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.userId = "";
+        message.balance = 0;
+        if (value !== undefined)
+            reflectionMergePartial<BalanceUpdatedEvent>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: BalanceUpdatedEvent): BalanceUpdatedEvent {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string user_id */ 1:
+                    message.userId = reader.string();
+                    break;
+                case /* double balance */ 2:
+                    message.balance = reader.double();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: BalanceUpdatedEvent, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string user_id = 1; */
+        if (message.userId !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.userId);
+        /* double balance = 2; */
+        if (message.balance !== 0)
+            writer.tag(2, WireType.Bit64).double(message.balance);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message betting.events.BalanceUpdatedEvent
+ */
+export const BalanceUpdatedEvent = new BalanceUpdatedEvent$Type();
