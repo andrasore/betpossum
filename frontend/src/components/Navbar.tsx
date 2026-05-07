@@ -16,7 +16,7 @@ export function Navbar() {
   return (
     <nav className="border-b bg-background px-6 py-3 flex items-center justify-between">
       <Link href="/dashboard" className="text-xl font-bold tracking-tight text-foreground">
-        BetApp
+        BetPossum
       </Link>
       <Button variant="ghost" size="sm" onClick={logout} className="gap-2">
         <LogOut className="h-4 w-4" />

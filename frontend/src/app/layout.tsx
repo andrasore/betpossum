@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: 'BetApp',
+  title: 'BetPossum',
   description: 'Live sports betting',
 };
 
