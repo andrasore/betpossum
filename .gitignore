@@ -11,3 +11,4 @@ requirements.txt
 .projectile
 __pycache__
 .tb_bin/
+generated/
