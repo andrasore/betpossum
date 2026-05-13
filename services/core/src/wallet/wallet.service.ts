@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
-import { BalanceRequestEvent, BalanceResponseEvent, BalanceUpdatedEvent } from '../generated/events';
+import { BalanceUpdatedEvent } from '../generated/events';
 import { RedisService } from '../redis/redis.service';
 import { EventsGateway } from '../events/events.gateway';
 
@@ -22,15 +21,5 @@ export class WalletService implements OnModuleInit {
         this.logger.error('Failed to decode balance.updated', e);
       }
     });
-  }
-
-  async getBalance(userId: string): Promise<number> {
-    const replyTo = `balance.response.${uuidv4()}`;
-    const responsePromise = this.redis.subscribeOnce(replyTo);
-    const req = BalanceRequestEvent.create({ userId, replyTo });
-    await this.redis.publish('balance.request', Buffer.from(BalanceRequestEvent.toBinary(req)));
-    const raw = await responsePromise;
-    const res = BalanceResponseEvent.fromBinary(raw);
-    return res.balance;
   }
 }

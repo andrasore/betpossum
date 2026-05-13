@@ -14,7 +14,7 @@ communicate asynchronously via Redis pub/sub using protobuf-serialised messages.
 | Layer            | Technology                                      |
 |------------------|-------------------------------------------------|
 | Frontend         | Next.js (React, TailwindCSS, SWR / React Query) |
-| API Gateway      | Nginx or custom NestJS gateway                  |
+| Edge proxy       | Nginx (path-based routing only)                 |
 | Core API         | NestJS (Node.js)                                |
 | Odds Service     | FastAPI (Python, asyncio)                       |
 | Wallet Service   | Flask (Python)                                  |
@@ -29,12 +29,22 @@ communicate asynchronously via Redis pub/sub using protobuf-serialised messages.
 
 ## Services
 
-### API Gateway
-Single entry point for all client traffic. Responsibilities:
-- JWT authentication and authorisation
-- Rate limiting
-- Request routing to downstream services
+### Edge proxy (Nginx)
+Nginx sits in front of the services and does path-based routing only — it is
+**not** a smart API gateway. Any service that exposes HTTP endpoints needed by
+the frontend is reachable through it.
+
+Responsibilities:
+- Path-based routing to the appropriate service (`/wallet/*` → Wallet,
+  everything else → Core)
 - WebSocket connection upgrade (for live odds and bet settlement feeds)
+
+Explicitly **not** responsibilities of the proxy:
+- **Authentication / authorisation** — each service verifies its own JWTs.
+  (TODO: wallet currently decodes the JWT payload without verifying the
+  signature; this needs to be replaced with proper verification using the
+  shared `JWT_SECRET`.)
+- **Rate limiting** — handled per-service if at all.
 
 ### NestJS — Core API
 The primary application service. Responsibilities:
@@ -63,6 +73,8 @@ service writes to TigerBeetle directly. Responsibilities:
 - Maintains a double-entry ledger backed by TigerBeetle
 - Subscribes to `bet.placed` and `bet.settled` events to trigger holds and
   releases
+- Exposes `GET /wallet/balance` directly to the frontend (via the Nginx
+  proxy). Inter-service write flows still go through Redis pub/sub.
 
 > **Note:** TigerBeetle does not have an official Python client. The Wallet
 > service communicates with TigerBeetle via a thin Node.js sidecar that exposes
@@ -72,10 +84,14 @@ service writes to TigerBeetle directly. Responsibilities:
 
 ## Inter-service Communication
 
-Services do not call each other directly over HTTP. All inter-service
+Services do not call each other directly over HTTP. All **inter-service**
 communication goes through Redis pub/sub. Messages are serialised with
 **Protocol Buffers** — `.proto` schema files serve as the contract between
 services.
+
+The frontend, however, *does* talk to services over HTTP (through the Nginx
+proxy). Read-only endpoints the frontend needs — e.g. `GET /wallet/balance` —
+are served directly by the owning service.
 
 ### Channels and event types
 
@@ -141,6 +157,7 @@ Suggested repo structure:
 ```
 /
 ├── frontend/          # Next.js
+├── nginx/             # Edge proxy config
 ├── services/
 │   ├── core/          # NestJS
 │   ├── odds/          # FastAPI

@@ -6,7 +6,7 @@ import uuid
 import redis
 from generated.events_pb2 import (
     BetPlacedEvent, BetSettledEvent, TransactionConfirmedEvent,
-    BalanceRequestEvent, BalanceResponseEvent, BalanceUpdatedEvent,
+    BalanceUpdatedEvent,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,22 +59,11 @@ def _handle_bet_settled(event: BetSettledEvent, ledger, r_pub: redis.Redis) -> N
         logger.error("settle failed for bet %s: %s", event.bet_id, e)
 
 
-def _handle_balance_request(event: BalanceRequestEvent, ledger, r_pub: redis.Redis) -> None:
-    try:
-        balance_cents = ledger.get_balance(event.user_id)
-        resp = BalanceResponseEvent(user_id=event.user_id, balance=balance_cents / 100)
-        r_pub.publish(event.reply_to, resp.SerializeToString())
-    except Exception as e:
-        logger.error("balance request failed for user %s: %s", event.user_id, e)
-        resp = BalanceResponseEvent(user_id=event.user_id, balance=0)
-        r_pub.publish(event.reply_to, resp.SerializeToString())
-
-
 def run(redis_url: str, ledger) -> None:
     r_sub = redis.from_url(redis_url)
     r_pub = redis.from_url(redis_url)
     pubsub = r_sub.pubsub()
-    pubsub.subscribe("bet.placed", "bet.settled", "balance.request")
+    pubsub.subscribe("bet.placed", "bet.settled")
 
     logger.info("Wallet subscriber ready")
     for message in pubsub.listen():
@@ -87,8 +76,6 @@ def run(redis_url: str, ledger) -> None:
                 _handle_bet_placed(BetPlacedEvent.FromString(data), ledger, r_pub)
             elif channel == "bet.settled":
                 _handle_bet_settled(BetSettledEvent.FromString(data), ledger, r_pub)
-            elif channel == "balance.request":
-                _handle_balance_request(BalanceRequestEvent.FromString(data), ledger, r_pub)
         except Exception as e:
             logger.error("Failed to process %s: %s", channel, e)
 

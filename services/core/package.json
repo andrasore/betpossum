@@ -2,7 +2,7 @@
   "name": "@betting/core",
   "version": "0.1.0",
   "scripts": {
-    "proto:gen": "protoc --ts_out ./src/generated --ts_opt long_type_number --proto_path ../../proto ../../proto/events.proto",
+    "proto:gen": "mkdir -p ./src/generated && protoc --ts_out ./src/generated --ts_opt long_type_number --proto_path ../../proto ../../proto/events.proto",
     "build": "npm run proto:gen && nest build && node esbuild.config.mjs",
     "start": "node dist/bundle",
     "start:dev": "nest start --watch",

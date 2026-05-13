@@ -44,18 +44,6 @@ message TransactionConfirmedEvent {
   int64  confirmed_at = 6; // Unix ms
 }
 
-// Core API → Wallet Service (request-reply)
-message BalanceRequestEvent {
-  string user_id  = 1;
-  string reply_to = 2; // channel to respond on
-}
-
-// Wallet Service → Core API (reply)
-message BalanceResponseEvent {
-  string user_id = 1;
-  double balance = 2; // in currency units (not cents)
-}
-
 // Wallet Service → Core API (push after each transaction)
 message BalanceUpdatedEvent {
   string user_id = 1;

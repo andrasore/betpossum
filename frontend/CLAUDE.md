@@ -6,10 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev          # Development server on port 3000
-npm run build        # Production build (standalone output)
 npm run start        # Serve production build on port 3000
-npm run typecheck    # TypeScript type check (no emit)
 ```
+
+For typechecks and builds, always run `npm run build` / `npm run typecheck`
+from the **repo root**, not from this workspace. See the root `CLAUDE.md`.
 
 There is no test or lint script configured.
 
