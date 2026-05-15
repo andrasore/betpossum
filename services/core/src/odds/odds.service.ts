@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { OddsUpdatedEvent } from '../generated/events';
+import { NotificationsClient } from '../notifications/notifications.client';
 import { RedisService } from '../redis/redis.service';
-import { EventsGateway } from '../events/events.gateway';
 
 @Injectable()
 export class OddsService implements OnModuleInit {
@@ -9,15 +9,15 @@ export class OddsService implements OnModuleInit {
 
   constructor(
     private readonly redis: RedisService,
-    private readonly gateway: EventsGateway,
+    private readonly notifications: NotificationsClient,
   ) {}
 
   onModuleInit() {
-    this.redis.subscribe('odds.updated', (raw) => {
+    this.redis.subscribe('odds.updated', async (raw) => {
       try {
         const event = OddsUpdatedEvent.fromBinary(raw);
-        this.redis.pub.set(`odds:${event.eventId}`, JSON.stringify(event));
-        this.gateway.broadcast('odds.updated', event);
+        await this.redis.pub.set(`odds:${event.eventId}`, JSON.stringify(event));
+        await this.notifications.broadcast('odds.updated', event);
       } catch (e) {
         this.logger.error('Failed to decode odds.updated', e);
       }

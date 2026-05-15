@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { OddsService } from './odds.service';
-import { EventsModule } from '../events/events.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [EventsModule],
+  imports: [NotificationsModule],
   providers: [OddsService],
   exports: [OddsService],
 })

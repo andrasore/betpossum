@@ -22,7 +22,7 @@ await build({
     'mqtt',
     'nats',
     //'@nestjs/platform-express',
-    //'@nestjs/websockets/socket-module',
+    '@nestjs/websockets/socket-module',
   ],
   outfile: './dist/bundle.js',
 });

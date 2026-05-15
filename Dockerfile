@@ -44,12 +44,15 @@ RUN apt-get update && apt-get install -y nodejs npm
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY services/odds/package.json ./services/odds/
+COPY services/notifications/package.json ./services/notifications/
 RUN npm ci
 COPY proto/ ./proto
 COPY services/odds/pyproject.toml ./services/odds/
+COPY services/notifications/pyproject.toml ./services/notifications/
 COPY turbo.json ./turbo.json
 RUN  npm run init
 COPY services/odds/src ./services/odds/src
+COPY services/notifications/src ./services/notifications/src
 RUN npm run build
 
 # Stage 5: Odds service runtime — just the PEX, nothing else.
@@ -59,3 +62,11 @@ WORKDIR /app
 COPY --chown=appuser:appgroup --from=builder-python /app/services/odds/dist/gunicorn_app.pex ./dist/
 USER appuser
 CMD ["/app/dist/gunicorn_app.pex", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
+
+# Stage 6: Notifications service runtime — Flask-SocketIO with eventlet.
+FROM python:3.13-slim AS notifications
+RUN groupadd appgroup && useradd -g appgroup -m appuser
+WORKDIR /app
+COPY --chown=appuser:appgroup --from=builder-python /app/services/notifications/dist/gunicorn_app.pex ./dist/
+USER appuser
+CMD ["/app/dist/gunicorn_app.pex", "app:app", "--bind", "0.0.0.0:8000", "--worker-class", "eventlet", "--workers", "1"]

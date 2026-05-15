@@ -13,3 +13,12 @@ message OddsUpdatedEvent {
   double draw_odds  = 7; // 0.0 when no draw market (e.g. basketball)
   int64  updated_at = 8; // Unix ms
 }
+
+// Any service → Notifications Service.
+// Fire-and-forget envelope for events that should be relayed to the browser
+// over the WebSocket. `payload` is JSON; `user_id` empty means broadcast.
+message NotificationEvent {
+  string user_id = 1;
+  string event   = 2;
+  string payload = 3;
+}

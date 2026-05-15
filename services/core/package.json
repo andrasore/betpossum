@@ -18,9 +18,7 @@
     "@nestjs/microservices": "^11.1.19",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.19",
-    "@nestjs/platform-socket.io": "^11.1.19",
     "@nestjs/typeorm": "^11.0.1",
-    "@nestjs/websockets": "^11.1.19",
     "@protobuf-ts/runtime": "^2.9.4",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
@@ -32,7 +30,6 @@
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "socket.io": "^4.8.3",
     "tigerbeetle-node": "0.17.3",
     "typeorm": "^0.3.28",
     "uuid": "^14.0.0"

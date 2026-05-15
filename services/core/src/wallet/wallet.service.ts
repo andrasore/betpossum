@@ -9,7 +9,7 @@ import {
   createClient,
   id as tbId,
 } from 'tigerbeetle-node';
-import { EventsGateway } from '../events/events.gateway';
+import { NotificationsClient } from '../notifications/notifications.client';
 
 const ESCROW_ID = 1n;
 const HOUSE_ID = 2n;
@@ -33,7 +33,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly gateway: EventsGateway,
+    private readonly notifications: NotificationsClient,
   ) {}
 
   async onModuleInit() {
@@ -101,7 +101,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   private async pushBalanceUpdated(userId: string): Promise<void> {
     const balance = await this.getBalance(userId);
-    this.gateway.sendToUser(userId, 'balance.updated', { balance });
+    await this.notifications.toUser(userId, 'balance.updated', { balance });
   }
 
   private buildAccount(id: bigint, code: number) {

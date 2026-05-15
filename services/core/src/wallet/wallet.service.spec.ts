@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { EventsGateway } from '../events/events.gateway';
+import { NotificationsClient } from '../notifications/notifications.client';
 import { WalletService } from './wallet.service';
 import { startTigerBeetle, TbInstance } from './tigerbeetle-harness';
 
@@ -27,7 +27,7 @@ describe('WalletService', () => {
             },
           },
         },
-        { provide: EventsGateway, useValue: { sendToUser: jest.fn() } },
+        { provide: NotificationsClient, useValue: { toUser: jest.fn(), broadcast: jest.fn() } },
       ],
     }).compile();
 

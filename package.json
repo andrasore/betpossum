@@ -4,6 +4,7 @@
   "workspaces": [
     "frontend",
     "services/core",
+    "services/notifications",
     "services/odds"
   ],
   "engines" : {

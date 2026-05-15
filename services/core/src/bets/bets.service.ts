@@ -2,14 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bet } from './bet.entity';
-import { EventsGateway } from '../events/events.gateway';
+import { NotificationsClient } from '../notifications/notifications.client';
 import { WalletService } from '../wallet/wallet.service';
 
 @Injectable()
 export class BetsService {
   constructor(
     @InjectRepository(Bet) private readonly repo: Repository<Bet>,
-    private readonly gateway: EventsGateway,
+    private readonly notifications: NotificationsClient,
     private readonly wallet: WalletService,
   ) {}
 
@@ -27,7 +27,7 @@ export class BetsService {
     const stakeCents = Math.round(stake * 100);
     await this.wallet.hold(userId, bet.id, stakeCents);
     await this.repo.update(bet.id, { status: 'held' });
-    this.gateway.sendToUser(userId, 'bet.held', { betId: bet.id });
+    await this.notifications.toUser(userId, 'bet.held', { betId: bet.id });
 
     return { ...bet, status: 'held' };
   }
@@ -43,7 +43,7 @@ export class BetsService {
       const payoutCents = Math.round(payout * 100);
       await this.wallet.payout(bet.userId, betId, payoutCents);
     }
-    this.gateway.sendToUser(bet.userId, 'bet.settled', { betId, won, payout });
+    await this.notifications.toUser(bet.userId, 'bet.settled', { betId, won, payout });
   }
 
   findByUser(userId: string) {

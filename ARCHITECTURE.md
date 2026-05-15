@@ -4,9 +4,9 @@
 
 This is a distributed sports betting application built for demonstration
 purposes. It uses a polyglot service architecture — NestJS for the real-time
-core, FastAPI for the odds ingestion service, and Next.js for the frontend.
-The core and odds services communicate asynchronously via Redis pub/sub using
-protobuf-serialised messages.
+core, FastAPI for the odds ingestion service, Flask + Flask-SocketIO for the
+notifications service, and Next.js for the frontend. Services communicate
+asynchronously via Redis pub/sub using protobuf-serialised messages.
 
 ---
 
@@ -18,6 +18,7 @@ protobuf-serialised messages.
 | Edge proxy       | Nginx (path-based routing only)                 |
 | Core API         | NestJS (Node.js) — includes the wallet module   |
 | Odds Service     | FastAPI (Python, asyncio)                       |
+| Notifications    | Flask + Flask-SocketIO (Python, eventlet)       |
 | Messaging        | Redis pub/sub                                   |
 | Message format   | Protocol Buffers (protobuf)                     |
 | Primary DB       | PostgreSQL                                      |
@@ -35,9 +36,8 @@ Nginx sits in front of the services and does path-based routing only — it is
 the frontend is reachable through it.
 
 Responsibilities:
-- Path-based routing to the Core API (the wallet endpoints are served by
-  Core's wallet module)
-- WebSocket connection upgrade (for live odds and bet settlement feeds)
+- Path-based routing: `/socket.io/*` → Notifications, everything else → Core
+- WebSocket connection upgrade (for the live odds, balance, and bet feeds)
 
 Explicitly **not** responsibilities of the proxy:
 - **Authentication / authorisation** — each service verifies its own JWTs.
@@ -48,12 +48,26 @@ The primary application service. Responsibilities:
 - User registration, authentication (JWT / OAuth)
 - Bet placement and settlement logic
 - Wallet / ledger operations against TigerBeetle (in-process module)
-- WebSocket server for pushing live updates to the frontend
-- Subscribes to the odds Redis channel for inter-service communication
+- Subscribes to the odds Redis channel and re-publishes UI events to the
+  notifications channel
+- Publishes UI events (balance updates, bet status changes, broadcast odds)
+  to Redis for the notifications service to deliver
 
 Internally the wallet logic lives as a Nest module within the core service and
 is invoked by the bets module via direct method calls — no Redis hop for
 money movement.
+
+### Flask + Flask-SocketIO — Notifications Service
+The only service the browser holds an open socket to. Responsibilities:
+- Accepts socket.io connections, verifies the JWT on `connect`, and joins each
+  socket into a room named after its `sub` claim
+- Subscribes to the Redis `notifications` channel; for each `NotificationEvent`
+  it emits the carried JSON payload to the target user's room (or broadcasts
+  if `user_id` is empty)
+
+The service is stateless — no DB, no business logic — and exists purely so the
+frontend has a fan-out point that doesn't depend on Core staying up to keep
+sockets healthy.
 
 ### FastAPI — Odds Service
 Lightweight async service responsible for ingesting odds from an external
@@ -71,20 +85,24 @@ provider. Responsibilities:
 
 ## Inter-service Communication
 
-The only cross-process boundary in the system is between the Odds Service and
-the Core API. They communicate asynchronously via Redis pub/sub with
-**Protocol Buffer** payloads — `.proto` schema files serve as the contract.
+Cross-process traffic flows over Redis pub/sub with **Protocol Buffer**
+payloads — `.proto` schema files serve as the contract. The wallet logic is
+colocated inside Core as a Nest module; bets call the wallet via direct
+in-process method calls.
 
-The wallet logic is colocated inside Core as a Nest module; bets call the
-wallet via direct in-process method calls.
-
-The frontend talks to Core over HTTP (through the Nginx proxy).
+The frontend talks to Core over HTTP and to Notifications over a socket.io
+connection (both through the Nginx proxy).
 
 ### Channels and event types
 
-| Channel        | Publisher    | Subscribers | Payload            |
-|----------------|--------------|-------------|--------------------|
-| `odds.updated` | Odds Service | Core API    | `OddsUpdatedEvent` |
+| Channel         | Publisher    | Subscribers   | Payload             |
+|-----------------|--------------|---------------|---------------------|
+| `odds.updated`  | Odds Service | Core API      | `OddsUpdatedEvent`  |
+| `notifications` | Core API     | Notifications | `NotificationEvent` |
+
+`NotificationEvent` is a thin envelope: `user_id` (empty = broadcast), `event`
+(socket.io event name), and `payload` (JSON-encoded data the frontend
+consumes verbatim). It is fire-and-forget — Core does not wait for a reply.
 
 ### Why protobuf over JSON?
 - Smaller payload size — important for high-frequency odds updates
@@ -139,6 +157,7 @@ Suggested repo structure:
 ├── nginx/             # Edge proxy config
 ├── services/
 │   ├── core/          # NestJS — includes wallet/TigerBeetle module
+│   ├── notifications/ # Flask + Flask-SocketIO (browser-facing WS)
 │   └── odds/          # FastAPI
 ├── proto/             # Shared .proto schema definitions
 ├── docker-compose.yml
