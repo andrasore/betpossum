@@ -70,5 +70,5 @@ def deposit():
     data = request.get_json(force=True)
     user_id: str = data["user_id"]
     amount_cents = int(float(data["amount"]) * 100)
-    ledger.deposit(user_id, str(uuid.uuid4()), amount_cents)
+    ledger.deposit(user_id, amount_cents)
     return jsonify({"status": "ok"}), 201

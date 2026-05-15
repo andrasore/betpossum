@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { OddsUpdatedEvent } from '../generated/events.pb';
+import { OddsUpdatedEvent } from '../generated/events';
 import { RedisService } from '../redis/redis.service';
 import { EventsGateway } from '../events/events.gateway';
 

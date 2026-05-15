@@ -1,8 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
-import { BetPlacedEvent, BetSettledEvent, TransactionConfirmedEvent } from '../generated/events.pb';
+import { BetPlacedEvent, BetSettledEvent, TransactionConfirmedEvent } from '../generated/events';
 import { Bet } from './bet.entity';
 import { RedisService } from '../redis/redis.service';
 import { EventsGateway } from '../events/events.gateway';

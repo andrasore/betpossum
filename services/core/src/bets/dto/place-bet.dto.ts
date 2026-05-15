@@ -1,4 +1,4 @@
-import { IsIn, IsNumber, IsPositive, IsString, IsUUID } from 'class-validator';
+import { IsIn, IsNumber, IsPositive, IsString } from 'class-validator';
 
 export class PlaceBetDto {
   @IsString()

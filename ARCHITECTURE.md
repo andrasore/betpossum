@@ -76,10 +76,6 @@ service writes to TigerBeetle directly. Responsibilities:
 - Exposes `GET /wallet/balance` directly to the frontend (via the Nginx
   proxy). Inter-service write flows still go through Redis pub/sub.
 
-> **Note:** TigerBeetle does not have an official Python client. The Wallet
-> service communicates with TigerBeetle via a thin Node.js sidecar that exposes
-> a local REST or gRPC interface.
-
 ---
 
 ## Inter-service Communication

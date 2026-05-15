@@ -2,13 +2,11 @@ import {
   WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server!: Server;
-  private readonly logger = new Logger(EventsGateway.name);
   private userSockets = new Map<string, Set<string>>(); // userId → socket ids
 
   constructor(private readonly jwt: JwtService) {}
