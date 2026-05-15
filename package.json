@@ -4,8 +4,7 @@
   "workspaces": [
     "frontend",
     "services/core",
-    "services/odds",
-    "services/wallet"
+    "services/odds"
   ],
   "engines" : {
     "npm" : "~11.12.1",

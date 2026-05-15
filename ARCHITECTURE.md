@@ -4,8 +4,9 @@
 
 This is a distributed sports betting application built for demonstration
 purposes. It uses a polyglot service architecture — NestJS for the real-time
-core, Flask/FastAPI for Python services, and Next.js for the frontend. Services
-communicate asynchronously via Redis pub/sub using protobuf-serialised messages.
+core, FastAPI for the odds ingestion service, and Next.js for the frontend.
+The core and odds services communicate asynchronously via Redis pub/sub using
+protobuf-serialised messages.
 
 ---
 
@@ -15,9 +16,8 @@ communicate asynchronously via Redis pub/sub using protobuf-serialised messages.
 |------------------|-------------------------------------------------|
 | Frontend         | Next.js (React, TailwindCSS, SWR / React Query) |
 | Edge proxy       | Nginx (path-based routing only)                 |
-| Core API         | NestJS (Node.js)                                |
+| Core API         | NestJS (Node.js) — includes the wallet module   |
 | Odds Service     | FastAPI (Python, asyncio)                       |
-| Wallet Service   | Flask (Python)                                  |
 | Messaging        | Redis pub/sub                                   |
 | Message format   | Protocol Buffers (protobuf)                     |
 | Primary DB       | PostgreSQL                                      |
@@ -35,23 +35,25 @@ Nginx sits in front of the services and does path-based routing only — it is
 the frontend is reachable through it.
 
 Responsibilities:
-- Path-based routing to the appropriate service (`/wallet/*` → Wallet,
-  everything else → Core)
+- Path-based routing to the Core API (the wallet endpoints are served by
+  Core's wallet module)
 - WebSocket connection upgrade (for live odds and bet settlement feeds)
 
 Explicitly **not** responsibilities of the proxy:
 - **Authentication / authorisation** — each service verifies its own JWTs.
-  (TODO: wallet currently decodes the JWT payload without verifying the
-  signature; this needs to be replaced with proper verification using the
-  shared `JWT_SECRET`.)
 - **Rate limiting** — handled per-service if at all.
 
 ### NestJS — Core API
 The primary application service. Responsibilities:
 - User registration, authentication (JWT / OAuth)
 - Bet placement and settlement logic
+- Wallet / ledger operations against TigerBeetle (in-process module)
 - WebSocket server for pushing live updates to the frontend
-- Publishes and subscribes to Redis channels for inter-service communication
+- Subscribes to the odds Redis channel for inter-service communication
+
+Internally the wallet logic lives as a Nest module within the core service and
+is invoked by the bets module via direct method calls — no Redis hop for
+money movement.
 
 ### FastAPI — Odds Service
 Lightweight async service responsible for ingesting odds from an external
@@ -65,48 +67,29 @@ provider. Responsibilities:
 > **Note:** This service does not calculate odds. It is purely an ingestion and
 > normalisation layer over an external feed.
 
-### Flask — Wallet Service
-Isolated financial service. All money movement goes through here — no other
-service writes to TigerBeetle directly. Responsibilities:
-- Deposit and withdrawal flows
-- Bet hold and payout operations (called by Core API via Redis)
-- Maintains a double-entry ledger backed by TigerBeetle
-- Subscribes to `bet.placed` and `bet.settled` events to trigger holds and
-  releases
-- Exposes `GET /wallet/balance` directly to the frontend (via the Nginx
-  proxy). Inter-service write flows still go through Redis pub/sub.
-
 ---
 
 ## Inter-service Communication
 
-Services do not call each other directly over HTTP. All **inter-service**
-communication goes through Redis pub/sub. Messages are serialised with
-**Protocol Buffers** — `.proto` schema files serve as the contract between
-services.
+The only cross-process boundary in the system is between the Odds Service and
+the Core API. They communicate asynchronously via Redis pub/sub with
+**Protocol Buffer** payloads — `.proto` schema files serve as the contract.
 
-The frontend, however, *does* talk to services over HTTP (through the Nginx
-proxy). Read-only endpoints the frontend needs — e.g. `GET /wallet/balance` —
-are served directly by the owning service.
+The wallet logic is colocated inside Core as a Nest module; bets call the
+wallet via direct in-process method calls.
+
+The frontend talks to Core over HTTP (through the Nginx proxy).
 
 ### Channels and event types
 
-| Channel        | Publisher      | Subscribers    | Payload                     |
-|----------------|----------------|----------------|-----------------------------|
-| `odds.updated` | Odds Service   | Core API       | `OddsUpdatedEvent`          |
-| `bet.placed`   | Core API       | Wallet Service | `BetPlacedEvent`            |
-| `bet.settled`  | Core API       | Wallet Service | `BetSettledEvent`           |
-| `tx.confirmed` | Wallet Service | Core API       | `TransactionConfirmedEvent` |
+| Channel        | Publisher    | Subscribers | Payload            |
+|----------------|--------------|-------------|--------------------|
+| `odds.updated` | Odds Service | Core API    | `OddsUpdatedEvent` |
 
 ### Why protobuf over JSON?
 - Smaller payload size — important for high-frequency odds updates
 - Schema is a first-class contract; breaking changes are caught at compile time
 - Faster serialisation / deserialisation
-
-> **When to graduate to Kafka:** Redis pub/sub has no message persistence or
-> replay. If you need an audit trail of all financial events, fan-out to many
-> consumers, or guaranteed delivery, migrate the financial channels
-> (`bet.placed`, `bet.settled`, `tx.confirmed`) to Kafka.
 
 ---
 
@@ -120,7 +103,7 @@ Owned exclusively by the Core API service. Stores:
 - Sessions (or delegate to Redis)
 
 ### TigerBeetle
-Owned exclusively by the Wallet service. Stores:
+Owned exclusively by Core's wallet module. Stores:
 - All account balances
 - Every debit and credit as an immutable double-entry transfer
 - Provides strong consistency and crash-safety guarantees for financial data
@@ -155,9 +138,8 @@ Suggested repo structure:
 ├── frontend/          # Next.js
 ├── nginx/             # Edge proxy config
 ├── services/
-│   ├── core/          # NestJS
-│   ├── odds/          # FastAPI
-│   └── wallet/        # Flask + TigerBeetle sidecar
+│   ├── core/          # NestJS — includes wallet/TigerBeetle module
+│   └── odds/          # FastAPI
 ├── proto/             # Shared .proto schema definitions
 ├── docker-compose.yml
 └── ARCHITECTURE.md

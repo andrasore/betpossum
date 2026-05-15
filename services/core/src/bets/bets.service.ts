@@ -1,24 +1,17 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BetPlacedEvent, BetSettledEvent, TransactionConfirmedEvent } from '../generated/events';
 import { Bet } from './bet.entity';
-import { RedisService } from '../redis/redis.service';
 import { EventsGateway } from '../events/events.gateway';
+import { WalletService } from '../wallet/wallet.service';
 
 @Injectable()
-export class BetsService implements OnModuleInit {
-  private readonly logger = new Logger(BetsService.name);
-
+export class BetsService {
   constructor(
     @InjectRepository(Bet) private readonly repo: Repository<Bet>,
-    private readonly redis: RedisService,
     private readonly gateway: EventsGateway,
+    private readonly wallet: WalletService,
   ) {}
-
-  onModuleInit() {
-    this.subscribeToTransactionConfirmed();
-  }
 
   async place(
     userId: string,
@@ -31,17 +24,12 @@ export class BetsService implements OnModuleInit {
       this.repo.create({ userId, eventId, selection, odds, stake, status: 'pending' }),
     );
 
-    const msg = BetPlacedEvent.create({
-      betId: bet.id,
-      userId,
-      eventId,
-      selection,
-      odds,
-      stake,
-      placedAt: Date.now(),
-    });
-    await this.redis.publish('bet.placed', Buffer.from(BetPlacedEvent.toBinary(msg)));
-    return bet;
+    const stakeCents = Math.round(stake * 100);
+    await this.wallet.hold(userId, bet.id, stakeCents);
+    await this.repo.update(bet.id, { status: 'held' });
+    this.gateway.sendToUser(userId, 'bet.held', { betId: bet.id });
+
+    return { ...bet, status: 'held' };
   }
 
   async settle(betId: string, won: boolean, payout: number): Promise<void> {
@@ -51,33 +39,14 @@ export class BetsService implements OnModuleInit {
     });
     const bet = await this.repo.findOneByOrFail({ id: betId });
 
-    const msg = BetSettledEvent.create({
-      betId,
-      userId: bet.userId,
-      won,
-      payout,
-      settledAt: Date.now(),
-    });
-    await this.redis.publish('bet.settled', Buffer.from(BetSettledEvent.toBinary(msg)));
+    if (won) {
+      const payoutCents = Math.round(payout * 100);
+      await this.wallet.payout(bet.userId, betId, payoutCents);
+    }
     this.gateway.sendToUser(bet.userId, 'bet.settled', { betId, won, payout });
   }
 
   findByUser(userId: string) {
     return this.repo.find({ where: { userId }, order: { placedAt: 'DESC' } });
-  }
-
-  private subscribeToTransactionConfirmed() {
-    this.redis.subscribe('tx.confirmed', async (raw) => {
-      try {
-        const event = TransactionConfirmedEvent.fromBinary(raw);
-        const { betId, userId, type } = event;
-        if (type === 'hold') {
-          await this.repo.update(betId, { status: 'held' });
-          this.gateway.sendToUser(userId, 'bet.held', { betId });
-        }
-      } catch (e) {
-        this.logger.error('Failed to decode tx.confirmed', e);
-      }
-    });
   }
 }

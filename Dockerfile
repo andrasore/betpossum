@@ -43,15 +43,12 @@ FROM python:3.13-slim AS builder-python
 RUN apt-get update && apt-get install -y nodejs npm
 WORKDIR /app
 COPY package.json package-lock.json ./
-COPY services/wallet/package.json ./services/wallet/
 COPY services/odds/package.json ./services/odds/
 RUN npm ci
 COPY proto/ ./proto
-COPY services/wallet/pyproject.toml ./services/wallet/
 COPY services/odds/pyproject.toml ./services/odds/
 COPY turbo.json ./turbo.json
 RUN  npm run init
-COPY services/wallet/src ./services/wallet/src
 COPY services/odds/src ./services/odds/src
 RUN npm run build
 
@@ -60,14 +57,5 @@ FROM python:3.13-slim AS odds
 RUN groupadd appgroup && useradd -g appgroup -m appuser
 WORKDIR /app
 COPY --chown=appuser:appgroup --from=builder-python /app/services/odds/dist/gunicorn_app.pex ./dist/
-USER appuser
-CMD ["/app/dist/gunicorn_app.pex", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
-
-# Stage 6: Wallet service runtime — just the PEX, nothing else.
-# python:3.13-slim is Debian (glibc); TigerBeetle ships only glibc-linked wheels.
-FROM python:3.13-slim AS wallet
-RUN groupadd appgroup && useradd -g appgroup -m appuser
-WORKDIR /app
-COPY --chown=appuser:appgroup --from=builder-python /app/services/wallet/dist/gunicorn_app.pex ./dist/
 USER appuser
 CMD ["/app/dist/gunicorn_app.pex", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]

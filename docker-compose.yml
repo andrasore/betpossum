@@ -58,12 +58,18 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: dev_jwt_secret_change_in_prod
       JWT_EXPIRES_IN: 7d
+      TIGERBEETLE_ADDRESS: tigerbeetle:6000
+      TIGERBEETLE_CLUSTER_ID: "0"
     ports:
       - "4000:4000"
+    security_opt:
+      - seccomp=unconfined  # TigerBeetle requires io_uring; Docker's default seccomp profile blocks it
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      tigerbeetle:
         condition: service_healthy
 
   odds:
@@ -79,21 +85,6 @@ services:
       redis:
         condition: service_healthy
 
-  wallet:
-    build:
-      context: .
-      target: wallet
-    environment:
-      REDIS_URL: redis://redis:6379
-      TIGERBEETLE_ADDRESS: tigerbeetle:6000
-    security_opt:
-      - seccomp=unconfined  # TigerBeetle requires io_uring; Docker's default seccomp profile blocks it
-    depends_on:
-      redis:
-        condition: service_healthy
-      tigerbeetle:
-        condition: service_healthy
-
   nginx:
     image: nginx:1.27-alpine
     volumes:
@@ -102,7 +93,6 @@ services:
       - "8080:80"
     depends_on:
       - core
-      - wallet
 
   frontend:
     build:

@@ -6,7 +6,8 @@
     "build": "npm run proto:gen && nest build && node esbuild.config.mjs",
     "start": "node dist/bundle",
     "start:dev": "nest start --watch",
-    "Typecheck": "tsc --noEmit"
+    "Typecheck": "tsc --noEmit",
+    "test": "jest"
   },
   "packageManager": "^npm@11",
   "dependencies": {
@@ -32,20 +33,25 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.3",
+    "tigerbeetle-node": "0.17.3",
     "typeorm": "^0.3.28",
     "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.21",
     "@nestjs/schematics": "^11.1.0",
+    "@nestjs/testing": "^11.1.21",
     "@protobuf-ts/plugin": "^2.9.4",
     "@protobuf-ts/protoc": "^2.9.4",
     "@types/bcrypt": "^6.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
     "@types/uuid": "^11.0.0",
     "esbuild": "^0.28.0",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.9",
     "typescript": "^6.0.3"
   }
 }
