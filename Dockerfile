@@ -33,14 +33,17 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 ENV NODE_ENV=development
 COPY --chown=appuser:appgroup --from=builder-node /app/services/core/dist/bundle.js ./dist/
+# TigerBeetle's native client is loaded at runtime via a platform-specific
+# path relative to bundle.js; esbuild can't inline a .node binary.
+COPY --chown=appuser:appgroup --from=builder-node /app/node_modules/tigerbeetle-node/dist/bin ./dist/bin
 USER appuser
 CMD ["node", "./dist/bundle.js"]
 
 # Stage 4: Build Python services into self-contained PEX executables.
 # PEX bundles the virtualenv so runtime images need no pip install.
-FROM python:3.13-slim AS builder-python
+FROM python:3.13-alpine AS builder-python
 # We install node and npm so we can access our build scripts
-RUN apt-get update && apt-get install -y nodejs npm
+RUN apk add --no-cache nodejs npm
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY services/odds/package.json ./services/odds/
@@ -56,16 +59,16 @@ COPY services/notifications/src ./services/notifications/src
 RUN npm run build
 
 # Stage 5: Odds service runtime — just the PEX, nothing else.
-FROM python:3.13-slim AS odds
-RUN groupadd appgroup && useradd -g appgroup -m appuser
+FROM python:3.13-alpine AS odds
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 COPY --chown=appuser:appgroup --from=builder-python /app/services/odds/dist/gunicorn_app.pex ./dist/
 USER appuser
 CMD ["/app/dist/gunicorn_app.pex", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
 
 # Stage 6: Notifications service runtime — Flask-SocketIO with eventlet.
-FROM python:3.13-slim AS notifications
-RUN groupadd appgroup && useradd -g appgroup -m appuser
+FROM python:3.13-alpine AS notifications
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 COPY --chown=appuser:appgroup --from=builder-python /app/services/notifications/dist/gunicorn_app.pex ./dist/
 USER appuser

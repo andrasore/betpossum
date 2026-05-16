@@ -1,5 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { promises as dns } from 'node:dns';
+import * as net from 'node:net';
 import {
   AccountFlags,
   Client,
@@ -38,10 +40,19 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     const address = this.config.get<string>('TIGERBEETLE_ADDRESS', 'localhost:6000');
+    const resolved = await this.resolveAddress(address);
     const clusterId = BigInt(this.config.get<string>('TIGERBEETLE_CLUSTER_ID', '0'));
-    this.logger.log(`Connecting to TigerBeetle cluster=${clusterId} address=${address}`);
-    this.client = createClient({ cluster_id: clusterId, replica_addresses: [address] });
+    this.logger.log(`Connecting to TigerBeetle cluster=${clusterId} address=${resolved}`);
+    this.client = createClient({ cluster_id: clusterId, replica_addresses: [resolved] });
     await this.ensureSystemAccounts();
+  }
+
+  private async resolveAddress(address: string): Promise<string> {
+    const [host, port] = address.split(':');
+    if (!port) return address;
+    if (net.isIP(host)) return address;
+    const { address: ip } = await dns.lookup(host, { family: 4 });
+    return `${ip}:${port}`;
   }
 
   onModuleDestroy() {

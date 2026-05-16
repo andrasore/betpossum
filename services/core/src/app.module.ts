@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from './auth/auth.module';
+import { KeycloakModule } from './keycloak/keycloak.module';
+import { KeycloakAuthModule } from './keycloak/keycloak-auth.module';
 import { UsersModule } from './users/users.module';
 import { BetsModule } from './bets/bets.module';
 import { WalletModule } from './wallet/wallet.module';
@@ -23,8 +24,9 @@ import { Bet } from './bets/bet.entity';
       }),
     }),
     RedisModule,
+    KeycloakModule,
     UsersModule,
-    AuthModule,
+    KeycloakAuthModule,
     BetsModule,
     WalletModule,
     OddsModule,

@@ -46,6 +46,42 @@ services:
       retries: 10
       start_period: 5s
 
+  keycloak_postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_dev
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm", "--http-port=8080"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak_postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_dev
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8090
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+    volumes:
+      - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
+    ports:
+      - "8090:8080"
+    depends_on:
+      keycloak_postgres:
+        condition: service_healthy
+
   # ── Application Services ───────────────────────────────────────────────────
 
   core:
@@ -56,10 +92,13 @@ services:
       PORT: 4000
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: dev_jwt_secret_change_in_prod
-      JWT_EXPIRES_IN: 7d
       TIGERBEETLE_ADDRESS: tigerbeetle:6000
       TIGERBEETLE_CLUSTER_ID: "0"
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_ISSUER_URL: http://localhost:8090/realms/betting
+      KEYCLOAK_REALM: betting
+      KEYCLOAK_ADMIN_CLIENT_ID: betting-core
+      KEYCLOAK_ADMIN_CLIENT_SECRET: betting-core-secret
     ports:
       - "4000:4000"
     security_opt:
@@ -71,6 +110,8 @@ services:
         condition: service_healthy
       tigerbeetle:
         condition: service_healthy
+      keycloak:
+        condition: service_started
 
   odds:
     build:
@@ -91,10 +132,14 @@ services:
       target: notifications
     environment:
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: dev_jwt_secret_change_in_prod
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_ISSUER_URL: http://localhost:8090/realms/betting
+      KEYCLOAK_REALM: betting
     depends_on:
       redis:
         condition: service_healthy
+      keycloak:
+        condition: service_started
 
   nginx:
     image: nginx:1.27-alpine
@@ -113,6 +158,9 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_WS_URL: ws://localhost:8080
+      NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8090
+      NEXT_PUBLIC_KEYCLOAK_REALM: betting
+      NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: betting-frontend
     ports:
       - "3000:3000"
     depends_on:
@@ -121,4 +169,4 @@ services:
 volumes:
   postgres_data:
   tigerbeetle_data:
-
+  keycloak_postgres_data:

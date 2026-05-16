@@ -19,6 +19,7 @@ asynchronously via Redis pub/sub using protobuf-serialised messages.
 | Core API         | NestJS (Node.js) — includes the wallet module   |
 | Odds Service     | FastAPI (Python, asyncio)                       |
 | Notifications    | Flask + Flask-SocketIO (Python, eventlet)       |
+| Identity         | Keycloak (OIDC, realm `betting`)                |
 | Messaging        | Redis pub/sub                                   |
 | Message format   | Protocol Buffers (protobuf)                     |
 | Primary DB       | PostgreSQL                                      |
@@ -43,9 +44,15 @@ Explicitly **not** responsibilities of the proxy:
 - **Authentication / authorisation** — each service verifies its own JWTs.
 - **Rate limiting** — handled per-service if at all.
 
+### Keycloak — Identity provider
+Keycloak owns all authentication. The realm `betting` defines two roles —
+`admin` (gates admin pages) and `user` (default for everyone) — plus two
+clients: a public `betting-frontend` (PKCE, used by the SPA) and a
+confidential `betting-core` (service-account access to the admin API for
+user-info lookups). Keycloak ships with its own dedicated Postgres instance.
+
 ### NestJS — Core API
 The primary application service. Responsibilities:
-- User registration, authentication (JWT / OAuth)
 - Bet placement and settlement logic
 - Wallet / ledger operations against TigerBeetle (in-process module)
 - Subscribes to the odds Redis channel and re-publishes UI events to the
@@ -115,10 +122,13 @@ consumes verbatim). It is fire-and-forget — Core does not wait for a reply.
 
 ### PostgreSQL
 Owned exclusively by the Core API service. Stores:
-- Users and authentication records
+- Local user records (id only — primary key matches the Keycloak `sub`;
+  email and name are fetched on demand from Keycloak)
 - Bet history and state
 - Sports events and market definitions
 - Sessions (or delegate to Redis)
+
+Keycloak runs against its own separate Postgres instance.
 
 ### TigerBeetle
 Owned exclusively by Core's wallet module. Stores:

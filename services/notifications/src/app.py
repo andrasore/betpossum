@@ -12,7 +12,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+KEYCLOAK_INTERNAL_URL = os.environ.get("KEYCLOAK_INTERNAL_URL", "http://keycloak:8080")
+KEYCLOAK_REALM = os.environ.get("KEYCLOAK_REALM", "betting")
+KEYCLOAK_ISSUER_URL = os.environ.get(
+    "KEYCLOAK_ISSUER_URL", f"{KEYCLOAK_INTERNAL_URL}/realms/{KEYCLOAK_REALM}"
+)
+
+JWKS_URL = f"{KEYCLOAK_INTERNAL_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
+jwks_client = jwt.PyJWKClient(JWKS_URL)
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
@@ -30,7 +37,14 @@ def on_connect(auth):
         logger.info("Rejecting socket %s: no token", request.sid)  # type: ignore[attr-defined]
         return False
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        signing_key = jwks_client.get_signing_key_from_jwt(token).key
+        payload = jwt.decode(
+            token,
+            signing_key,
+            algorithms=["RS256"],
+            issuer=KEYCLOAK_ISSUER_URL,
+            options={"verify_aud": False},
+        )
     except jwt.PyJWTError as exc:
         logger.info("Rejecting socket %s: %s", request.sid, exc)  # type: ignore[attr-defined]
         return False

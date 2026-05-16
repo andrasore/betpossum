@@ -6,26 +6,6 @@ function authHeaders(token: string) {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
 
-export async function login(email: string, password: string) {
-  const res = await fetch(`${BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) throw new Error('Login failed');
-  return res.json() as Promise<{ accessToken: string }>;
-}
-
-export async function register(email: string, password: string) {
-  const res = await fetch(`${BASE}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) throw new Error('Registration failed');
-  return res.json() as Promise<{ accessToken: string }>;
-}
-
 export async function placeBet(token: string, payload: PlaceBetPayload): Promise<Bet> {
   const res = await fetch(`${BASE}/bets`, {
     method: 'POST',
