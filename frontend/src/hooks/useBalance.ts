@@ -10,9 +10,9 @@ export function useBalance(token: string | null) {
   useEffect(() => {
     if (!token) return;
 
-    fetchBalance(token).then(setBalance).catch(() => {});
+    fetchBalance().then(setBalance).catch(() => {});
 
-    const socket = getSocket(token);
+    const socket = getSocket();
     socket.on('balance.updated', ({ balance: b }: { balance: number }) => setBalance(b));
     return () => { socket.off('balance.updated'); };
   }, [token]);

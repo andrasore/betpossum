@@ -6,8 +6,8 @@ import type { Bet } from '@/types';
 
 export function useBets(token: string | null) {
   return useSWR<Bet[]>(
-    token ? ['bets', token] : null,
-    ([, t]) => fetchBets(t as string),
+    token ? 'bets' : null,
+    () => fetchBets(),
     { refreshInterval: 10_000 },
   );
 }

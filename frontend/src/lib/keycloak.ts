@@ -77,6 +77,35 @@ export async function completeLogin(code: string, state: string): Promise<void> 
   sessionStorage.removeItem(PKCE_STATE_KEY);
 }
 
+async function doRefresh(): Promise<string> {
+  const refresh = localStorage.getItem(REFRESH_KEY);
+  if (!refresh) throw new Error('No refresh token');
+
+  const res = await fetch(`${REALM_BASE}/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: CLIENT_ID,
+      refresh_token: refresh,
+    }),
+  });
+  if (!res.ok) throw new Error(`Token refresh failed (${res.status})`);
+  const json = (await res.json()) as { access_token: string; refresh_token?: string };
+
+  localStorage.setItem(TOKEN_KEY, json.access_token);
+  if (json.refresh_token) localStorage.setItem(REFRESH_KEY, json.refresh_token);
+  return json.access_token;
+}
+
+// Shared dedupe across HTTP + WebSocket callers; concurrent 401s / connect_errors
+// collapse into one refresh request.
+let refreshInFlight: Promise<string> | null = null;
+export function refreshAccessToken(): Promise<string> {
+  refreshInFlight ??= doRefresh().finally(() => { refreshInFlight = null; });
+  return refreshInFlight;
+}
+
 export function logout(): void {
   const refresh = localStorage.getItem(REFRESH_KEY);
   localStorage.removeItem(TOKEN_KEY);

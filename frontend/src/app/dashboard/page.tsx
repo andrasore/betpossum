@@ -74,7 +74,6 @@ export default function DashboardPage() {
         <aside className="w-80 border-l bg-background p-4 overflow-y-auto">
           <BetSlip
             selection={selection}
-            token={token}
             onPlaced={() => { setSelection(null); mutate(); }}
           />
         </aside>

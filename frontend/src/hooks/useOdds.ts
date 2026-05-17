@@ -10,7 +10,7 @@ export function useOdds(token: string | null) {
 
   useEffect(() => {
     if (!token) return;
-    const socket = getSocket(token);
+    const socket = getSocket();
 
     socket.on('odds.updated', (raw: unknown) => {
       const result = OddsEventSchema.safeParse(raw);

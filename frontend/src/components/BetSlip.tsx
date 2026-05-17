@@ -17,11 +17,10 @@ interface Selection {
 
 interface Props {
   selection: Selection | null;
-  token: string;
   onPlaced: () => void;
 }
 
-export function BetSlip({ selection, token, onPlaced }: Props) {
+export function BetSlip({ selection, onPlaced }: Props) {
   const [stake, setStake] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +44,7 @@ export function BetSlip({ selection, token, onPlaced }: Props) {
     setLoading(true);
     setError(null);
     try {
-      await placeBet(token, {
+      await placeBet({
         eventId: event.eventId,
         selection: choice,
         odds,
