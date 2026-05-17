@@ -10,6 +10,7 @@ export class LoggingMiddleware implements NestMiddleware {
     const { method, originalUrl, params, query, body } = req;
     const start = Date.now();
 
+    // req.user isn't populated yet — NestJS guards run after middleware.
     this.logger.log(
       `→ ${method} ${originalUrl} params=${safeStringify(params)} query=${safeStringify(query)} body=${safeStringify(body)}`,
     );
@@ -23,8 +24,10 @@ export class LoggingMiddleware implements NestMiddleware {
 
     res.on('finish', () => {
       const elapsed = Date.now() - start;
+      const userId = req.user?.id;
+      const userPart = userId ? ` userId=${userId}` : '';
       this.logger.log(
-        `← ${method} ${originalUrl} ${res.statusCode} (${elapsed}ms) body=${safeStringify(responseBody)}`,
+        `← ${method} ${originalUrl} ${res.statusCode} (${elapsed}ms)${userPart} body=${safeStringify(responseBody)}`,
       );
     });
 
