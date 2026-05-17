@@ -10,8 +10,10 @@ import useSWR from 'swr';
 import { Navbar } from '@/components/Navbar';
 import { fetchAdminUsers, setAdminUserBalance, type AdminUserRow } from '@/lib/api';
 import { isAdmin } from '@/lib/keycloak';
+import { useForceTheme } from '@/hooks/useForceTheme';
 
 export default function AdminPage() {
+  useForceTheme('light');
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
 

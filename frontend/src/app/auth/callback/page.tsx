@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Flex, Text } from '@chakra-ui/react';
 import { completeLogin, isAdmin } from '@/lib/keycloak';
+import { fetchBalance } from '@/lib/api';
 import { useForceTheme } from '@/hooks/useForceTheme';
 
 function Callback() {
@@ -20,6 +21,9 @@ function Callback() {
       return;
     }
     completeLogin(code, state)
+      // Serializes one authed call to drive JWT validate → user/wallet creation
+      // to completion before the dashboard fires its parallel requests.
+      .then(() => fetchBalance())
       .then(() => {
         const token = localStorage.getItem('token');
         router.replace(token && isAdmin(token) ? '/admin' : '/dashboard');
