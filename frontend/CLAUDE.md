@@ -16,9 +16,12 @@ There is no test or lint script configured.
 
 ## Environment
 
-Copy `.env.example` to `.env.local` and set:
-- `NEXT_PUBLIC_API_URL` — REST backend (default `http://localhost:4000`)
-- `NEXT_PUBLIC_WS_URL` — WebSocket backend (default `ws://localhost:4000`)
+The REST and WebSocket URLs are resolved at runtime in the browser from
+`window.location.hostname`, pointing at the nginx gateway on port 8080. They
+are not configurable via env vars — nginx routes `/` to core and `/socket.io/`
+to the notifications service.
+
+Copy `.env.example` to `.env.local` for Keycloak settings only.
 
 ## Architecture
 

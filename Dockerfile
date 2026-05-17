@@ -13,11 +13,9 @@ RUN pnpm install --frozen-lockfile --filter '@betting/frontend...' --filter '@be
 COPY proto/ ./proto/
 COPY services/core/ ./services/core/
 COPY frontend/ ./frontend/
-COPY turbo.json ./turbo.json
 RUN pnpm --filter '@betting/core' --filter '@betting/frontend' run build
-# pnpm deploy is used to generate copiable files for core
-# --legacy is required because 
-RUN pnpm --filter '@betting/core' deploy  --prod services/core/pruned
+# pnpm deploy is used to generate a copiable directory for core
+RUN pnpm --filter '@betting/core' deploy --prod services/core/pruned
 
 # Stage 2: Next.js frontend served via its standalone output.
 FROM node:25-alpine AS frontend
