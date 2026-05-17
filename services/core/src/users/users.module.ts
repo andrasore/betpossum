@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
-import { KeycloakModule } from '../keycloak/keycloak.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]), KeycloakModule],
+  imports: [TypeOrmModule.forFeature([User]),  WalletModule],
   providers: [UsersService],
   exports: [UsersService],
 })
