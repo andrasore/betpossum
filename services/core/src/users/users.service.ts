@@ -30,7 +30,12 @@ export class UsersService {
     if (existing) {
       throw new ConflictException(`User ${dto.id} already exists`);
     }
-    const local = await this.repo.save(this.repo.create({ id: dto.id }));
+    // TODO this is not updated when someone changes their name in keycloak
+    const local = await this.repo.save(this.repo.create({
+      id: dto.id,
+      email: dto.email ?? null,
+      name: dto.name ?? null,
+    }));
     this.logger.log(`Creating wallet account for new user ${local.id}`);
     // TODO maybe expect this to fail
     await this.wallet.createAccount(local.id);
