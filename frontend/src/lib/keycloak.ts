@@ -106,6 +106,29 @@ export function refreshAccessToken(): Promise<string> {
   return refreshInFlight;
 }
 
+interface JwtPayload {
+  realm_access?: { roles?: string[] };
+}
+
+function decodeJwtPayload(token: string): JwtPayload | null {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const padded = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(padded)) as JwtPayload;
+  } catch {
+    return null;
+  }
+}
+
+export function getRoles(token: string): string[] {
+  return decodeJwtPayload(token)?.realm_access?.roles ?? [];
+}
+
+export function isAdmin(token: string): boolean {
+  return getRoles(token).includes('admin');
+}
+
 export function logout(): void {
   const refresh = localStorage.getItem(REFRESH_KEY);
   localStorage.removeItem(TOKEN_KEY);

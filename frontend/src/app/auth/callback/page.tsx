@@ -3,9 +3,11 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Flex, Text } from '@chakra-ui/react';
-import { completeLogin } from '@/lib/keycloak';
+import { completeLogin, isAdmin } from '@/lib/keycloak';
+import { useForceTheme } from '@/hooks/useForceTheme';
 
 function Callback() {
+  useForceTheme('dark');
   const router = useRouter();
   const params = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +20,10 @@ function Callback() {
       return;
     }
     completeLogin(code, state)
-      .then(() => router.replace('/dashboard'))
+      .then(() => {
+        const token = localStorage.getItem('token');
+        router.replace(token && isAdmin(token) ? '/admin' : '/dashboard');
+      })
       .catch((err) => setError(err.message ?? 'Login failed'));
   }, [params, router]);
 

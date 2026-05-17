@@ -63,3 +63,25 @@ export async function fetchBalance(): Promise<number> {
   const { balance } = await res.json() as { balance: number };
   return balance;
 }
+
+export interface AdminUserRow {
+  id: string;
+  email: string | null;
+  name: string | null;
+  betCount: number;
+  balance: number;
+}
+
+export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
+  const res = await authedFetch('/admin/users');
+  if (!res.ok) throw new Error('Failed to fetch users');
+  return res.json();
+}
+
+export async function setAdminUserBalance(userId: string, amount: number): Promise<void> {
+  const res = await authedFetch(`/admin/users/${userId}/balance`, {
+    method: 'PUT',
+    body: JSON.stringify({ amount }),
+  });
+  if (!res.ok) throw new Error('Failed to update balance');
+}

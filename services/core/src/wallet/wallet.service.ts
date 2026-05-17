@@ -23,6 +23,7 @@ const CODE_RELEASE = 2;
 const CODE_PAYOUT = 3;
 const CODE_KEEP = 4;
 const CODE_DEPOSIT = 5;
+const CODE_ADMIN_ADJUST = 6;
 
 const ESCROW_CODE = 100;
 const HOUSE_CODE = 101;
@@ -73,6 +74,17 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   async deposit(userId: string, amountCents: number): Promise<void> {
     await this.transfer(HOUSE_ID, this.toId(userId), amountCents, CODE_DEPOSIT);
+    await this.pushBalanceUpdated(userId);
+  }
+
+  async setBalance(userId: string, targetCents: number): Promise<void> {
+    const currentCents = await this.getBalanceCents(userId);
+    const diff = targetCents - currentCents;
+    if (diff > 0) {
+      await this.transfer(HOUSE_ID, this.toId(userId), diff, CODE_ADMIN_ADJUST);
+    } else if (diff < 0) {
+      await this.transfer(this.toId(userId), HOUSE_ID, -diff, CODE_ADMIN_ADJUST);
+    }
     await this.pushBalanceUpdated(userId);
   }
 

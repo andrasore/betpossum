@@ -25,7 +25,23 @@ export class UsersService {
     return this.repo.findOneBy({ id });
   }
 
+  async listWithBetCounts(): Promise<Array<{ user: User; betCount: number }>> {
+    const rows = await this.repo
+      .createQueryBuilder('u')
+      .leftJoin('u.bets', 'b')
+      .select('u')
+      .addSelect('COUNT(b.id)', 'bet_count')
+      .groupBy('u.id')
+      .orderBy('u.createdAt', 'DESC')
+      .getRawAndEntities();
+    return rows.entities.map((user, i) => ({
+      user,
+      betCount: Number(rows.raw[i].bet_count ?? 0),
+    }));
+  }
+
   async createUser(dto: CreateUserDto): Promise<UserView> {
+    // TODO do not create db user for admins
     const existing = await this.repo.findOneBy({ id: dto.id });
     if (existing) {
       throw new ConflictException(`User ${dto.id} already exists`);

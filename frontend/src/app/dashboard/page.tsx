@@ -9,6 +9,8 @@ import { BetSlip } from '@/components/BetSlip';
 import { useOdds } from '@/hooks/useOdds';
 import { useBets } from '@/hooks/useBets';
 import { useBalance } from '@/hooks/useBalance';
+import { useForceTheme } from '@/hooks/useForceTheme';
+import { isAdmin } from '@/lib/keycloak';
 import type { Bet, OddsEvent } from '@/types';
 
 type Selection = { event: OddsEvent; choice: 'home' | 'away' | 'draw' } | null;
@@ -21,6 +23,7 @@ const statusPalette: Record<Bet['status'], string> = {
 };
 
 export default function DashboardPage() {
+  useForceTheme('dark');
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
@@ -31,6 +34,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const t = localStorage.getItem('token');
     if (!t) { router.replace('/login'); return; }
+    if (isAdmin(t)) { router.replace('/admin'); return; }
     setToken(t);
   }, [router]);
 

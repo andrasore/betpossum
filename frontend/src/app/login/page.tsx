@@ -3,8 +3,10 @@
 import { useEffect } from 'react';
 import { Flex, Text } from '@chakra-ui/react';
 import { startLogin } from '@/lib/keycloak';
+import { useForceTheme } from '@/hooks/useForceTheme';
 
 export default function LoginPage() {
+  useForceTheme('dark');
   useEffect(() => {
     startLogin().catch((err) => console.error(err));
   }, []);

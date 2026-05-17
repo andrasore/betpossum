@@ -78,9 +78,9 @@
       "realmRoles": ["user"]
     },
     {
-      "username": "admin-user",
+      "username": "bob",
       "email": "admin@example.com",
-      "firstName": "Admin",
+      "firstName": "Bob",
       "lastName": "Example",
       "enabled": true,
       "emailVerified": true,
