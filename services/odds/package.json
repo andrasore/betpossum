@@ -2,11 +2,9 @@
   "name": "@betting/odds",
   "version": "0.1.0",
   "scripts": {
-    "init": "python -m venv .venv && mkdir -p ./src && .venv/bin/pip freeze --exclude-editable > requirements.txt && .venv/bin/pip install -e .",
+    "init": "python -m venv .venv && mkdir -p ./src && .venv/bin/pip install -e .",
     "init:dev": "python -m venv .venv && venv/bin/pip install -e '.[dev]'",
-    "build": "npm run proto:gen && npm run bundle",
     "proto:gen": "mkdir -p ./src/generated && .venv/bin/python -m grpc_tools.protoc -I../../proto --python_out=src/generated --mypy_out=src/generated --plugin=protoc-gen-mypy=.venv/bin/protoc-gen-mypy ../../proto/events.proto",
-    "bundle": "mkdir -p ./dist && .venv/bin/pex . -r requirements.txt -e gunicorn -o dist/gunicorn_app.pex -D ./src",
     "typecheck": ".venv/bin/python -m mypy --check-untyped-defs src/"
   }
 }

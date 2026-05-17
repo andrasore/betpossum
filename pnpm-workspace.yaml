@@ -1,0 +1,10 @@
+packages:
+  - "frontend"
+  - "services/*"
+allowBuilds:
+  '@nestjs/core': true
+  esbuild: true
+  msw: true
+  sharp: true
+  unrs-resolver: true
+injectWorkspacePackages: true

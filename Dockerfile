@@ -2,18 +2,22 @@
 # the Docker context to be the root folder. The build steps need to access
 # /proto and /node_modules
 
-# Stage 1: Build all Node.js services (frontend + core).
+# Stage 1: Build all JS workspaces (frontend + core).
 FROM node:25-alpine AS builder-node
+RUN npm install corepack -g --force && corepack enable && corepack prepare pnpm@11.1.2 --activate
 WORKDIR /app
-COPY package.json package-lock.json ./
-COPY services/core/package.json ./services/core/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json ./frontend/
-RUN npm ci
+COPY services/core/package.json ./services/core/
+RUN pnpm install --frozen-lockfile --filter '@betting/frontend...' --filter '@betting/core...'
 COPY proto/ ./proto/
 COPY services/core/ ./services/core/
 COPY frontend/ ./frontend/
 COPY turbo.json ./turbo.json
-RUN npm run build
+RUN pnpm --filter '@betting/core' --filter '@betting/frontend' run build
+# pnpm deploy is used to generate copiable files for core
+# --legacy is required because 
+RUN pnpm --filter '@betting/core' deploy  --prod services/core/pruned
 
 # Stage 2: Next.js frontend served via its standalone output.
 FROM node:25-alpine AS frontend
@@ -27,49 +31,31 @@ USER appuser
 EXPOSE 3001
 CMD ["node", "frontend/server.js"]
 
-# Stage 3: Core Node.js service (bundled single file).
+# Stage 3: Core Node.js service.
 FROM node:25-alpine AS core
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 ENV NODE_ENV=development
-COPY --chown=appuser:appgroup --from=builder-node /app/services/core/dist/bundle.js ./dist/
-# TigerBeetle's native client is loaded at runtime via a platform-specific
-# path relative to bundle.js; esbuild can't inline a .node binary.
-COPY --chown=appuser:appgroup --from=builder-node /app/node_modules/tigerbeetle-node/dist/bin ./dist/bin
+COPY --chown=appuser:appgroup --from=builder-node /app/services/core/pruned/ ./
 USER appuser
-CMD ["node", "./dist/bundle.js"]
+CMD ["node", "./dist/main.js"]
 
-# Stage 4: Build Python services into self-contained PEX executables.
-# PEX bundles the virtualenv so runtime images need no pip install.
-FROM python:3.13-alpine AS builder-python
-# We install node and npm so we can access our build scripts
-RUN apk add --no-cache nodejs npm
-WORKDIR /app
-COPY package.json package-lock.json ./
-COPY services/odds/package.json ./services/odds/
-COPY services/notifications/package.json ./services/notifications/
-RUN npm ci
-COPY proto/ ./proto
-COPY services/odds/pyproject.toml ./services/odds/
-COPY services/notifications/pyproject.toml ./services/notifications/
-COPY turbo.json ./turbo.json
-RUN  npm run init
-COPY services/odds/src ./services/odds/src
-COPY services/notifications/src ./services/notifications/src
-RUN npm run build
-
-# Stage 5: Odds service runtime — just the PEX, nothing else.
+# Stage 4: Odds service.
 FROM python:3.13-alpine AS odds
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY --chown=appuser:appgroup --from=builder-python /app/services/odds/dist/gunicorn_app.pex ./dist/
+COPY services/odds/pyproject.toml .
+RUN python -m venv .venv && mkdir -p ./src &&  .venv/bin/pip install -e .
+COPY services/odds/src/ ./src/
 USER appuser
-CMD ["/app/dist/gunicorn_app.pex", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2"]
+CMD ["/app/.venv/bin/gunicorn", "app:app", "--bind", "0.0.0.0:8000"]
 
-# Stage 6: Notifications service runtime — Flask-SocketIO with eventlet.
+# Stage 5: Notifications service runtime — Flask-SocketIO with eventlet.
 FROM python:3.13-alpine AS notifications
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY --chown=appuser:appgroup --from=builder-python /app/services/notifications/dist/gunicorn_app.pex ./dist/
+COPY services/notifications/pyproject.toml .
+RUN python -m venv .venv && mkdir -p ./src && .venv/bin/pip install -e .
+COPY services/notifications/src/ ./src/
 USER appuser
-CMD ["/app/dist/gunicorn_app.pex", "app:app", "--bind", "0.0.0.0:8000", "--worker-class", "eventlet", "--workers", "1"]
+CMD ["/app/.venv/bin/gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--worker-class", "eventlet"]

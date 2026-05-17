@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "scripts": {
     "proto:gen": "mkdir -p ./src/generated && protoc --ts_out ./src/generated --ts_opt long_type_number --proto_path ../../proto ../../proto/events.proto",
-    "build": "npm run proto:gen && nest build && node esbuild.config.mjs",
-    "start": "node dist/bundle",
+    "build": "nest build",
+    "start": "node dist/main",
     "start:dev": "nest start --watch",
-    "Typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "jest"
   },
-  "packageManager": "^npm@11",
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@nestjs/common": "^11.1.19",
     "@nestjs/config": "^4.0.4",
