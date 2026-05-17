@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { KeycloakModule } from './keycloak/keycloak.module';
@@ -10,6 +10,7 @@ import { OddsModule } from './odds/odds.module';
 import { RedisModule } from './redis/redis.module';
 import { User } from './users/user.entity';
 import { Bet } from './bets/bet.entity';
+import { LoggingMiddleware } from './common/logging.middleware';
 
 @Module({
   imports: [
@@ -32,4 +33,8 @@ import { Bet } from './bets/bet.entity';
     OddsModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(LoggingMiddleware).forRoutes('*');
+  }
+}
