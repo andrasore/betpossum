@@ -1,14 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  Box,
+  Button,
+  Card,
+  Field,
+  Flex,
+  NumberInput,
+  Separator,
+  Stack,
+  Text,
+} from '@chakra-ui/react';
 import type { OddsEvent } from '@/types';
 import { placeBet } from '@/lib/api';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 
 interface Selection {
   event: OddsEvent;
@@ -27,16 +32,19 @@ export function BetSlip({ selection, onPlaced }: Props) {
 
   if (!selection) {
     return (
-      <Card className="bg-muted/40 border-dashed">
-        <CardContent className="pt-6 text-sm text-muted-foreground text-center">
-          Click any odds to build your bet slip.
-        </CardContent>
-      </Card>
+      <Card.Root variant="outline">
+        <Card.Body>
+          <Text fontSize="sm" color="fg.muted" textAlign="center">
+            Click any odds to build your bet slip.
+          </Text>
+        </Card.Body>
+      </Card.Root>
     );
   }
 
   const { event, choice } = selection;
-  const odds = choice === 'home' ? event.homeOdds : choice === 'away' ? event.awayOdds : event.drawOdds;
+  const odds =
+    choice === 'home' ? event.homeOdds : choice === 'away' ? event.awayOdds : event.drawOdds;
   const potentialReturn = stake ? (parseFloat(stake) * odds).toFixed(2) : '—';
 
   async function submit() {
@@ -60,62 +68,50 @@ export function BetSlip({ selection, onPlaced }: Props) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Bet Slip</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-0.5">
-          <p className="text-sm font-medium">{event.homeTeam} vs {event.awayTeam}</p>
-          <p className="text-xs text-muted-foreground capitalize">{choice} @ {odds.toFixed(2)}</p>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="stake">Stake (£)</Label>
-          <div className="relative flex">
-            <Input
-              id="stake"
-              type="number"
-              min="0.01"
-              step="0.01"
-              placeholder="0.00"
+    <Card.Root>
+      <Card.Header pb={3}>
+        <Card.Title fontSize="md">Bet Slip</Card.Title>
+      </Card.Header>
+      <Card.Body>
+        <Stack gap={4}>
+          <Box>
+            <Text fontSize="sm" fontWeight="medium">
+              {event.homeTeam} vs {event.awayTeam}
+            </Text>
+            <Text fontSize="xs" color="fg.muted" textTransform="capitalize">
+              {choice} @ {odds.toFixed(2)}
+            </Text>
+          </Box>
+          <Field.Root>
+            <Field.Label>Stake (£)</Field.Label>
+            <NumberInput.Root
               value={stake}
-              onChange={(e) => setStake(e.target.value)}
-              className="pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            />
-            <div className="absolute right-0 inset-y-0 flex flex-col border-l border-input">
-              <Button
-                type="button"
-                variant="ghost"
-                tabIndex={-1}
-                onClick={() => setStake(v => (Math.max(0, (parseFloat(v) || 0) + 1)).toFixed(2))}
-                className="flex-1 h-auto px-1 rounded-none rounded-tr-md text-muted-foreground"
-              >
-                <ChevronUp className="size-3" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                tabIndex={-1}
-                onClick={() => setStake(v => (Math.max(0, (parseFloat(v) || 0) - 1)).toFixed(2))}
-                className="fglex-1 h-auto px-1 rounded-none border-t border-input text-muted-foreground"
-              >
-                <ChevronDown className="size-3" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        <Separator />
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Potential return</span>
-          <span className="font-semibold">£{potentialReturn}</span>
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </CardContent>
-      <CardFooter>
-        <Button className="w-full" onClick={submit} disabled={loading || !stake}>
-          {loading ? 'Placing…' : 'Place Bet'}
+              onValueChange={(d) => setStake(d.value)}
+              min={0}
+              step={1}
+              width="full"
+            >
+              <NumberInput.Control />
+              <NumberInput.Input placeholder="0.00" />
+            </NumberInput.Root>
+          </Field.Root>
+          <Separator />
+          <Flex justify="space-between" fontSize="sm">
+            <Text color="fg.muted">Potential return</Text>
+            <Text fontWeight="semibold">£{potentialReturn}</Text>
+          </Flex>
+          {error && (
+            <Text fontSize="xs" color="red.500">
+              {error}
+            </Text>
+          )}
+        </Stack>
+      </Card.Body>
+      <Card.Footer>
+        <Button w="full" onClick={submit} loading={loading} disabled={!stake}>
+          Place Bet
         </Button>
-      </CardFooter>
-    </Card>
+      </Card.Footer>
+    </Card.Root>
   );
 }

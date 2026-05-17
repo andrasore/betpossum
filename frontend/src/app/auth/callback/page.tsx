@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Flex, Text } from '@chakra-ui/react';
 import { completeLogin } from '@/lib/keycloak';
 
 function Callback() {
@@ -22,18 +23,18 @@ function Callback() {
   }, [params, router]);
 
   return (
-    <p className="text-sm text-muted-foreground">
+    <Text fontSize="sm" color="fg.muted">
       {error ? `Sign-in failed: ${error}` : 'Completing sign-in…'}
-    </p>
+    </Text>
   );
 }
 
 export default function CallbackPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40">
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+    <Flex minH="100vh" align="center" justify="center" bg="bg.muted">
+      <Suspense fallback={<Text fontSize="sm" color="fg.muted">Loading…</Text>}>
         <Callback />
       </Suspense>
-    </div>
+    </Flex>
   );
 }

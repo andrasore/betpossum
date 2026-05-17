@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Flex, Text } from '@chakra-ui/react';
 import { startLogin } from '@/lib/keycloak';
 
 export default function LoginPage() {
@@ -9,8 +10,10 @@ export default function LoginPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40">
-      <p className="text-sm text-muted-foreground">Redirecting to sign-in…</p>
-    </div>
+    <Flex minH="100vh" align="center" justify="center" bg="bg.muted">
+      <Text fontSize="sm" color="fg.muted">
+        Redirecting to sign-in…
+      </Text>
+    </Flex>
   );
 }

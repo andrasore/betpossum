@@ -51,7 +51,7 @@ DashboardPage
 └── BetSlip (sidebar)    — controlled stake input; calls placeBet on submit
 ```
 
-All interactive components are `'use client'`. shadcn/ui components live in `src/components/ui/`; domain components are directly in `src/components/`.
+All interactive components are `'use client'`. Domain components live in `src/components/`; there is no `ui/` primitives folder — Chakra UI v3 supplies the primitives directly.
 
 ### Key types (`src/types/index.ts`)
 
@@ -61,4 +61,4 @@ All interactive components are `'use client'`. shadcn/ui components live in `src
 
 ### Styling
 
-Tailwind CSS v4 with a custom brand primary (`#1a56db`). Use the `cn()` helper from `src/lib/utils.ts` for conditional class merging. shadcn components use CSS variables defined in `src/app/globals.css`.
+Chakra UI v3 with `defaultSystem`. `next-themes` forces dark mode via `forcedTheme="dark"` in `src/app/providers.tsx`. There is no Tailwind, no global CSS file, and no `cn()` helper — styling is via Chakra props (`bg`, `color`, `p`, etc.) and tokens (`bg.muted`, `fg.muted`, `border`, color palettes like `green`/`red`).

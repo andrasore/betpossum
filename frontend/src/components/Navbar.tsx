@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, Flex, Text } from '@chakra-ui/react';
 import { logout } from '@/lib/keycloak';
 
 interface NavbarProps {
@@ -11,21 +11,31 @@ interface NavbarProps {
 
 export function Navbar({ balance }: NavbarProps) {
   return (
-    <nav className="border-b bg-background px-6 py-3 flex items-center justify-between">
-      <Link href="/dashboard" className="text-xl font-bold tracking-tight text-foreground">
-        BetPossum
+    <Flex
+      as="nav"
+      align="center"
+      justify="space-between"
+      px={6}
+      py={3}
+      borderBottomWidth="1px"
+      borderColor="border"
+    >
+      <Link href="/dashboard">
+        <Text fontSize="xl" fontWeight="bold" letterSpacing="tight">
+          BetPossum
+        </Text>
       </Link>
-      <div className="flex items-center gap-4">
+      <Flex align="center" gap={4}>
         {balance != null && (
-          <span className="text-sm font-medium text-foreground">
+          <Text fontSize="sm" fontWeight="medium">
             Balance: £{balance.toFixed(2)}
-          </span>
+          </Text>
         )}
-        <Button variant="ghost" size="sm" onClick={logout} className="gap-2">
-          <LogOut className="h-4 w-4" />
+        <Button variant="ghost" size="sm" onClick={logout}>
+          <LogOut size={16} />
           Sign out
         </Button>
-      </div>
-    </nav>
+      </Flex>
+    </Flex>
   );
 }

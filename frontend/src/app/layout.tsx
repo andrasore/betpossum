@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
-import './globals.css';
-import { Noto_Sans } from "next/font/google";
-import { cn } from "@/lib/utils";
+import { Noto_Sans } from 'next/font/google';
+import { Providers } from './providers';
 
-const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
+const notoSans = Noto_Sans({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: 'BetPossum',
@@ -12,8 +11,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn("dark font-sans", "font-sans", notoSans.variable)}>
-      <body className="min-h-screen antialiased">{children}</body>
+    <html lang="en" suppressHydrationWarning className={notoSans.variable}>
+      <body style={{ fontFamily: 'var(--font-sans), system-ui, sans-serif' }}>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
