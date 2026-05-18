@@ -2,22 +2,56 @@ name: PR checks
 
 on:
   pull_request:
+  push:
+    branches: [main]
 
 jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6.0.8
 
       - uses: actions/setup-node@v4
         with:
           node-version: '25'
-          cache: 'npm'
 
-      - run: npm run init
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - run: npm run typecheck
+      - name: Cache node_modules
+        id: cache-node
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            frontend/node_modules
+            services/*/node_modules
+          key: node-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - run: npm run build
+      - name: Cache Python venvs
+        id: cache-venv
+        uses: actions/cache@v4
+        with:
+          path: |
+            services/odds/.venv
+            services/notifications/.venv
+          key: venv-${{ runner.os }}-py3.12-${{ hashFiles('services/*/pyproject.toml', 'services/*/requirements.txt') }}
 
-      - run: npm run test
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Install deps (cache miss only)
+        if: steps.cache-node.outputs.cache-hit != 'true' || steps.cache-venv.outputs.cache-hit != 'true'
+        run: pnpm run init
+
+      - run: pnpm run typecheck
+      - run: pnpm run build
+      - run: pnpm run test
