@@ -46,9 +46,9 @@ COPY services/odds/pyproject.toml .
 RUN python -m venv .venv && mkdir -p ./src &&  .venv/bin/pip install -e .
 COPY services/odds/src/ ./src/
 USER appuser
-CMD ["/app/.venv/bin/gunicorn", "app:app", "--bind", "0.0.0.0:8000"]
+CMD ["/app/.venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
 
-# Stage 5: Notifications service runtime — Flask-SocketIO with eventlet.
+# Stage 5: Notifications service runtime — FastAPI + python-socketio (ASGI).
 FROM python:3.13-alpine AS notifications
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
@@ -56,4 +56,4 @@ COPY services/notifications/pyproject.toml .
 RUN python -m venv .venv && mkdir -p ./src && .venv/bin/pip install -e .
 COPY services/notifications/src/ ./src/
 USER appuser
-CMD ["/app/.venv/bin/gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--worker-class", "eventlet"]
+CMD ["/app/.venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]

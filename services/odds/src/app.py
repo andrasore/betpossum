@@ -1,9 +1,10 @@
 import asyncio
 import logging
 import os
-import threading
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
-from flask import Flask, jsonify
+from fastapi import FastAPI
 
 from providers import get_provider
 from publisher import OddsPublisher
@@ -18,26 +19,28 @@ PROVIDER_NAME = os.environ.get("ODDS_PROVIDER", "mock")
 STORAGE_NAME = os.environ.get("ODDS_STORAGE", "postgres")
 
 
-def _start_worker():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     provider = get_provider(PROVIDER_NAME)
     storage = get_storage(STORAGE_NAME)
     publisher = OddsPublisher(REDIS_URL)
-    loop.run_until_complete(run(provider, storage, publisher, POLL_INTERVAL_SECONDS))
+    worker = asyncio.create_task(
+        run(provider, storage, publisher, POLL_INTERVAL_SECONDS),
+        name=f"odds-worker-{PROVIDER_NAME}-{STORAGE_NAME}",
+    )
+    try:
+        yield
+    finally:
+        worker.cancel()
+        try:
+            await worker
+        except asyncio.CancelledError:
+            pass
 
 
-threading.Thread(
-    target=_start_worker,
-    daemon=True,
-    name=f"odds-worker-{PROVIDER_NAME}-{STORAGE_NAME}",
-).start()
-
-app = Flask(__name__)
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/health")
-def health():
-    return jsonify(
-        {"status": "ok", "provider": PROVIDER_NAME, "storage": STORAGE_NAME}
-    )
+def health() -> dict[str, str]:
+    return {"status": "ok", "provider": PROVIDER_NAME, "storage": STORAGE_NAME}

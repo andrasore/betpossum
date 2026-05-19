@@ -7,8 +7,8 @@ name = "odds-service"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-  "flask==3.1.3",
-  "gunicorn==25.3.0",
+  "fastapi==0.121.2",
+  "uvicorn[standard]==0.40.0",
   "aiohttp==3.13.5",
   "asyncpg==0.30.0",
   "redis[hiredis]==7.4.0",

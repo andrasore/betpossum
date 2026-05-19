@@ -1,13 +1,13 @@
-import eventlet  # pyright: ignore[reportMissingTypeStubs]
-eventlet.monkey_patch()  # pyright: ignore[reportUnknownMemberType]
-
+import asyncio
 import logging
 import os
-from typing import Any
+from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator
 
 import jwt
-from flask import Flask, jsonify, request
-from flask_socketio import SocketIO, join_room  # pyright: ignore[reportMissingTypeStubs, reportUnknownVariableType]
+import socketio  # pyright: ignore[reportMissingTypeStubs]
+from fastapi import FastAPI
+
 from subscriber import run as run_subscriber
 
 logging.basicConfig(level=logging.INFO)
@@ -23,20 +23,38 @@ KEYCLOAK_ISSUER_URL = os.environ.get(
 JWKS_URL = f"{KEYCLOAK_INTERNAL_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
 jwks_client = jwt.PyJWKClient(JWKS_URL)
 
-app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")  # pyright: ignore[reportUnknownMemberType]
 
 
-@app.get("/health")
-def health():
-    return jsonify({"status": "ok"})
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+    subscriber = asyncio.create_task(run_subscriber(REDIS_URL, sio), name="notifications-subscriber")
+    try:
+        yield
+    finally:
+        subscriber.cancel()
+        try:
+            await subscriber
+        except asyncio.CancelledError:
+            pass
 
 
-@socketio.on("connect")  # pyright: ignore[reportUnknownMemberType]
-def on_connect(auth: dict[str, Any] | None):
+fastapi_app = FastAPI(lifespan=lifespan)
+
+
+@fastapi_app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)  # pyright: ignore[reportUnknownMemberType]
+
+
+@sio.event  # pyright: ignore[reportUnknownMemberType, reportUntypedFunctionDecorator]
+async def connect(sid: str, _environ: dict[str, Any], auth: dict[str, Any] | None) -> bool:
     token = auth.get("token") if isinstance(auth, dict) else None
     if not isinstance(token, str):
-        logger.info("Rejecting socket %s: no token", request.sid)  # type: ignore[attr-defined]
+        logger.info("Rejecting socket %s: no token", sid)
         return False
     try:
         signing_key = jwks_client.get_signing_key_from_jwt(token).key
@@ -48,13 +66,11 @@ def on_connect(auth: dict[str, Any] | None):
             options={"verify_aud": False},
         )
     except jwt.PyJWTError as exc:
-        logger.info("Rejecting socket %s: %s", request.sid, exc)  # type: ignore[attr-defined]
+        logger.info("Rejecting socket %s: %s", sid, exc)
         return False
     user_id = payload.get("sub")
     if not isinstance(user_id, str):
         return False
-    join_room(user_id)  # pyright: ignore[reportUnknownMemberType]
-    logger.info("Socket %s joined room %s", request.sid, user_id)  # type: ignore[attr-defined]
-
-
-socketio.start_background_task(run_subscriber, REDIS_URL, socketio)  # pyright: ignore[reportUnknownMemberType]
+    await sio.enter_room(sid, user_id)  # pyright: ignore[reportUnknownMemberType]
+    logger.info("Socket %s joined room %s", sid, user_id)
+    return True
