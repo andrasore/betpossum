@@ -1,7 +1,6 @@
 import redis.asyncio as aioredis
 from models import OddsEvent
 from generated.events_pb2 import OddsUpdatedEvent
-import json
 
 
 class OddsPublisher:
@@ -19,9 +18,6 @@ class OddsPublisher:
             draw_odds=event.draw_odds,
             updated_at=event.updated_at,
         ).SerializeToString()
-        # Write current odds to cache for low-latency reads
-        await self._redis.set(f"odds:{event.event_id}", json.dumps(event.model_dump()))
-        # Broadcast to subscribers
         await self._redis.publish("odds.updated", payload)
 
     async def close(self) -> None:

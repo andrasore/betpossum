@@ -11,6 +11,7 @@ import { RedisModule } from './redis/redis.module';
 import { AdminModule } from './admin/admin.module';
 import { User } from './users/user.entity';
 import { Bet } from './bets/bet.entity';
+import { OddsCurrent } from './odds/odds-current.entity';
 import { LoggingMiddleware } from './common/logging.middleware';
 
 @Module({
@@ -21,7 +22,7 @@ import { LoggingMiddleware } from './common/logging.middleware';
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
         url: config.get('DATABASE_URL'),
-        entities: [User, Bet],
+        entities: [User, Bet, OddsCurrent],
         synchronize: true, // use migrations in production
       }),
     }),

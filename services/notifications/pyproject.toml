@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["mypy", "mypy-protobuf"]
+dev = ["pyright", "mypy-protobuf"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -27,8 +27,10 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.mypy]
-python_version = "3.12"
-ignore_missing_imports = true
-explicit_package_bases = true
-mypy_path = "src"
+[tool.pyright]
+pythonVersion = "3.12"
+include = ["src"]
+exclude = ["src/generated"]
+extraPaths = ["src"]
+venvPath = "."
+venv = ".venv"

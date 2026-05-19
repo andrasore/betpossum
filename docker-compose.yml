@@ -119,11 +119,14 @@ services:
       target: odds
     environment:
       REDIS_URL: redis://redis:6379
-      THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-demo}
+      DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
+      ODDS_PROVIDER: mock
+      ODDS_STORAGE: postgres
       POLL_INTERVAL_SECONDS: 30
-      MOCK: "true"
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   notifications:

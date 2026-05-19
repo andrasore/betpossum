@@ -1,4 +1,4 @@
-import type { Bet, PlaceBetPayload } from '@/types';
+import type { Bet, OddsEvent, PlaceBetPayload } from '@/types';
 import { logout, refreshAccessToken } from '@/lib/keycloak';
 
 function baseUrl(): string {
@@ -54,6 +54,12 @@ export async function placeBet(payload: PlaceBetPayload): Promise<Bet> {
 export async function fetchBets(): Promise<Bet[]> {
   const res = await authedFetch('/bets');
   if (!res.ok) throw new Error('Failed to fetch bets');
+  return res.json();
+}
+
+export async function fetchOdds(): Promise<OddsEvent[]> {
+  const res = await authedFetch('/odds');
+  if (!res.ok) throw new Error('Failed to fetch odds');
   return res.json();
 }
 
