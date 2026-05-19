@@ -18,7 +18,7 @@ class OddsPublisher:
             draw_odds=event.draw_odds,
             updated_at=event.updated_at,
         ).SerializeToString()
-        await self._redis.publish("odds.updated", payload)
+        await self._redis.publish("odds.updated", payload)  # pyright: ignore[reportUnknownMemberType]
 
     async def close(self) -> None:
         await self._redis.aclose()

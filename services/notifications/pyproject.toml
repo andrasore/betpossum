@@ -30,6 +30,7 @@ where = ["src"]
 [tool.pyright]
 pythonVersion = "3.12"
 include = ["src"]
+strict = ["src"]
 exclude = ["src/generated"]
 extraPaths = ["src"]
 venvPath = "."

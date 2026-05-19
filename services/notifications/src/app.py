@@ -1,11 +1,13 @@
-import eventlet
-eventlet.monkey_patch()
+import eventlet  # pyright: ignore[reportMissingTypeStubs]
+eventlet.monkey_patch()  # pyright: ignore[reportUnknownMemberType]
 
 import logging
 import os
+from typing import Any
+
 import jwt
 from flask import Flask, jsonify, request
-from flask_socketio import SocketIO, join_room
+from flask_socketio import SocketIO, join_room  # pyright: ignore[reportMissingTypeStubs, reportUnknownVariableType]
 from subscriber import run as run_subscriber
 
 logging.basicConfig(level=logging.INFO)
@@ -30,10 +32,10 @@ def health():
     return jsonify({"status": "ok"})
 
 
-@socketio.on("connect")
-def on_connect(auth):
-    token = (auth or {}).get("token") if isinstance(auth, dict) else None
-    if not token:
+@socketio.on("connect")  # pyright: ignore[reportUnknownMemberType]
+def on_connect(auth: dict[str, Any] | None):
+    token = auth.get("token") if isinstance(auth, dict) else None
+    if not isinstance(token, str):
         logger.info("Rejecting socket %s: no token", request.sid)  # type: ignore[attr-defined]
         return False
     try:
@@ -51,8 +53,8 @@ def on_connect(auth):
     user_id = payload.get("sub")
     if not isinstance(user_id, str):
         return False
-    join_room(user_id)
+    join_room(user_id)  # pyright: ignore[reportUnknownMemberType]
     logger.info("Socket %s joined room %s", request.sid, user_id)  # type: ignore[attr-defined]
 
 
-socketio.start_background_task(run_subscriber, REDIS_URL, socketio)
+socketio.start_background_task(run_subscriber, REDIS_URL, socketio)  # pyright: ignore[reportUnknownMemberType]

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from types import TracebackType
 from typing import ClassVar
 
 from models import OddsEvent
@@ -15,7 +16,12 @@ class OddsStorage(ABC):
     async def __aenter__(self) -> "OddsStorage":
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         return None
 
     async def init_schema(self) -> None:

@@ -1,7 +1,8 @@
 import logging
 import os
 import time
-from typing import AsyncIterator, ClassVar
+from types import TracebackType
+from typing import Any, AsyncIterator, ClassVar
 
 import aiohttp
 
@@ -13,21 +14,19 @@ logger = logging.getLogger(__name__)
 DEFAULT_SPORTS = ["soccer_epl", "basketball_nba", "americanfootball_nfl"]
 
 
-def _normalise(raw_event: dict, sport: str) -> OddsEvent | None:
+def _normalise(raw_event: dict[str, Any], sport: str) -> OddsEvent | None:
     try:
-        bookmakers = raw_event.get("bookmakers", [])
+        bookmakers: list[dict[str, Any]] = raw_event.get("bookmakers", [])
         if not bookmakers:
             return None
-        market = next(
-            (m for m in bookmakers[0].get("markets", []) if m["key"] == "h2h"),
-            None,
-        )
-        if not market:
+        markets: list[dict[str, Any]] = bookmakers[0].get("markets", [])
+        market = next((m for m in markets if m["key"] == "h2h"), None)
+        if market is None:
             return None
 
-        outcomes = {o["name"]: o["price"] for o in market["outcomes"]}
-        home = raw_event["home_team"]
-        away = raw_event["away_team"]
+        outcomes: dict[str, float] = {o["name"]: o["price"] for o in market["outcomes"]}
+        home: str = raw_event["home_team"]
+        away: str = raw_event["away_team"]
         return OddsEvent(
             event_id=raw_event["id"],
             sport=sport,
@@ -61,7 +60,12 @@ class TheOddsApiProvider(OddsProvider):
         self._session = aiohttp.ClientSession()
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         if self._session is not None:
             await self._session.close()
             self._session = None
@@ -80,7 +84,7 @@ class TheOddsApiProvider(OddsProvider):
                     if resp.status != 200:
                         logger.warning("Odds API returned %s for %s", resp.status, sport)
                         continue
-                    events = await resp.json()
+                    events: list[dict[str, Any]] = await resp.json()
                     for raw in events:
                         event = _normalise(raw, sport)
                         if event:

@@ -1,8 +1,10 @@
 import logging
 import os
+from types import TracebackType
 from typing import ClassVar
 
-import asyncpg
+# TODO maybe use sqlalchemy
+import asyncpg  # pyright: ignore[reportMissingTypeStubs]
 
 from models import OddsEvent
 from .base import OddsStorage
@@ -77,19 +79,26 @@ class PostgresStorage(OddsStorage):
         return cls(dsn=dsn)
 
     async def __aenter__(self) -> "PostgresStorage":
-        self._pool = await asyncpg.create_pool(dsn=self._dsn, min_size=1, max_size=4)
+        self._pool = await asyncpg.create_pool(  # pyright: ignore[reportUnknownMemberType]
+            dsn=self._dsn, min_size=1, max_size=4,
+        )
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         if self._pool is not None:
             await self._pool.close()
             self._pool = None
 
     async def init_schema(self) -> None:
         assert self._pool is not None, "init_schema called outside async-with"
-        async with self._pool.acquire() as conn:
+        async with self._pool.acquire() as conn:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
             for stmt in _SCHEMA_STATEMENTS:
-                await conn.execute(stmt)
+                await conn.execute(stmt)  # pyright: ignore[reportUnknownMemberType]
         logger.info("Postgres odds schema ready")
 
     async def record(self, event: OddsEvent) -> None:
@@ -104,7 +113,7 @@ class PostgresStorage(OddsStorage):
             event.draw_odds,
             event.updated_at,
         )
-        async with self._pool.acquire() as conn:
-            async with conn.transaction():
-                await conn.execute(_INSERT_HISTORY, *args)
-                await conn.execute(_UPSERT_CURRENT, *args)
+        async with self._pool.acquire() as conn:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            async with conn.transaction():  # pyright: ignore[reportUnknownMemberType]
+                await conn.execute(_INSERT_HISTORY, *args)  # pyright: ignore[reportUnknownMemberType]
+                await conn.execute(_UPSERT_CURRENT, *args)  # pyright: ignore[reportUnknownMemberType]

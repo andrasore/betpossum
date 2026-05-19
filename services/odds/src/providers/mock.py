@@ -7,14 +7,22 @@ without calling the real API.
 import logging
 import random
 import time
-from typing import AsyncIterator, ClassVar
+from typing import AsyncIterator, ClassVar, TypedDict
 
 from models import OddsEvent
 from .base import OddsProvider
 
 logger = logging.getLogger(__name__)
 
-FIXTURES = [
+
+class Fixture(TypedDict):
+    event_id: str
+    sport: str
+    home_team: str
+    away_team: str
+
+
+FIXTURES: list[Fixture] = [
     {"event_id": "mock-epl-001", "sport": "soccer_epl",            "home_team": "Arsenal",               "away_team": "Chelsea"},
     {"event_id": "mock-epl-002", "sport": "soccer_epl",            "home_team": "Liverpool",              "away_team": "Manchester City"},
     {"event_id": "mock-epl-003", "sport": "soccer_epl",            "home_team": "Tottenham",              "away_team": "Manchester United"},
@@ -44,7 +52,7 @@ def _drift(value: float, lo: float, hi: float) -> float:
 class MockProvider(OddsProvider):
     name: ClassVar[str] = "mock"
 
-    def __init__(self, fixtures: list[dict] = FIXTURES):
+    def __init__(self, fixtures: list[Fixture] = FIXTURES):
         self._fixtures = fixtures
         self._state: dict[str, dict[str, float]] = {}
 
