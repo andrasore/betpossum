@@ -43,18 +43,10 @@ export class EventsService implements OnModuleInit {
       return;
     }
 
-    const inserted = await this.results
-      .createQueryBuilder()
-      .insert()
-      .values({ eventId: event.eventId, outcome })
-      .orIgnore()
-      .execute();
-
-    if (inserted.identifiers.length === 0) {
-      this.logger.log(`Event ${event.eventId} already resolved, skipping`);
-      return;
-    }
-
+    // Settle still-held bets first. On redelivery after a partial-completion
+    // crash, this query returns only the bets that haven't been settled yet,
+    // so we resume from where we left off. The audit row gets written last so
+    // its presence does not mask a partial settle.
     const held = await this.bets.find({
       where: { eventId: event.eventId, status: 'held' },
     });
@@ -67,5 +59,12 @@ export class EventsService implements OnModuleInit {
       const profit = won ? stake * (odds - 1) : 0;
       await this.betsService.settle(bet.id, won, profit);
     }
+
+    await this.results
+      .createQueryBuilder()
+      .insert()
+      .values({ eventId: event.eventId, outcome })
+      .orIgnore()
+      .execute();
   }
 }

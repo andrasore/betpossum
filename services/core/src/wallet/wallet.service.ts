@@ -128,7 +128,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
         ledger: LEDGER,
         code: CODE_BET,
         flags: TransferFlags.void_pending_transfer,
-        timestamp: 0n,
+        timestamp: 0n
       },
     ]);
     await this.pushBalanceUpdated(userId);
