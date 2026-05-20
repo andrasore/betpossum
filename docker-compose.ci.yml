@@ -1,0 +1,38 @@
+# CI-only overlay: routes each service build through the BuildKit GitHub
+# Actions cache backend. Requires the workflow to set up buildx and export
+# COMPOSE_BAKE=true so `docker compose build` delegates to `buildx bake`.
+#
+# Scopes are per-service so a churn in one service's layers doesn't evict
+# another's cache.
+
+services:
+  keycloak:
+    build:
+      cache_from:
+        - type=gha,scope=keycloak
+      cache_to:
+        - type=gha,mode=max,scope=keycloak
+  core:
+    build:
+      cache_from:
+        - type=gha,scope=core
+      cache_to:
+        - type=gha,mode=max,scope=core
+  odds:
+    build:
+      cache_from:
+        - type=gha,scope=odds
+      cache_to:
+        - type=gha,mode=max,scope=odds
+  notifications:
+    build:
+      cache_from:
+        - type=gha,scope=notifications
+      cache_to:
+        - type=gha,mode=max,scope=notifications
+  frontend:
+    build:
+      cache_from:
+        - type=gha,scope=frontend
+      cache_to:
+        - type=gha,mode=max,scope=frontend

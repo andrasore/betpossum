@@ -8,8 +8,13 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      COMPOSE_BAKE: 'true'
     steps:
       - uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6.0.8

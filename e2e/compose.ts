@@ -8,6 +8,7 @@ export const PROJECT = 'betting-e2e';
 export const COMPOSE_FILES = [
   '-f', 'docker-compose.yml',
   '-f', 'docker-compose.e2e.yml',
+  ...(process.env.CI ? ['-f', 'docker-compose.ci.yml'] : []),
 ];
 
 export const LOGS_DIR = path.join(__dirname, 'test-results', 'docker-logs');
