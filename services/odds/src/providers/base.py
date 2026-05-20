@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import AsyncIterator, ClassVar
 
-from models import OddsEvent
+from models import EventResult, OddsEvent
 
 
 class OddsProvider(ABC):
@@ -27,3 +27,11 @@ class OddsProvider(ABC):
     @abstractmethod
     def fetch_tick(self) -> AsyncIterator[OddsEvent]:
         ...
+
+    async def fetch_results(self) -> AsyncIterator[EventResult]:
+        """Emit any newly-resolved events since the last call.
+
+        Default is empty; providers that know about event conclusions override.
+        """
+        return
+        yield  # pragma: no cover  — make this an async generator

@@ -95,28 +95,29 @@ describe('BetsService', () => {
     expect(notifications.toUser).toHaveBeenCalledWith(userId, 'bet.held', { betId: bet.id });
   });
 
-  it('settles a winning bet: updates row, pays out, notifies', async () => {
+  it('settles a winning bet: releases hold, pays profit, updates row', async () => {
     const userId = await newFundedUser(10000);
     const bet = await bets.place(userId, 'evt-2', 'home', 3, 10);
     notifications.toUser.mockClear();
 
-    await bets.settle(bet.id, true, 30);
+    // stake 10 at odds 3 → profit = 10 * (3 - 1) = 20
+    await bets.settle(bet.id, true, 20);
 
     const stored = await betRepo.findOneByOrFail({ id: bet.id });
     expect(stored.status).toBe('won');
-    expect(Number(stored.payout)).toBe(30);
+    expect(Number(stored.payout)).toBe(20);
 
-    // Stake still locked in pending until settlement fix lands; payout +3000 lands on top.
+    // release voids the 1000c hold (stake returns) + payout adds 2000c profit.
     expect(await wallet.getBalanceCents(userId)).toBe(12000);
 
     expect(notifications.toUser).toHaveBeenCalledWith(userId, 'bet.settled', {
       betId: bet.id,
       won: true,
-      payout: 30,
+      payout: 20,
     });
   });
 
-  it('settles a losing bet: updates row, no payout, notifies', async () => {
+  it('settles a losing bet: keeps the hold, no payout', async () => {
     const userId = await newFundedUser(10000);
     const bet = await bets.place(userId, 'evt-3', 'home', 3, 10);
     notifications.toUser.mockClear();
@@ -127,6 +128,7 @@ describe('BetsService', () => {
     expect(stored.status).toBe('lost');
     expect(Number(stored.payout)).toBe(0);
 
+    // keep makes the 1000c hold permanent → balance drops by stake.
     expect(await wallet.getBalanceCents(userId)).toBe(9000);
 
     expect(notifications.toUser).toHaveBeenCalledWith(userId, 'bet.settled', {
@@ -134,6 +136,18 @@ describe('BetsService', () => {
       won: false,
       payout: 0,
     });
+  });
+
+  it('settle throws when called twice — duplicate invocations are the caller-side bug', async () => {
+    const userId = await newFundedUser(10000);
+    const bet = await bets.place(userId, 'evt-twice', 'home', 3, 10);
+
+    await bets.settle(bet.id, true, 20);
+    const after1 = await wallet.getBalanceCents(userId);
+    expect(after1).toBe(12000);
+
+    await expect(bets.settle(bet.id, true, 20)).rejects.toThrow(/status is won/);
+    expect(await wallet.getBalanceCents(userId)).toBe(after1);
   });
 
   it('preserves decimal precision through stake × odds settlement', async () => {
@@ -145,9 +159,10 @@ describe('BetsService', () => {
     expect(Number(placed.stake)).toBe(0.1);
     expect(await wallet.getBalanceCents(userId)).toBe(9990);
 
-    await bets.settle(bet.id, true, 0.3);
+    // profit = 0.1 * (3 - 1) = 0.2
+    await bets.settle(bet.id, true, 0.2);
     const settled = await betRepo.findOneByOrFail({ id: bet.id });
-    expect(Number(settled.payout)).toBe(0.3);
+    expect(Number(settled.payout)).toBe(0.2);
     expect(await wallet.getBalanceCents(userId)).toBe(10020);
   });
 });

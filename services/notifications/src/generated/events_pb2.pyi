@@ -5,6 +5,7 @@ isort:skip_file
 
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 import builtins as _builtins
 import sys
 import typing as _typing
@@ -15,6 +16,25 @@ else:
     from typing_extensions import TypeAlias as _TypeAlias, Never as _Never
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class _Outcome:
+    ValueType = _typing.NewType("ValueType", _builtins.int)
+    V: _TypeAlias = ValueType  # noqa: Y015
+
+class _OutcomeEnumTypeWrapper(_enum_type_wrapper._EnumTypeWrapper[_Outcome.ValueType], _builtins.type):
+    DESCRIPTOR: _descriptor.EnumDescriptor
+    OUTCOME_UNSPECIFIED: _Outcome.ValueType  # 0
+    OUTCOME_HOME: _Outcome.ValueType  # 1
+    OUTCOME_AWAY: _Outcome.ValueType  # 2
+    OUTCOME_DRAW: _Outcome.ValueType  # 3
+
+class Outcome(_Outcome, metaclass=_OutcomeEnumTypeWrapper): ...
+
+OUTCOME_UNSPECIFIED: Outcome.ValueType  # 0
+OUTCOME_HOME: Outcome.ValueType  # 1
+OUTCOME_AWAY: Outcome.ValueType  # 2
+OUTCOME_DRAW: Outcome.ValueType  # 3
+Global___Outcome: _TypeAlias = Outcome  # noqa: Y015
 
 @_typing.final
 class OddsUpdatedEvent(_message.Message):
@@ -59,6 +79,40 @@ class OddsUpdatedEvent(_message.Message):
     def WhichOneof(self, oneof_group: _Never) -> None: ...
 
 Global___OddsUpdatedEvent: _TypeAlias = OddsUpdatedEvent  # noqa: Y015
+
+@_typing.final
+class EventResolvedEvent(_message.Message):
+    """Odds Service or Admin → Core API.
+    Signals that a sports event has concluded with a known outcome. Core
+    consumes this to settle any held bets on the event.
+    """
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    EVENT_ID_FIELD_NUMBER: _builtins.int
+    SPORT_FIELD_NUMBER: _builtins.int
+    OUTCOME_FIELD_NUMBER: _builtins.int
+    RESOLVED_AT_FIELD_NUMBER: _builtins.int
+    event_id: _builtins.str
+    sport: _builtins.str
+    outcome: Global___Outcome.ValueType
+    resolved_at: _builtins.int
+    """Unix ms"""
+    def __init__(
+        self,
+        *,
+        event_id: _builtins.str = ...,
+        sport: _builtins.str = ...,
+        outcome: Global___Outcome.ValueType = ...,
+        resolved_at: _builtins.int = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["event_id", b"event_id", "outcome", b"outcome", "resolved_at", b"resolved_at", "sport", b"sport"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___EventResolvedEvent: _TypeAlias = EventResolvedEvent  # noqa: Y015
 
 @_typing.final
 class NotificationEvent(_message.Message):

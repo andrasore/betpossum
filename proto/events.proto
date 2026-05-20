@@ -14,6 +14,23 @@ message OddsUpdatedEvent {
   int64  updated_at = 8; // Unix ms
 }
 
+enum Outcome {
+  OUTCOME_UNSPECIFIED = 0;
+  OUTCOME_HOME = 1;
+  OUTCOME_AWAY = 2;
+  OUTCOME_DRAW = 3;
+}
+
+// Odds Service or Admin → Core API.
+// Signals that a sports event has concluded with a known outcome. Core
+// consumes this to settle any held bets on the event.
+message EventResolvedEvent {
+  string  event_id    = 1;
+  string  sport       = 2;
+  Outcome outcome     = 3;
+  int64   resolved_at = 4; // Unix ms
+}
+
 // Any service → Notifications Service.
 // Fire-and-forget envelope for events that should be relayed to the browser
 // over the WebSocket. `payload` is JSON; `user_id` empty means broadcast.

@@ -1,4 +1,8 @@
+from typing import Literal
+
 from pydantic import BaseModel
+
+Outcome = Literal["home", "away", "draw"]
 
 
 class OddsEvent(BaseModel):
@@ -10,3 +14,10 @@ class OddsEvent(BaseModel):
     away_odds: float
     draw_odds: float = 0.0
     updated_at: int  # Unix ms
+
+
+class EventResult(BaseModel):
+    event_id: str
+    sport: str
+    outcome: Outcome
+    resolved_at: int  # Unix ms

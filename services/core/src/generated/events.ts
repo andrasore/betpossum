@@ -50,6 +50,31 @@ export interface OddsUpdatedEvent {
     updatedAt: number; // Unix ms
 }
 /**
+ * Odds Service or Admin → Core API.
+ * Signals that a sports event has concluded with a known outcome. Core
+ * consumes this to settle any held bets on the event.
+ *
+ * @generated from protobuf message betting.events.EventResolvedEvent
+ */
+export interface EventResolvedEvent {
+    /**
+     * @generated from protobuf field: string event_id = 1
+     */
+    eventId: string;
+    /**
+     * @generated from protobuf field: string sport = 2
+     */
+    sport: string;
+    /**
+     * @generated from protobuf field: betting.events.Outcome outcome = 3
+     */
+    outcome: Outcome;
+    /**
+     * @generated from protobuf field: int64 resolved_at = 4
+     */
+    resolvedAt: number; // Unix ms
+}
+/**
  * Any service → Notifications Service.
  * Fire-and-forget envelope for events that should be relayed to the browser
  * over the WebSocket. `payload` is JSON; `user_id` empty means broadcast.
@@ -69,6 +94,27 @@ export interface NotificationEvent {
      * @generated from protobuf field: string payload = 3
      */
     payload: string;
+}
+/**
+ * @generated from protobuf enum betting.events.Outcome
+ */
+export enum Outcome {
+    /**
+     * @generated from protobuf enum value: OUTCOME_UNSPECIFIED = 0;
+     */
+    UNSPECIFIED = 0,
+    /**
+     * @generated from protobuf enum value: OUTCOME_HOME = 1;
+     */
+    HOME = 1,
+    /**
+     * @generated from protobuf enum value: OUTCOME_AWAY = 2;
+     */
+    AWAY = 2,
+    /**
+     * @generated from protobuf enum value: OUTCOME_DRAW = 3;
+     */
+    DRAW = 3
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class OddsUpdatedEvent$Type extends MessageType<OddsUpdatedEvent> {
@@ -173,6 +219,77 @@ class OddsUpdatedEvent$Type extends MessageType<OddsUpdatedEvent> {
  * @generated MessageType for protobuf message betting.events.OddsUpdatedEvent
  */
 export const OddsUpdatedEvent = new OddsUpdatedEvent$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class EventResolvedEvent$Type extends MessageType<EventResolvedEvent> {
+    constructor() {
+        super("betting.events.EventResolvedEvent", [
+            { no: 1, name: "event_id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "sport", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "outcome", kind: "enum", T: () => ["betting.events.Outcome", Outcome, "OUTCOME_"] },
+            { no: 4, name: "resolved_at", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 2 /*LongType.NUMBER*/ }
+        ]);
+    }
+    create(value?: PartialMessage<EventResolvedEvent>): EventResolvedEvent {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.eventId = "";
+        message.sport = "";
+        message.outcome = 0;
+        message.resolvedAt = 0;
+        if (value !== undefined)
+            reflectionMergePartial<EventResolvedEvent>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: EventResolvedEvent): EventResolvedEvent {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string event_id */ 1:
+                    message.eventId = reader.string();
+                    break;
+                case /* string sport */ 2:
+                    message.sport = reader.string();
+                    break;
+                case /* betting.events.Outcome outcome */ 3:
+                    message.outcome = reader.int32();
+                    break;
+                case /* int64 resolved_at */ 4:
+                    message.resolvedAt = reader.int64().toNumber();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: EventResolvedEvent, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string event_id = 1; */
+        if (message.eventId !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.eventId);
+        /* string sport = 2; */
+        if (message.sport !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.sport);
+        /* betting.events.Outcome outcome = 3; */
+        if (message.outcome !== 0)
+            writer.tag(3, WireType.Varint).int32(message.outcome);
+        /* int64 resolved_at = 4; */
+        if (message.resolvedAt !== 0)
+            writer.tag(4, WireType.Varint).int64(message.resolvedAt);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message betting.events.EventResolvedEvent
+ */
+export const EventResolvedEvent = new EventResolvedEvent$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class NotificationEvent$Type extends MessageType<NotificationEvent> {
     constructor() {

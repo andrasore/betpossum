@@ -51,7 +51,7 @@ Copy `.env.example` to `.env.local` for Keycloak settings only.
 
 - **REST** (`src/lib/api.ts`): `login`, `register`, `placeBet`, `fetchBets` — all protected calls attach `Authorization: Bearer <token>`.
 - **WebSocket** (`src/lib/websocket.ts`): Singleton Socket.io instance authenticated via the token. The `useOdds` hook subscribes to `odds.updated` events and maintains a `Map<eventId, OddsEvent>`. Incoming events are validated with the Zod schema in `src/lib/schemas.ts`.
-- **Polling** (`src/hooks/useBets.ts`): SWR with a 10-second refresh interval for the user's bet list.
+- **Bets** (`src/hooks/useBets.ts`): SWR-backed. No interval polling — invalidation is socket-driven via `bet.held` / `bet.settled` events (per-user filtered server-side via socket.io rooms keyed on the JWT `sub`), plus a `connect` listener that revalidates after any disconnect.
 
 ### Component hierarchy (dashboard)
 

@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminService } from './admin.service';
 import { SetBalanceDto } from './dto/set-balance.dto';
+import { SettleEventDto } from './dto/settle-event.dto';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 
@@ -22,6 +23,15 @@ export class AdminController {
     @Body() dto: SetBalanceDto,
   ) {
     await this.admin.setUserBalance(userId, dto.amount);
+    return { status: 'ok' };
+  }
+
+  @Post('events/:eventId/result')
+  async resolveEvent(
+    @Param('eventId') eventId: string,
+    @Body() dto: SettleEventDto,
+  ) {
+    await this.admin.resolveEvent(eventId, dto.outcome);
     return { status: 'ok' };
   }
 }

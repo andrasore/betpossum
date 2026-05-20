@@ -24,15 +24,19 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x65vents.proto\x12\x0e\x62\x65tting.events\"\xa6\x01\n\x10OddsUpdatedEvent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\r\n\x05sport\x18\x02 \x01(\t\x12\x11\n\thome_team\x18\x03 \x01(\t\x12\x11\n\taway_team\x18\x04 \x01(\t\x12\x11\n\thome_odds\x18\x05 \x01(\x01\x12\x11\n\taway_odds\x18\x06 \x01(\x01\x12\x11\n\tdraw_odds\x18\x07 \x01(\x01\x12\x12\n\nupdated_at\x18\x08 \x01(\x03\"D\n\x11NotificationEvent\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\r\n\x05\x65vent\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\tb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x65vents.proto\x12\x0e\x62\x65tting.events\"\xa6\x01\n\x10OddsUpdatedEvent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\r\n\x05sport\x18\x02 \x01(\t\x12\x11\n\thome_team\x18\x03 \x01(\t\x12\x11\n\taway_team\x18\x04 \x01(\t\x12\x11\n\thome_odds\x18\x05 \x01(\x01\x12\x11\n\taway_odds\x18\x06 \x01(\x01\x12\x11\n\tdraw_odds\x18\x07 \x01(\x01\x12\x12\n\nupdated_at\x18\x08 \x01(\x03\"t\n\x12\x45ventResolvedEvent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\r\n\x05sport\x18\x02 \x01(\t\x12(\n\x07outcome\x18\x03 \x01(\x0e\x32\x17.betting.events.Outcome\x12\x13\n\x0bresolved_at\x18\x04 \x01(\x03\"D\n\x11NotificationEvent\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\r\n\x05\x65vent\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\t*X\n\x07Outcome\x12\x17\n\x13OUTCOME_UNSPECIFIED\x10\x00\x12\x10\n\x0cOUTCOME_HOME\x10\x01\x12\x10\n\x0cOUTCOME_AWAY\x10\x02\x12\x10\n\x0cOUTCOME_DRAW\x10\x03\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'events_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
+  _globals['_OUTCOME']._serialized_start=389
+  _globals['_OUTCOME']._serialized_end=477
   _globals['_ODDSUPDATEDEVENT']._serialized_start=33
   _globals['_ODDSUPDATEDEVENT']._serialized_end=199
-  _globals['_NOTIFICATIONEVENT']._serialized_start=201
-  _globals['_NOTIFICATIONEVENT']._serialized_end=269
+  _globals['_EVENTRESOLVEDEVENT']._serialized_start=201
+  _globals['_EVENTRESOLVEDEVENT']._serialized_end=317
+  _globals['_NOTIFICATIONEVENT']._serialized_start=319
+  _globals['_NOTIFICATIONEVENT']._serialized_end=387
 # @@protoc_insertion_point(module_scope)

@@ -25,25 +25,51 @@ export class MessagingService implements OnModuleInit, OnModuleDestroy {
     await this.connection?.close().catch(() => undefined);
   }
 
-  async publish(channel: string, payload: Buffer): Promise<void> {
-    await this.channel.assertExchange(channel, 'fanout', { durable: false });
-    this.channel.publish(channel, '', payload);
+  async publish(
+    channel: string,
+    payload: Buffer,
+    opts: { durable?: boolean } = {},
+  ): Promise<void> {
+    const durable = opts.durable ?? false;
+    await this.channel.assertExchange(channel, 'fanout', { durable });
+    this.channel.publish(channel, '', payload, { persistent: durable });
   }
 
-  async subscribe(channel: string, handler: (msg: Buffer) => void): Promise<void> {
-    await this.channel.assertExchange(channel, 'fanout', { durable: false });
-    const { queue } = await this.channel.assertQueue('', {
-      exclusive: true,
-      autoDelete: true,
-      durable: false,
+  async subscribe(
+    channel: string,
+    handler: (msg: Buffer) => void | Promise<void>,
+    opts: { durable?: boolean; queueName?: string } = {},
+  ): Promise<void> {
+    const durable = opts.durable ?? false;
+    if (durable && !opts.queueName) {
+      throw new Error(`subscribe(${channel}): durable subscribers must provide queueName`);
+    }
+    await this.channel.assertExchange(channel, 'fanout', { durable });
+    const { queue } = await this.channel.assertQueue(opts.queueName ?? '', {
+      exclusive: !opts.queueName,
+      autoDelete: !opts.queueName,
+      durable,
     });
     await this.channel.bindQueue(queue, channel, '');
     await this.channel.consume(
       queue,
       (msg) => {
-        if (msg) handler(msg.content);
+        if (!msg) return;
+        if (durable) {
+          Promise.resolve()
+            .then(() => handler(msg.content))
+            .then(
+              () => this.channel.ack(msg),
+              (err) => {
+                this.logger.error(`Handler for ${channel} failed; requeuing`, err);
+                this.channel.nack(msg, false, true);
+              },
+            );
+        } else {
+          handler(msg.content);
+        }
       },
-      { noAck: true },
+      { noAck: !durable },
     );
   }
 }

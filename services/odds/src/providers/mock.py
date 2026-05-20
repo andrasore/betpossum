@@ -2,14 +2,16 @@
 
 Maintains a fixed pool of fixtures across three sports and slowly drifts
 their odds on each tick so the frontend sees realistic live-market movement
-without calling the real API.
+without calling the real API. After MOCK_RESOLVE_TICKS ticks, each fixture
+resolves to a random outcome (biased by inverse current odds) and drops out.
 """
 import logging
+import os
 import random
 import time
 from typing import AsyncIterator, ClassVar, TypedDict
 
-from models import OddsEvent
+from models import EventResult, OddsEvent, Outcome
 from .base import OddsProvider
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,8 @@ FIXTURES: list[Fixture] = [
     {"event_id": "mock-nfl-002", "sport": "americanfootball_nfl",  "home_team": "Dallas Cowboys",         "away_team": "New York Giants"},
 ]
 
+DEFAULT_RESOLVE_TICKS = 3
+
 
 def _has_draw(sport: str) -> bool:
     return sport.startswith("soccer")
@@ -49,30 +53,54 @@ def _drift(value: float, lo: float, hi: float) -> float:
     return round(max(lo, min(hi, value + random.uniform(-0.15, 0.15))), 2)
 
 
+def _sample_outcome(odds: dict[str, float], has_draw: bool) -> Outcome:
+    """Sample an outcome with probability inversely proportional to current odds."""
+    choices: list[tuple[Outcome, float]] = [("home", 1.0 / odds["home"]), ("away", 1.0 / odds["away"])]
+    if has_draw and odds["draw"] > 0:
+        choices.append(("draw", 1.0 / odds["draw"]))
+    total = sum(w for _, w in choices)
+    r = random.uniform(0, total)
+    acc = 0.0
+    for outcome, weight in choices:
+        acc += weight
+        if r <= acc:
+            return outcome
+    return choices[-1][0]
+
+
 class MockProvider(OddsProvider):
     name: ClassVar[str] = "mock"
 
-    def __init__(self, fixtures: list[Fixture] = FIXTURES):
+    def __init__(self, fixtures: list[Fixture] = FIXTURES, resolve_ticks: int = DEFAULT_RESOLVE_TICKS):
         self._fixtures = fixtures
+        self._resolve_ticks = resolve_ticks
         self._state: dict[str, dict[str, float]] = {}
+        self._ticks: dict[str, int] = {}
+        self._resolved: set[str] = set()
+        self._pending_results: list[EventResult] = []
 
     @classmethod
     def from_env(cls) -> "MockProvider":
-        return cls()
+        resolve_ticks = int(os.environ.get("MOCK_RESOLVE_TICKS", str(DEFAULT_RESOLVE_TICKS)))
+        return cls(resolve_ticks=resolve_ticks)
 
     async def fetch_tick(self) -> AsyncIterator[OddsEvent]:
         for fixture in self._fixtures:
             eid = fixture["event_id"]
+            if eid in self._resolved:
+                continue
             has_draw = _has_draw(fixture["sport"])
 
             if eid not in self._state:
                 self._state[eid] = _seed(has_draw)
+                self._ticks[eid] = 0
 
             s = self._state[eid]
             s["home"] = _drift(s["home"], 1.1, 6.0)
             s["away"] = _drift(s["away"], 1.1, 6.0)
             if has_draw:
                 s["draw"] = _drift(s["draw"], 2.5, 6.0)
+            self._ticks[eid] += 1
 
             yield OddsEvent(
                 event_id=eid,
@@ -85,4 +113,22 @@ class MockProvider(OddsProvider):
                 updated_at=int(time.time() * 1000),
             )
 
-        logger.info("Published mock odds for %d fixtures", len(self._fixtures))
+            if self._ticks[eid] >= self._resolve_ticks:
+                outcome = _sample_outcome(s, has_draw)
+                self._resolved.add(eid)
+                self._pending_results.append(
+                    EventResult(
+                        event_id=eid,
+                        sport=fixture["sport"],
+                        outcome=outcome,
+                        resolved_at=int(time.time() * 1000),
+                    )
+                )
+                logger.info("Mock fixture %s resolved as %s", eid, outcome)
+
+        active = sum(1 for f in self._fixtures if f["event_id"] not in self._resolved)
+        logger.info("Published mock odds for %d active fixtures (%d resolved)", active, len(self._resolved))
+
+    async def fetch_results(self) -> AsyncIterator[EventResult]:
+        while self._pending_results:
+            yield self._pending_results.pop(0)
