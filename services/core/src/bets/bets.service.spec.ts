@@ -9,9 +9,23 @@ import { BetsService } from './bets.service';
 import { User } from '../users/user.entity';
 import { NotificationsClient } from '../notifications/notifications.client';
 import { WalletService } from '../wallet/wallet.service';
+import { MessagingService } from '../messaging/messaging.service';
 import { startTigerBeetle, TbInstance } from '../wallet/tigerbeetle-harness';
+import { EventResolvedEvent, Outcome } from '../generated/events';
 
 const newId = (): string => randomUUID();
+
+const encodeEvent = (eventId: string, outcome: Outcome): Buffer =>
+  Buffer.from(
+    EventResolvedEvent.toBinary(
+      EventResolvedEvent.create({
+        eventId,
+        sport: 'soccer_epl',
+        outcome,
+        resolvedAt: Date.now(),
+      }),
+    ),
+  );
 
 describe('BetsService', () => {
   let tb: TbInstance;
@@ -21,6 +35,7 @@ describe('BetsService', () => {
   let userRepo: Repository<User>;
   let betRepo: Repository<Bet>;
   const notifications = { toUser: jest.fn(), broadcast: jest.fn() };
+  const messaging = { publish: jest.fn(), subscribe: jest.fn() };
 
   beforeAll(async () => {
     tb = await startTigerBeetle();
@@ -54,6 +69,7 @@ describe('BetsService', () => {
           },
         },
         { provide: NotificationsClient, useValue: notifications },
+        { provide: MessagingService, useValue: messaging },
       ],
     }).compile();
 
@@ -164,5 +180,62 @@ describe('BetsService', () => {
     const settled = await betRepo.findOneByOrFail({ id: bet.id });
     expect(Number(settled.payout)).toBe(0.2);
     expect(await wallet.getBalanceCents(userId)).toBe(10020);
+  });
+
+  it('handleEventResolved settles only held bets on the resolved event; winning selections receive profit', async () => {
+    const userA = await newFundedUser(10000);
+    const userB = await newFundedUser(10000);
+
+    // Two bets on the event-to-resolve, one bet on an unrelated event.
+    const winnerBet = await bets.place(userA, 'evt-win', 'home', 3, 10);   // matches outcome → wins
+    const loserBet = await bets.place(userB, 'evt-win', 'away', 2, 5);      // doesn't match → loses
+    const unrelatedBet = await bets.place(userA, 'evt-other', 'home', 2, 5);
+
+    await bets.handleEventResolved(encodeEvent('evt-win', Outcome.HOME));
+
+    const winner = await betRepo.findOneByOrFail({ id: winnerBet.id });
+    const loser = await betRepo.findOneByOrFail({ id: loserBet.id });
+    const unrelated = await betRepo.findOneByOrFail({ id: unrelatedBet.id });
+
+    expect(winner.status).toBe('won');
+    expect(Number(winner.payout)).toBe(20); // 10 * (3-1) = 20
+
+    expect(loser.status).toBe('lost');
+    expect(Number(loser.payout)).toBe(0);
+
+    expect(unrelated.status).toBe('held');
+
+    // userA: +2000c profit; held released. Pre-bet 10000, held -1000 (other), so balance = 10000 + 2000 - 500 (other still held) = 11500
+    expect(await wallet.getBalanceCents(userA)).toBe(11500);
+    // userB lost stake of $5 = 500c, so balance = 10000 - 500 = 9500
+    expect(await wallet.getBalanceCents(userB)).toBe(9500);
+  });
+
+  it('handleEventResolved is idempotent — duplicate delivery does not settle bets twice', async () => {
+    const userId = await newFundedUser(10000);
+    const bet = await bets.place(userId, 'evt-dup', 'home', 3, 10);
+
+    await bets.handleEventResolved(encodeEvent('evt-dup', Outcome.HOME));
+    const balanceAfterFirst = await wallet.getBalanceCents(userId);
+
+    // Second delivery finds no 'held' bets for the event (the first delivery
+    // moved them to 'won'/'lost'), so settle() is never re-invoked.
+    await expect(
+      bets.handleEventResolved(encodeEvent('evt-dup', Outcome.HOME)),
+    ).resolves.toBeUndefined();
+
+    expect(await wallet.getBalanceCents(userId)).toBe(balanceAfterFirst);
+    const settled = await betRepo.findOneByOrFail({ id: bet.id });
+    expect(settled.status).toBe('won');
+  });
+
+  it('handleEventResolved ignores events with unspecified outcome', async () => {
+    const userId = await newFundedUser(10000);
+    const bet = await bets.place(userId, 'evt-unspec', 'home', 2, 5);
+
+    await bets.handleEventResolved(encodeEvent('evt-unspec', Outcome.UNSPECIFIED));
+
+    const stored = await betRepo.findOneByOrFail({ id: bet.id });
+    expect(stored.status).toBe('held');
   });
 });

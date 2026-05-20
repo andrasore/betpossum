@@ -9,11 +9,9 @@ import { WalletModule } from './wallet/wallet.module';
 import { OddsModule } from './odds/odds.module';
 import { MessagingModule } from './messaging/messaging.module';
 import { AdminModule } from './admin/admin.module';
-import { EventsModule } from './events/events.module';
 import { User } from './users/user.entity';
 import { Bet } from './bets/bet.entity';
 import { OddsCurrent } from './odds/odds-current.entity';
-import { EventResult } from './events/event-result.entity';
 import { LoggingMiddleware } from './common/logging.middleware';
 
 @Module({
@@ -24,7 +22,7 @@ import { LoggingMiddleware } from './common/logging.middleware';
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
         url: config.get('DATABASE_URL'),
-        entities: [User, Bet, OddsCurrent, EventResult],
+        entities: [User, Bet, OddsCurrent],
         synchronize: true, // use migrations in production
       }),
     }),
@@ -36,7 +34,6 @@ import { LoggingMiddleware } from './common/logging.middleware';
     WalletModule,
     OddsModule,
     AdminModule,
-    EventsModule,
   ],
 })
 export class AppModule implements NestModule {
