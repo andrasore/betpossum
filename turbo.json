@@ -1,10 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "//": "NOTE: pnpm install is managed separately from \"init\"",
   "tasks": {
     "init": {
-      "inputs": ["package.json", "pyproject.toml"],
-      "outputs": ["node_modules/**", ".venv/**"]
-    },
+      "inputs": ["pyproject.toml"],
+      "outputs": [".venv/**"]
+      },
     "build": {
       "dependsOn": ["init"],
       "inputs": ["src/**"],
@@ -34,9 +35,6 @@
         "tsconfig.json"
       ],
       "outputs": []
-    },
-    "e2e": {
-      "dependsOn": ["install-browser"]
     }
   }
 }

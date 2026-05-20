@@ -48,11 +48,8 @@ jobs:
           key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chromium
+        uses: browser-actions/setup-chrome@v2 
 
       - name: Install deps (cache miss only)
         if: steps.cache-node.outputs.cache-hit != 'true' || steps.cache-venv.outputs.cache-hit != 'true'

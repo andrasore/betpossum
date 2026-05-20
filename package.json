@@ -10,7 +10,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "e2e": "turbo run e2e --filter=@betting/e2e",
+    "e2e": "pnpm --filter=@betting/e2e run e2e",
     "hooks:setup": "mkdir -p .git/hooks && cp .githooks/pre-* .git/hooks/ && chmod +x .git/hooks/pre-*",
     "up:dev": "docker compose up -d postgres rabbitmq tigerbeetle",
     "init": "pnpm install && turbo run init"
