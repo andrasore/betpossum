@@ -1,27 +1,34 @@
-import type { Bet, OddsEvent, PlaceBetPayload } from '@/types';
-import { logout, refreshAccessToken } from '@/lib/keycloak';
-import { getConfig } from '@/lib/config';
+import { getConfig } from "@/lib/config";
+import { logout, refreshAccessToken } from "@/lib/keycloak";
+import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
 
 function baseUrl(): string {
   return `${window.location.protocol}//${window.location.hostname}:${getConfig().gatewayPort}`;
 }
 
-function send(path: string, init: RequestInit | undefined, token: string): Promise<Response> {
+function send(
+  path: string,
+  init: RequestInit | undefined,
+  token: string,
+): Promise<Response> {
   return fetch(`${baseUrl()}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
       ...(init?.headers ?? {}),
     },
   });
 }
 
-async function authedFetch(path: string, init?: RequestInit): Promise<Response> {
-  const token = localStorage.getItem('token');
+async function authedFetch(
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const token = localStorage.getItem("token");
   if (!token) {
     logout();
-    throw new Error('Session expired');
+    throw new Error("Session expired");
   }
 
   const res = await send(path, init, token);
@@ -32,42 +39,42 @@ async function authedFetch(path: string, init?: RequestInit): Promise<Response> 
     fresh = await refreshAccessToken();
   } catch {
     logout();
-    throw new Error('Session expired');
+    throw new Error("Session expired");
   }
 
   const retry = await send(path, init, fresh);
   if (retry.status === 401) {
     logout();
-    throw new Error('Session expired');
+    throw new Error("Session expired");
   }
   return retry;
 }
 
 export async function placeBet(payload: PlaceBetPayload): Promise<Bet> {
-  const res = await authedFetch('/bets', {
-    method: 'POST',
+  const res = await authedFetch("/bets", {
+    method: "POST",
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error('Failed to place bet');
+  if (!res.ok) throw new Error("Failed to place bet");
   return res.json();
 }
 
 export async function fetchBets(): Promise<Bet[]> {
-  const res = await authedFetch('/bets');
-  if (!res.ok) throw new Error('Failed to fetch bets');
+  const res = await authedFetch("/bets");
+  if (!res.ok) throw new Error("Failed to fetch bets");
   return res.json();
 }
 
 export async function fetchOdds(): Promise<OddsEvent[]> {
-  const res = await authedFetch('/odds');
-  if (!res.ok) throw new Error('Failed to fetch odds');
+  const res = await authedFetch("/odds");
+  if (!res.ok) throw new Error("Failed to fetch odds");
   return res.json();
 }
 
 export async function fetchBalance(): Promise<number> {
-  const res = await authedFetch('/wallet/balance');
-  if (!res.ok) throw new Error('Failed to fetch balance');
-  const { balance } = await res.json() as { balance: number };
+  const res = await authedFetch("/wallet/balance");
+  if (!res.ok) throw new Error("Failed to fetch balance");
+  const { balance } = (await res.json()) as { balance: number };
   return balance;
 }
 
@@ -80,15 +87,18 @@ export interface AdminUserRow {
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
-  const res = await authedFetch('/admin/users');
-  if (!res.ok) throw new Error('Failed to fetch users');
+  const res = await authedFetch("/admin/users");
+  if (!res.ok) throw new Error("Failed to fetch users");
   return res.json();
 }
 
-export async function setAdminUserBalance(userId: string, amount: number): Promise<void> {
+export async function setAdminUserBalance(
+  userId: string,
+  amount: number,
+): Promise<void> {
   const res = await authedFetch(`/admin/users/${userId}/balance`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify({ amount }),
   });
-  if (!res.ok) throw new Error('Failed to update balance');
+  if (!res.ok) throw new Error("Failed to update balance");
 }

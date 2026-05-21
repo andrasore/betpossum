@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const OddsEventSchema = z.object({
   eventId: z.string().min(1),

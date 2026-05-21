@@ -1,17 +1,23 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { BetsService } from './bets.service';
-import { PlaceBetDto } from './dto/place-bet.dto';
-import { AuthUser, CurrentUser } from '../common/current-user.decorator';
+import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { AuthGuard } from "@nestjs/passport";
+import { type AuthUser, CurrentUser } from "../common/current-user.decorator";
+import type { BetsService } from "./bets.service";
+import type { PlaceBetDto } from "./dto/place-bet.dto";
 
-@Controller('bets')
-@UseGuards(AuthGuard('jwt'))
+@Controller("bets")
+@UseGuards(AuthGuard("jwt"))
 export class BetsController {
   constructor(private readonly bets: BetsService) {}
 
   @Post()
   place(@CurrentUser() user: AuthUser, @Body() dto: PlaceBetDto) {
-    return this.bets.place(user.id, dto.eventId, dto.selection, dto.odds, dto.stake);
+    return this.bets.place(
+      user.id,
+      dto.eventId,
+      dto.selection,
+      dto.odds,
+      dto.stake,
+    );
   }
 
   @Get()

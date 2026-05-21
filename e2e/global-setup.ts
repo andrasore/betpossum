@@ -1,15 +1,19 @@
-import { captureLogs, compose } from './compose';
+import { captureLogs, compose } from "./compose";
 
 const KEYCLOAK_DISCOVERY =
-  'http://localhost:18090/realms/betting/.well-known/openid-configuration';
-const FRONTEND_URL = 'http://localhost:13000';
+  "http://localhost:18090/realms/betting/.well-known/openid-configuration";
+const FRONTEND_URL = "http://localhost:13000";
 
-async function waitFor(url: string, label: string, timeoutMs = 90_000): Promise<void> {
+async function waitFor(
+  url: string,
+  label: string,
+  timeoutMs = 90_000,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let lastErr: unknown = null;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(url, { redirect: 'manual' });
+      const res = await fetch(url, { redirect: "manual" });
       if (res.status < 500) {
         console.log(`  ${label} ready (${res.status})`);
         return;
@@ -25,20 +29,20 @@ async function waitFor(url: string, label: string, timeoutMs = 90_000): Promise<
 
 export default async function globalSetup(): Promise<void> {
   try {
-    console.log('→ Booting e2e stack');
-    compose(['up', '-d', '--build', '--wait']);
+    console.log("→ Booting e2e stack");
+    compose(["up", "-d", "--build", "--wait"]);
 
-    console.log('→ Waiting for Keycloak realm import');
-    await waitFor(KEYCLOAK_DISCOVERY, 'keycloak');
+    console.log("→ Waiting for Keycloak realm import");
+    await waitFor(KEYCLOAK_DISCOVERY, "keycloak");
 
-    console.log('→ Waiting for frontend');
-    await waitFor(FRONTEND_URL, 'frontend');
+    console.log("→ Waiting for frontend");
+    await waitFor(FRONTEND_URL, "frontend");
   } catch (err) {
-    console.error('→ Setup failed — capturing docker logs');
+    console.error("→ Setup failed — capturing docker logs");
     try {
       captureLogs();
     } catch (logErr) {
-      console.error('  failed to capture logs:', logErr);
+      console.error("  failed to capture logs:", logErr);
     }
     throw err;
   }

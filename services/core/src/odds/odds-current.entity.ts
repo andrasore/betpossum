@@ -1,33 +1,33 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn } from "typeorm";
 
 const bigintAsNumber = {
   to: (v: number) => v,
-  from: (v: string | number) => (typeof v === 'string' ? Number(v) : v),
+  from: (v: string | number) => (typeof v === "string" ? Number(v) : v),
 };
 
-@Entity({ name: 'odds_current', synchronize: false })
+@Entity({ name: "odds_current", synchronize: false })
 export class OddsCurrent {
-  @PrimaryColumn({ name: 'event_id' })
+  @PrimaryColumn({ name: "event_id" })
   eventId!: string;
 
   @Column()
   sport!: string;
 
-  @Column({ name: 'home_team' })
+  @Column({ name: "home_team" })
   homeTeam!: string;
 
-  @Column({ name: 'away_team' })
+  @Column({ name: "away_team" })
   awayTeam!: string;
 
-  @Column({ type: 'double precision', name: 'home_odds' })
+  @Column({ type: "double precision", name: "home_odds" })
   homeOdds!: number;
 
-  @Column({ type: 'double precision', name: 'away_odds' })
+  @Column({ type: "double precision", name: "away_odds" })
   awayOdds!: number;
 
-  @Column({ type: 'double precision', name: 'draw_odds', default: 0 })
+  @Column({ type: "double precision", name: "draw_odds", default: 0 })
   drawOdds!: number;
 
-  @Column({ type: 'bigint', name: 'updated_at', transformer: bigintAsNumber })
+  @Column({ type: "bigint", name: "updated_at", transformer: bigintAsNumber })
   updatedAt!: number;
 }

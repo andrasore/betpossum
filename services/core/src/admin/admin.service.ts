@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
-import { WalletService } from '../wallet/wallet.service';
-import { MessagingService } from '../messaging/messaging.service';
-import { EventResolvedEvent, Outcome } from '../generated/events';
+import { Injectable, Logger } from "@nestjs/common";
+import { EventResolvedEvent, Outcome } from "../generated/events";
+import type { MessagingService } from "../messaging/messaging.service";
+import type { UsersService } from "../users/users.service";
+import type { WalletService } from "../wallet/wallet.service";
 
 export interface AdminUserRow {
   id: string;
@@ -12,7 +12,7 @@ export interface AdminUserRow {
   balance: number;
 }
 
-const OUTCOME_TO_PROTO: Record<'home' | 'away' | 'draw', Outcome> = {
+const OUTCOME_TO_PROTO: Record<"home" | "away" | "draw", Outcome> = {
   home: Outcome.HOME,
   away: Outcome.AWAY,
   draw: Outcome.DRAW,
@@ -43,20 +43,25 @@ export class AdminService {
 
   async setUserBalance(userId: string, amount: number): Promise<void> {
     const targetCents = Math.round(amount * 100);
-    this.logger.log(`Admin setting balance for ${userId} to ${targetCents} cents`);
+    this.logger.log(
+      `Admin setting balance for ${userId} to ${targetCents} cents`,
+    );
     await this.wallet.setBalance(userId, targetCents);
   }
 
-  async resolveEvent(eventId: string, outcome: 'home' | 'away' | 'draw'): Promise<void> {
+  async resolveEvent(
+    eventId: string,
+    outcome: "home" | "away" | "draw",
+  ): Promise<void> {
     this.logger.log(`Admin resolving event ${eventId} as ${outcome}`);
     const msg = EventResolvedEvent.create({
       eventId,
-      sport: '',
+      sport: "",
       outcome: OUTCOME_TO_PROTO[outcome],
       resolvedAt: Date.now(),
     });
     await this.messaging.publish(
-      'events.resolved',
+      "events.resolved",
       Buffer.from(EventResolvedEvent.toBinary(msg)),
       { durable: true },
     );

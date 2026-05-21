@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { getSocket } from '@/lib/websocket';
-import { fetchOdds } from '@/lib/api';
-import { OddsEventSchema } from '@/lib/schemas';
-import type { OddsEvent } from '@/types';
+import { useEffect, useState } from "react";
+import { fetchOdds } from "@/lib/api";
+import { OddsEventSchema } from "@/lib/schemas";
+import { getSocket } from "@/lib/websocket";
+import type { OddsEvent } from "@/types";
 
 export function useOdds(token: string | null) {
   const [odds, setOdds] = useState<Map<string, OddsEvent>>(new Map());
@@ -22,13 +22,13 @@ export function useOdds(token: string | null) {
         });
         setOdds(new Map(parsed.map((e) => [e.eventId, e])));
       })
-      .catch((err) => console.warn('[useOdds] hydrate failed', err));
+      .catch((err) => console.warn("[useOdds] hydrate failed", err));
 
     const socket = getSocket();
-    socket.on('odds.updated', (raw: unknown) => {
+    socket.on("odds.updated", (raw: unknown) => {
       const result = OddsEventSchema.safeParse(raw);
       if (!result.success) {
-        console.warn('[useOdds] Invalid odds event:', result.error.flatten());
+        console.warn("[useOdds] Invalid odds event:", result.error.flatten());
         return;
       }
       const event = result.data;
@@ -37,7 +37,7 @@ export function useOdds(token: string | null) {
 
     return () => {
       cancelled = true;
-      socket.off('odds.updated');
+      socket.off("odds.updated");
     };
   }, [token]);
 

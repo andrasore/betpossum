@@ -1,18 +1,23 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { promises as dns } from 'node:dns';
-import * as net from 'node:net';
+import { promises as dns } from "node:dns";
+import * as net from "node:net";
+import {
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from "@nestjs/common";
+import type { ConfigService } from "@nestjs/config";
 import {
   AccountFlags,
-  Client,
+  type Client,
   CreateAccountStatus,
   CreateTransferStatus,
-  Transfer,
-  TransferFlags,
   createClient,
+  type Transfer,
+  TransferFlags,
   id as tbId,
-} from 'tigerbeetle-node';
-import { NotificationsClient } from '../notifications/notifications.client';
+} from "tigerbeetle-node";
+import type { NotificationsClient } from "../notifications/notifications.client";
 
 const HOUSE_ID = 2n;
 
@@ -37,16 +42,26 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    const address = this.config.get<string>('TIGERBEETLE_ADDRESS', 'localhost:6000');
+    const address = this.config.get<string>(
+      "TIGERBEETLE_ADDRESS",
+      "localhost:6000",
+    );
     const resolved = await this.resolveAddress(address);
-    const clusterId = BigInt(this.config.get<string>('TIGERBEETLE_CLUSTER_ID', '0'));
-    this.logger.log(`Connecting to TigerBeetle cluster=${clusterId} address=${resolved}`);
-    this.client = createClient({ cluster_id: clusterId, replica_addresses: [resolved] });
+    const clusterId = BigInt(
+      this.config.get<string>("TIGERBEETLE_CLUSTER_ID", "0"),
+    );
+    this.logger.log(
+      `Connecting to TigerBeetle cluster=${clusterId} address=${resolved}`,
+    );
+    this.client = createClient({
+      cluster_id: clusterId,
+      replica_addresses: [resolved],
+    });
     await this.ensureSystemAccounts();
   }
 
   private async resolveAddress(address: string): Promise<string> {
-    const [host, port] = address.split(':');
+    const [host, port] = address.split(":");
     if (!port) return address;
     if (net.isIP(host)) return address;
     const { address: ip } = await dns.lookup(host, { family: 4 });
@@ -59,7 +74,11 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   async createAccount(userId: string): Promise<void> {
     const results = await this.client.createAccounts([
-      this.buildAccount(this.toId(userId), USER_CODE, AccountFlags.debits_must_not_exceed_credits),
+      this.buildAccount(
+        this.toId(userId),
+        USER_CODE,
+        AccountFlags.debits_must_not_exceed_credits,
+      ),
     ]);
     this.assertCreateAccounts(results);
   }
@@ -77,7 +96,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
   }
 
   async deposit(userId: string, amountCents: number): Promise<void> {
-    await this.simpleTransfer(HOUSE_ID, this.toId(userId), amountCents, CODE_DEPOSIT);
+    await this.simpleTransfer(
+      HOUSE_ID,
+      this.toId(userId),
+      amountCents,
+      CODE_DEPOSIT,
+    );
     await this.pushBalanceUpdated(userId);
   }
 
@@ -85,14 +109,28 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     const currentCents = await this.getBalanceCents(userId);
     const diff = targetCents - currentCents;
     if (diff > 0) {
-      await this.simpleTransfer(HOUSE_ID, this.toId(userId), diff, CODE_ADMIN_ADJUST);
+      await this.simpleTransfer(
+        HOUSE_ID,
+        this.toId(userId),
+        diff,
+        CODE_ADMIN_ADJUST,
+      );
     } else if (diff < 0) {
-      await this.simpleTransfer(this.toId(userId), HOUSE_ID, -diff, CODE_ADMIN_ADJUST);
+      await this.simpleTransfer(
+        this.toId(userId),
+        HOUSE_ID,
+        -diff,
+        CODE_ADMIN_ADJUST,
+      );
     }
     await this.pushBalanceUpdated(userId);
   }
 
-  async hold(userId: string, betId: string, amountCents: number): Promise<void> {
+  async hold(
+    userId: string,
+    betId: string,
+    amountCents: number,
+  ): Promise<void> {
     await this.createTransfers([
       {
         id: this.toId(betId),
@@ -113,7 +151,11 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     await this.pushBalanceUpdated(userId);
   }
 
-  async release(userId: string, betId: string, amountCents: number): Promise<void> {
+  async release(
+    userId: string,
+    betId: string,
+    amountCents: number,
+  ): Promise<void> {
     await this.createTransfers([
       {
         id: tbId(),
@@ -128,13 +170,17 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
         ledger: LEDGER,
         code: CODE_BET,
         flags: TransferFlags.void_pending_transfer,
-        timestamp: 0n
+        timestamp: 0n,
       },
     ]);
     await this.pushBalanceUpdated(userId);
   }
 
-  async keep(userId: string, betId: string, amountCents: number): Promise<void> {
+  async keep(
+    userId: string,
+    betId: string,
+    amountCents: number,
+  ): Promise<void> {
     await this.createTransfers([
       {
         id: tbId(),
@@ -155,22 +201,38 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     await this.pushBalanceUpdated(userId);
   }
 
-  async payout(userId: string, betId: string, amountCents: number): Promise<void> {
-    await this.simpleTransfer(HOUSE_ID, this.toId(userId), amountCents, CODE_PAYOUT, this.toId(betId));
+  async payout(
+    userId: string,
+    betId: string,
+    amountCents: number,
+  ): Promise<void> {
+    await this.simpleTransfer(
+      HOUSE_ID,
+      this.toId(userId),
+      amountCents,
+      CODE_PAYOUT,
+      this.toId(betId),
+    );
     await this.pushBalanceUpdated(userId);
   }
 
   private async ensureSystemAccounts(): Promise<void> {
-    const results = await this.client.createAccounts([this.buildAccount(HOUSE_ID, HOUSE_CODE)]);
+    const results = await this.client.createAccounts([
+      this.buildAccount(HOUSE_ID, HOUSE_CODE),
+    ]);
     this.assertCreateAccounts(results);
   }
 
   private async pushBalanceUpdated(userId: string): Promise<void> {
     const balance = await this.getBalance(userId);
-    await this.notifications.toUser(userId, 'balance.updated', { balance });
+    await this.notifications.toUser(userId, "balance.updated", { balance });
   }
 
-  private buildAccount(id: bigint, code: number, flags: number = AccountFlags.none) {
+  private buildAccount(
+    id: bigint,
+    code: number,
+    flags: number = AccountFlags.none,
+  ) {
     return {
       id,
       debits_pending: 0n,
@@ -218,20 +280,29 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     const results = await this.client.createTransfers(transfers);
     for (const r of results) {
       if (r.status !== CreateTransferStatus.created) {
-        throw new Error(`TigerBeetle transfer failed: ${CreateTransferStatus[r.status]}`);
+        throw new Error(
+          `TigerBeetle transfer failed: ${CreateTransferStatus[r.status]}`,
+        );
       }
     }
   }
 
-  private assertCreateAccounts(results: { status: CreateAccountStatus }[]): void {
+  private assertCreateAccounts(
+    results: { status: CreateAccountStatus }[],
+  ): void {
     for (const r of results) {
-      if (r.status !== CreateAccountStatus.created && r.status !== CreateAccountStatus.exists) {
-        throw new Error(`TigerBeetle account creation failed: ${CreateAccountStatus[r.status]}`);
+      if (
+        r.status !== CreateAccountStatus.created &&
+        r.status !== CreateAccountStatus.exists
+      ) {
+        throw new Error(
+          `TigerBeetle account creation failed: ${CreateAccountStatus[r.status]}`,
+        );
       }
     }
   }
 
   private toId(value: string): bigint {
-    return BigInt('0x' + value.replace(/-/g, ''));
+    return BigInt(`0x${value.replace(/-/g, "")}`);
   }
 }

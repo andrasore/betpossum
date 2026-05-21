@@ -1,31 +1,52 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
-  Box, Flex, Heading, IconButton, Input, Spinner, Table, Text,
-} from '@chakra-ui/react';
-import { Check, X } from 'lucide-react';
-import useSWR from 'swr';
-import { Navbar } from '@/components/Navbar';
-import { fetchAdminUsers, setAdminUserBalance, type AdminUserRow } from '@/lib/api';
-import { isAdmin } from '@/lib/keycloak';
-import { useForceTheme } from '@/hooks/useForceTheme';
+  Box,
+  Flex,
+  Heading,
+  IconButton,
+  Input,
+  Spinner,
+  Table,
+  Text,
+} from "@chakra-ui/react";
+import { Check, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import useSWR from "swr";
+import { Navbar } from "@/components/Navbar";
+import { useForceTheme } from "@/hooks/useForceTheme";
+import {
+  type AdminUserRow,
+  fetchAdminUsers,
+  setAdminUserBalance,
+} from "@/lib/api";
+import { isAdmin } from "@/lib/keycloak";
 
 export default function AdminPage() {
-  useForceTheme('light');
+  useForceTheme("light");
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const t = localStorage.getItem('token');
-    if (!t) { router.replace('/login'); return; }
-    if (!isAdmin(t)) { router.replace('/dashboard'); return; }
+    const t = localStorage.getItem("token");
+    if (!t) {
+      router.replace("/login");
+      return;
+    }
+    if (!isAdmin(t)) {
+      router.replace("/dashboard");
+      return;
+    }
     setToken(t);
   }, [router]);
 
-  const { data: users, isLoading, mutate } = useSWR<AdminUserRow[]>(
-    token ? 'admin-users' : null,
+  const {
+    data: users,
+    isLoading,
+    mutate,
+  } = useSWR<AdminUserRow[]>(
+    token ? "admin-users" : null,
     () => fetchAdminUsers(),
     { refreshInterval: 15_000 },
   );
@@ -36,7 +57,9 @@ export default function AdminPage() {
     <Flex direction="column" h="100vh">
       <Navbar />
       <Box as="main" flex="1" overflowY="auto" p={6}>
-        <Heading as="h2" size="md" mb={4}>Users</Heading>
+        <Heading as="h2" size="md" mb={4}>
+          Users
+        </Heading>
         {isLoading && !users ? (
           <Spinner />
         ) : users && users.length > 0 ? (
@@ -47,7 +70,9 @@ export default function AdminPage() {
                 <Table.ColumnHeader>Email</Table.ColumnHeader>
                 <Table.ColumnHeader>Name</Table.ColumnHeader>
                 <Table.ColumnHeader textAlign="end">Bets</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="end">Balance (£)</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="end">
+                  Balance (£)
+                </Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
@@ -57,14 +82,22 @@ export default function AdminPage() {
             </Table.Body>
           </Table.Root>
         ) : (
-          <Text fontSize="sm" color="fg.muted">No users yet.</Text>
+          <Text fontSize="sm" color="fg.muted">
+            No users yet.
+          </Text>
         )}
       </Box>
     </Flex>
   );
 }
 
-function UserRow({ user, onSaved }: { user: AdminUserRow; onSaved: () => void }) {
+function UserRow({
+  user,
+  onSaved,
+}: {
+  user: AdminUserRow;
+  onSaved: () => void;
+}) {
   const [draft, setDraft] = useState<string>(user.balance.toFixed(2));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +118,7 @@ function UserRow({ user, onSaved }: { user: AdminUserRow; onSaved: () => void })
       await setAdminUserBalance(user.id, parsed);
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed');
+      setError(e instanceof Error ? e.message : "Failed");
     } finally {
       setSaving(false);
     }
@@ -99,10 +132,24 @@ function UserRow({ user, onSaved }: { user: AdminUserRow; onSaved: () => void })
   return (
     <Table.Row>
       <Table.Cell>
-        <Text as="span" fontFamily="mono" fontSize="xs" color="fg.muted">{user.id}</Text>
+        <Text as="span" fontFamily="mono" fontSize="xs" color="fg.muted">
+          {user.id}
+        </Text>
       </Table.Cell>
-      <Table.Cell>{user.email ?? <Text as="span" color="fg.muted">—</Text>}</Table.Cell>
-      <Table.Cell>{user.name ?? <Text as="span" color="fg.muted">—</Text>}</Table.Cell>
+      <Table.Cell>
+        {user.email ?? (
+          <Text as="span" color="fg.muted">
+            —
+          </Text>
+        )}
+      </Table.Cell>
+      <Table.Cell>
+        {user.name ?? (
+          <Text as="span" color="fg.muted">
+            —
+          </Text>
+        )}
+      </Table.Cell>
       <Table.Cell textAlign="end">{user.betCount}</Table.Cell>
       <Table.Cell textAlign="end">
         <Flex align="center" justify="flex-end" gap={2}>
@@ -116,7 +163,7 @@ function UserRow({ user, onSaved }: { user: AdminUserRow; onSaved: () => void })
             width="120px"
             textAlign="end"
             disabled={saving}
-            borderColor={dirty ? 'yellow.500' : undefined}
+            borderColor={dirty ? "yellow.500" : undefined}
           />
           {dirty && (
             <>
@@ -143,7 +190,9 @@ function UserRow({ user, onSaved }: { user: AdminUserRow; onSaved: () => void })
           )}
         </Flex>
         {error && (
-          <Text fontSize="xs" color="red.500" mt={1}>{error}</Text>
+          <Text fontSize="xs" color="red.500" mt={1}>
+            {error}
+          </Text>
         )}
       </Table.Cell>
     </Table.Row>

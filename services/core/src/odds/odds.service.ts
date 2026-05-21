@@ -1,10 +1,10 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { OddsUpdatedEvent } from '../generated/events';
-import { NotificationsClient } from '../notifications/notifications.client';
-import { MessagingService } from '../messaging/messaging.service';
-import { OddsCurrent } from './odds-current.entity';
+import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import type { Repository } from "typeorm";
+import { OddsUpdatedEvent } from "../generated/events";
+import type { MessagingService } from "../messaging/messaging.service";
+import type { NotificationsClient } from "../notifications/notifications.client";
+import { OddsCurrent } from "./odds-current.entity";
 
 @Injectable()
 export class OddsService implements OnModuleInit {
@@ -18,12 +18,12 @@ export class OddsService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    await this.messaging.subscribe('odds.updated', async (raw) => {
+    await this.messaging.subscribe("odds.updated", async (raw) => {
       try {
         const event = OddsUpdatedEvent.fromBinary(raw);
-        await this.notifications.broadcast('odds.updated', event);
+        await this.notifications.broadcast("odds.updated", event);
       } catch (e) {
-        this.logger.error('Failed to decode odds.updated', e);
+        this.logger.error("Failed to decode odds.updated", e);
       }
     });
   }
@@ -35,7 +35,7 @@ export class OddsService implements OnModuleInit {
   listOdds(sport?: string): Promise<OddsCurrent[]> {
     return this.repo.find({
       where: sport ? { sport } : {},
-      order: { updatedAt: 'DESC' },
+      order: { updatedAt: "DESC" },
     });
   }
 }

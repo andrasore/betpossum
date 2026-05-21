@@ -24,14 +24,9 @@
     "name": "default-roles-betting",
     "composite": true,
     "composites": {
-      "realm": [
-        "user"
-      ],
+      "realm": ["user"],
       "client": {
-        "account": [
-          "view-profile",
-          "manage-account"
-        ]
+        "account": ["view-profile", "manage-account"]
       }
     }
   },
@@ -44,13 +39,8 @@
       "directAccessGrantsEnabled": false,
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": [
-        "http://localhost:13000/*"
-      ],
-      "webOrigins": [
-        "http://localhost:13000",
-        "http://localhost:18080"
-      ],
+      "redirectUris": ["http://localhost:13000/*"],
+      "webOrigins": ["http://localhost:13000", "http://localhost:18080"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://localhost:13000/*"
@@ -73,10 +63,7 @@
       "enabled": true,
       "serviceAccountClientId": "betting-core",
       "clientRoles": {
-        "realm-management": [
-          "view-users",
-          "query-users"
-        ]
+        "realm-management": ["view-users", "query-users"]
       }
     },
     {
@@ -93,9 +80,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "user"
-      ]
+      "realmRoles": ["user"]
     },
     {
       "username": "bob",
@@ -111,10 +96,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "admin",
-        "user"
-      ]
+      "realmRoles": ["admin", "user"]
     }
   ]
 }

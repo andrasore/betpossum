@@ -4,19 +4,19 @@
 // NEXT_PUBLIC_* substitution at build time — so the same image serves dev
 // and e2e on different Keycloak host ports.
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export function GET(): Response {
   const config = {
-    keycloakUrl: process.env.KEYCLOAK_URL ?? 'http://localhost:8090',
-    keycloakRealm: process.env.KEYCLOAK_REALM ?? 'betting',
-    keycloakClientId: process.env.KEYCLOAK_CLIENT_ID ?? 'betting-frontend',
+    keycloakUrl: process.env.KEYCLOAK_URL ?? "http://localhost:8090",
+    keycloakRealm: process.env.KEYCLOAK_REALM ?? "betting",
+    keycloakClientId: process.env.KEYCLOAK_CLIENT_ID ?? "betting-frontend",
     gatewayPort: Number(process.env.GATEWAY_PORT ?? 8080),
   };
   return new Response(`window.__APP_CONFIG__=${JSON.stringify(config)};`, {
     headers: {
-      'Content-Type': 'application/javascript; charset=utf-8',
-      'Cache-Control': 'no-store',
+      "Content-Type": "application/javascript; charset=utf-8",
+      "Cache-Control": "no-store",
     },
   });
 }

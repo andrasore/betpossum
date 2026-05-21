@@ -1,6 +1,5 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
 import {
   Box,
   Button,
@@ -12,11 +11,12 @@ import {
   Separator,
   Stack,
   Text,
-} from '@chakra-ui/react';
-import type { OddsEvent } from '@/types';
-import { placeBet } from '@/lib/api';
+} from "@chakra-ui/react";
+import { useState } from "react";
+import { placeBet } from "@/lib/api";
+import type { OddsEvent } from "@/types";
 
-type Choice = 'home' | 'away' | 'draw';
+type Choice = "home" | "away" | "draw";
 
 interface Selection {
   event: OddsEvent;
@@ -30,7 +30,7 @@ interface Props {
 }
 
 export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
-  const [stake, setStake] = useState('');
+  const [stake, setStake] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,19 +48,23 @@ export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
 
   const { event, choice } = selection;
   const odds =
-    choice === 'home' ? event.homeOdds : choice === 'away' ? event.awayOdds : event.drawOdds;
-  const potentialReturn = stake ? (parseFloat(stake) * odds).toFixed(2) : '—';
+    choice === "home"
+      ? event.homeOdds
+      : choice === "away"
+        ? event.awayOdds
+        : event.drawOdds;
+  const potentialReturn = stake ? (parseFloat(stake) * odds).toFixed(2) : "—";
 
   const segments: { value: Choice; label: string; odds: number }[] = [
-    { value: 'home', label: event.homeTeam, odds: event.homeOdds },
+    { value: "home", label: event.homeTeam, odds: event.homeOdds },
     ...(event.drawOdds > 0
-      ? [{ value: 'draw' as Choice, label: 'Draw', odds: event.drawOdds }]
+      ? [{ value: "draw" as Choice, label: "Draw", odds: event.drawOdds }]
       : []),
-    { value: 'away', label: event.awayTeam, odds: event.awayOdds },
+    { value: "away", label: event.awayTeam, odds: event.awayOdds },
   ];
 
   async function submit() {
-    if (!stake || isNaN(Number(stake))) return;
+    if (!stake || Number.isNaN(Number(stake))) return;
     setLoading(true);
     setError(null);
     try {
@@ -70,10 +74,10 @@ export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
         odds,
         stake: parseFloat(stake),
       });
-      setStake('');
+      setStake("");
       onPlaced();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -108,8 +112,12 @@ export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
                 value: s.value,
                 label: (
                   <Stack gap={0.5} align="center">
-                    <Text fontSize="sm" fontWeight="medium">{s.label}</Text>
-                    <Text fontSize="xs" fontWeight="bold">{s.odds.toFixed(2)}</Text>
+                    <Text fontSize="sm" fontWeight="medium">
+                      {s.label}
+                    </Text>
+                    <Text fontSize="xs" fontWeight="bold">
+                      {s.odds.toFixed(2)}
+                    </Text>
                   </Stack>
                 ),
               }))}

@@ -10,8 +10,11 @@
   "accessTokenLifespan": 1800,
   "roles": {
     "realm": [
-      { "name": "admin", "description": "Administrator — access to admin pages" },
-      { "name": "user",  "description": "Regular user" }
+      {
+        "name": "admin",
+        "description": "Administrator — access to admin pages"
+      },
+      { "name": "user", "description": "Regular user" }
     ]
   },
   "defaultRole": {
@@ -33,13 +36,8 @@
       "directAccessGrantsEnabled": false,
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": [
-        "http://localhost:3000/*"
-      ],
-      "webOrigins": [
-        "http://localhost:3000",
-        "http://localhost:8080"
-      ],
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000", "http://localhost:8080"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://localhost:3000/*"

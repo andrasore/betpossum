@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pyright", "mypy-protobuf"]
+dev = ["pyright", "mypy-protobuf", "ruff"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

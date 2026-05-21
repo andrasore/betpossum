@@ -1,18 +1,22 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { KeycloakModule } from './keycloak/keycloak.module';
-import { KeycloakAuthModule } from './keycloak/keycloak-auth.module';
-import { UsersModule } from './users/users.module';
-import { BetsModule } from './bets/bets.module';
-import { WalletModule } from './wallet/wallet.module';
-import { OddsModule } from './odds/odds.module';
-import { MessagingModule } from './messaging/messaging.module';
-import { AdminModule } from './admin/admin.module';
-import { User } from './users/user.entity';
-import { Bet } from './bets/bet.entity';
-import { OddsCurrent } from './odds/odds-current.entity';
-import { LoggingMiddleware } from './common/logging.middleware';
+import {
+  type MiddlewareConsumer,
+  Module,
+  type NestModule,
+} from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { AdminModule } from "./admin/admin.module";
+import { Bet } from "./bets/bet.entity";
+import { BetsModule } from "./bets/bets.module";
+import { LoggingMiddleware } from "./common/logging.middleware";
+import { KeycloakModule } from "./keycloak/keycloak.module";
+import { KeycloakAuthModule } from "./keycloak/keycloak-auth.module";
+import { MessagingModule } from "./messaging/messaging.module";
+import { OddsModule } from "./odds/odds.module";
+import { OddsCurrent } from "./odds/odds-current.entity";
+import { User } from "./users/user.entity";
+import { UsersModule } from "./users/users.module";
+import { WalletModule } from "./wallet/wallet.module";
 
 @Module({
   imports: [
@@ -20,8 +24,8 @@ import { LoggingMiddleware } from './common/logging.middleware';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        url: config.get('DATABASE_URL'),
+        type: "postgres",
+        url: config.get("DATABASE_URL"),
         entities: [User, Bet, OddsCurrent],
         synchronize: true, // use migrations in production
       }),
@@ -38,6 +42,6 @@ import { LoggingMiddleware } from './common/logging.middleware';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(LoggingMiddleware).forRoutes('*');
+    consumer.apply(LoggingMiddleware).forRoutes("*");
   }
 }

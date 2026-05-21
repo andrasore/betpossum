@@ -1,9 +1,9 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './user.entity';
-import { CreateUserDto } from './dto/create-user.dto';
-import { WalletService } from '../wallet/wallet.service';
+import { ConflictException, Injectable, Logger } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import type { Repository } from "typeorm";
+import type { WalletService } from "../wallet/wallet.service";
+import type { CreateUserDto } from "./dto/create-user.dto";
+import { User } from "./user.entity";
 
 export interface UserView {
   id: string;
@@ -27,12 +27,12 @@ export class UsersService {
 
   async listWithBetCounts(): Promise<Array<{ user: User; betCount: number }>> {
     const rows = await this.repo
-      .createQueryBuilder('u')
-      .leftJoin('u.bets', 'b')
-      .select('u')
-      .addSelect('COUNT(b.id)', 'bet_count')
-      .groupBy('u.id')
-      .orderBy('u.createdAt', 'DESC')
+      .createQueryBuilder("u")
+      .leftJoin("u.bets", "b")
+      .select("u")
+      .addSelect("COUNT(b.id)", "bet_count")
+      .groupBy("u.id")
+      .orderBy("u.createdAt", "DESC")
       .getRawAndEntities();
     return rows.entities.map((user, i) => ({
       user,
@@ -47,11 +47,13 @@ export class UsersService {
       throw new ConflictException(`User ${dto.id} already exists`);
     }
     // TODO this is not updated when someone changes their name in keycloak
-    const local = await this.repo.save(this.repo.create({
-      id: dto.id,
-      email: dto.email ?? null,
-      name: dto.name ?? null,
-    }));
+    const local = await this.repo.save(
+      this.repo.create({
+        id: dto.id,
+        email: dto.email ?? null,
+        name: dto.name ?? null,
+      }),
+    );
     this.logger.log(`Creating wallet account for new user ${local.id}`);
     // TODO maybe expect this to fail
     await this.wallet.createAccount(local.id);

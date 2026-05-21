@@ -1,4 +1,4 @@
-import { getConfig } from '@/lib/config';
+import { getConfig } from "@/lib/config";
 
 function realmBase(): string {
   const { keycloakUrl, keycloakRealm } = getConfig();
@@ -9,28 +9,36 @@ function clientId(): string {
   return getConfig().keycloakClientId;
 }
 
-const REDIRECT_URI = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '';
+const REDIRECT_URI =
+  typeof window !== "undefined"
+    ? `${window.location.origin}/auth/callback`
+    : "";
 
-const TOKEN_KEY = 'token';
-const REFRESH_KEY = 'refresh_token';
-const PKCE_VERIFIER_KEY = 'pkce_verifier';
-const PKCE_STATE_KEY = 'pkce_state';
+const TOKEN_KEY = "token";
+const REFRESH_KEY = "refresh_token";
+const PKCE_VERIFIER_KEY = "pkce_verifier";
+const PKCE_STATE_KEY = "pkce_state";
 
 function randomString(length: number): string {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, length);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, length);
 }
 
 function base64UrlEncode(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  let str = '';
+  let str = "";
   for (const b of bytes) str += String.fromCharCode(b);
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 async function pkceChallenge(verifier: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(verifier),
+  );
   return base64UrlEncode(digest);
 }
 
@@ -45,24 +53,28 @@ export async function startLogin(): Promise<void> {
   const params = new URLSearchParams({
     client_id: clientId(),
     redirect_uri: REDIRECT_URI,
-    response_type: 'code',
-    scope: 'openid profile email',
+    response_type: "code",
+    scope: "openid profile email",
     state,
     code_challenge: challenge,
-    code_challenge_method: 'S256',
+    code_challenge_method: "S256",
   });
 
   window.location.assign(`${realmBase()}/auth?${params.toString()}`);
 }
 
-export async function completeLogin(code: string, state: string): Promise<void> {
+export async function completeLogin(
+  code: string,
+  state: string,
+): Promise<void> {
   const expectedState = sessionStorage.getItem(PKCE_STATE_KEY);
   const verifier = sessionStorage.getItem(PKCE_VERIFIER_KEY);
-  if (!expectedState || expectedState !== state) throw new Error('Invalid OAuth state');
-  if (!verifier) throw new Error('Missing PKCE verifier');
+  if (!expectedState || expectedState !== state)
+    throw new Error("Invalid OAuth state");
+  if (!verifier) throw new Error("Missing PKCE verifier");
 
   const body = new URLSearchParams({
-    grant_type: 'authorization_code',
+    grant_type: "authorization_code",
     client_id: clientId(),
     code,
     redirect_uri: REDIRECT_URI,
@@ -70,12 +82,15 @@ export async function completeLogin(code: string, state: string): Promise<void> 
   });
 
   const res = await fetch(`${realmBase()}/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
   if (!res.ok) throw new Error(`Token exchange failed (${res.status})`);
-  const json = (await res.json()) as { access_token: string; refresh_token?: string };
+  const json = (await res.json()) as {
+    access_token: string;
+    refresh_token?: string;
+  };
 
   localStorage.setItem(TOKEN_KEY, json.access_token);
   if (json.refresh_token) localStorage.setItem(REFRESH_KEY, json.refresh_token);
@@ -85,19 +100,22 @@ export async function completeLogin(code: string, state: string): Promise<void> 
 
 async function doRefresh(): Promise<string> {
   const refresh = localStorage.getItem(REFRESH_KEY);
-  if (!refresh) throw new Error('No refresh token');
+  if (!refresh) throw new Error("No refresh token");
 
   const res = await fetch(`${realmBase()}/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      grant_type: 'refresh_token',
+      grant_type: "refresh_token",
       client_id: clientId(),
       refresh_token: refresh,
     }),
   });
   if (!res.ok) throw new Error(`Token refresh failed (${res.status})`);
-  const json = (await res.json()) as { access_token: string; refresh_token?: string };
+  const json = (await res.json()) as {
+    access_token: string;
+    refresh_token?: string;
+  };
 
   localStorage.setItem(TOKEN_KEY, json.access_token);
   if (json.refresh_token) localStorage.setItem(REFRESH_KEY, json.refresh_token);
@@ -108,7 +126,9 @@ async function doRefresh(): Promise<string> {
 // collapse into one refresh request.
 let refreshInFlight: Promise<string> | null = null;
 export function refreshAccessToken(): Promise<string> {
-  refreshInFlight ??= doRefresh().finally(() => { refreshInFlight = null; });
+  refreshInFlight ??= doRefresh().finally(() => {
+    refreshInFlight = null;
+  });
   return refreshInFlight;
 }
 
@@ -117,10 +137,10 @@ interface JwtPayload {
 }
 
 function decodeJwtPayload(token: string): JwtPayload | null {
-  const parts = token.split('.');
+  const parts = token.split(".");
   if (parts.length !== 3) return null;
   try {
-    const padded = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
     return JSON.parse(atob(padded)) as JwtPayload;
   } catch {
     return null;
@@ -132,7 +152,7 @@ export function getRoles(token: string): string[] {
 }
 
 export function isAdmin(token: string): boolean {
-  return getRoles(token).includes('admin');
+  return getRoles(token).includes("admin");
 }
 
 export function logout(): void {
@@ -146,9 +166,12 @@ export function logout(): void {
   });
   if (refresh) {
     fetch(`${realmBase()}/logout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: clientId(), refresh_token: refresh }),
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId(),
+        refresh_token: refresh,
+      }),
       keepalive: true,
     }).catch(() => undefined);
   }

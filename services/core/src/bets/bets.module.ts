@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Bet } from './bet.entity';
-import { BetsService } from './bets.service';
-import { BetsController } from './bets.controller';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { WalletModule } from '../wallet/wallet.module';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { NotificationsModule } from "../notifications/notifications.module";
+import { WalletModule } from "../wallet/wallet.module";
+import { Bet } from "./bet.entity";
+import { BetsController } from "./bets.controller";
+import { BetsService } from "./bets.service";
 
 @Module({
   imports: [TypeOrmModule.forFeature([Bet]), NotificationsModule, WalletModule],

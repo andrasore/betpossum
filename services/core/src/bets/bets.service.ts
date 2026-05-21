@@ -1,19 +1,19 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Bet } from './bet.entity';
-import { NotificationsClient } from '../notifications/notifications.client';
-import { WalletService } from '../wallet/wallet.service';
-import { MessagingService } from '../messaging/messaging.service';
-import { EventResolvedEvent, Outcome } from '../generated/events';
+import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import type { Repository } from "typeorm";
+import { EventResolvedEvent, Outcome } from "../generated/events";
+import type { MessagingService } from "../messaging/messaging.service";
+import type { NotificationsClient } from "../notifications/notifications.client";
+import type { WalletService } from "../wallet/wallet.service";
+import { Bet } from "./bet.entity";
 
-type Selection = 'home' | 'away' | 'draw';
+type Selection = "home" | "away" | "draw";
 
 const OUTCOME_MAP: Record<Outcome, Selection | null> = {
   [Outcome.UNSPECIFIED]: null,
-  [Outcome.HOME]: 'home',
-  [Outcome.AWAY]: 'away',
-  [Outcome.DRAW]: 'draw',
+  [Outcome.HOME]: "home",
+  [Outcome.AWAY]: "away",
+  [Outcome.DRAW]: "draw",
 };
 
 @Injectable()
@@ -29,9 +29,9 @@ export class BetsService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.messaging.subscribe(
-      'events.resolved',
+      "events.resolved",
       (raw) => this.handleEventResolved(raw),
-      { durable: true, queueName: 'core.events.resolved' },
+      { durable: true, queueName: "core.events.resolved" },
     );
   }
 
@@ -43,15 +43,22 @@ export class BetsService implements OnModuleInit {
     stake: number,
   ): Promise<Bet> {
     const bet = await this.repo.save(
-      this.repo.create({ userId, eventId, selection, odds, stake, status: 'pending' }),
+      this.repo.create({
+        userId,
+        eventId,
+        selection,
+        odds,
+        stake,
+        status: "pending",
+      }),
     );
 
     const stakeCents = Math.round(stake * 100);
     await this.wallet.hold(userId, bet.id, stakeCents);
-    await this.repo.update(bet.id, { status: 'held' });
-    await this.notifications.toUser(userId, 'bet.held', { betId: bet.id });
+    await this.repo.update(bet.id, { status: "held" });
+    await this.notifications.toUser(userId, "bet.held", { betId: bet.id });
 
-    return { ...bet, status: 'held' };
+    return { ...bet, status: "held" };
   }
 
   // `payout` is profit only (stake * (odds - 1)), not total return. On win we
@@ -62,8 +69,10 @@ export class BetsService implements OnModuleInit {
   // prevents duplicate invocations from reaching this method.
   async settle(betId: string, won: boolean, payout: number): Promise<void> {
     const bet = await this.repo.findOneByOrFail({ id: betId });
-    if (bet.status !== 'held') {
-      throw new Error(`Cannot settle bet ${betId}: status is ${bet.status}, expected held`);
+    if (bet.status !== "held") {
+      throw new Error(
+        `Cannot settle bet ${betId}: status is ${bet.status}, expected held`,
+      );
     }
 
     const stakeCents = Math.round(Number(bet.stake) * 100);
@@ -79,10 +88,14 @@ export class BetsService implements OnModuleInit {
     }
 
     await this.repo.update(betId, {
-      status: won ? 'won' : 'lost',
+      status: won ? "won" : "lost",
       payout: won ? payout : 0,
     });
-    await this.notifications.toUser(bet.userId, 'bet.settled', { betId, won, payout });
+    await this.notifications.toUser(bet.userId, "bet.settled", {
+      betId,
+      won,
+      payout,
+    });
   }
 
   // Idempotency is provided by the `status: 'held'` filter: once a bet is
@@ -92,14 +105,18 @@ export class BetsService implements OnModuleInit {
     const event = EventResolvedEvent.fromBinary(raw);
     const outcome = OUTCOME_MAP[event.outcome];
     if (outcome === null) {
-      this.logger.warn(`Ignoring events.resolved for ${event.eventId} with unspecified outcome`);
+      this.logger.warn(
+        `Ignoring events.resolved for ${event.eventId} with unspecified outcome`,
+      );
       return;
     }
 
     const held = await this.repo.find({
-      where: { eventId: event.eventId, status: 'held' },
+      where: { eventId: event.eventId, status: "held" },
     });
-    this.logger.log(`Settling ${held.length} held bet(s) on event ${event.eventId} (${outcome})`);
+    this.logger.log(
+      `Settling ${held.length} held bet(s) on event ${event.eventId} (${outcome})`,
+    );
 
     for (const bet of held) {
       const won = bet.selection === outcome;
@@ -111,6 +128,6 @@ export class BetsService implements OnModuleInit {
   }
 
   findByUser(userId: string) {
-    return this.repo.find({ where: { userId }, order: { placedAt: 'DESC' } });
+    return this.repo.find({ where: { userId }, order: { placedAt: "DESC" } });
   }
 }

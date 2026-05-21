@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { Flex, Text } from '@chakra-ui/react';
-import { startLogin } from '@/lib/keycloak';
-import { useForceTheme } from '@/hooks/useForceTheme';
+import { Flex, Text } from "@chakra-ui/react";
+import { useEffect } from "react";
+import { useForceTheme } from "@/hooks/useForceTheme";
+import { startLogin } from "@/lib/keycloak";
 
 export default function LoginPage() {
-  useForceTheme('dark');
+  useForceTheme("dark");
   useEffect(() => {
     startLogin().catch((err) => console.error(err));
   }, []);

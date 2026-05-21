@@ -1,15 +1,19 @@
-import type { Metadata } from 'next';
-import { Noto_Sans } from 'next/font/google';
-import { Providers } from './providers';
+import type { Metadata } from "next";
+import { Noto_Sans } from "next/font/google";
+import { Providers } from "./providers";
 
-const notoSans = Noto_Sans({ subsets: ['latin'], variable: '--font-sans' });
+const notoSans = Noto_Sans({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: 'BetPossum',
-  description: 'Live sports betting',
+  title: "BetPossum",
+  description: "Live sports betting",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" suppressHydrationWarning className={notoSans.variable}>
       <head>
@@ -18,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             window.__APP_CONFIG__ is set before any client bundle runs. */}
         <script src="/runtime-config.js" />
       </head>
-      <body style={{ fontFamily: 'var(--font-sans), system-ui, sans-serif' }}>
+      <body style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}>
         <Providers>{children}</Providers>
       </body>
     </html>

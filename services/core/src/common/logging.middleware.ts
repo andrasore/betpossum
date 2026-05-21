@@ -1,9 +1,9 @@
-import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
-import type { NextFunction, Request, Response } from 'express';
+import { Injectable, Logger, type NestMiddleware } from "@nestjs/common";
+import type { NextFunction, Request, Response } from "express";
 
 @Injectable()
 export class LoggingMiddleware implements NestMiddleware {
-  private readonly logger = new Logger('HTTP');
+  private readonly logger = new Logger("HTTP");
 
   use(req: Request, res: Response, next: NextFunction): void {
     // TODO: redact sensitive fields (passwords, tokens, auth headers) before logging
@@ -22,10 +22,10 @@ export class LoggingMiddleware implements NestMiddleware {
       return originalSend(chunk);
     };
 
-    res.on('finish', () => {
+    res.on("finish", () => {
       const elapsed = Date.now() - start;
       const userId = req.user?.id;
-      const userPart = userId ? ` userId=${userId}` : '';
+      const userPart = userId ? ` userId=${userId}` : "";
       this.logger.log(
         `← ${method} ${originalUrl} ${res.statusCode} (${elapsed}ms)${userPart} body=${safeStringify(responseBody)}`,
       );
@@ -36,12 +36,12 @@ export class LoggingMiddleware implements NestMiddleware {
 }
 
 function safeStringify(value: unknown): string {
-  if (value === undefined) return 'undefined';
-  if (typeof value === 'string') return value;
+  if (value === undefined) return "undefined";
+  if (typeof value === "string") return value;
   if (Buffer.isBuffer(value)) return `<Buffer ${value.length}b>`;
   try {
     return JSON.stringify(value);
   } catch {
-    return '<unserializable>';
+    return "<unserializable>";
   }
 }

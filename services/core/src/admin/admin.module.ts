@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { AdminController } from './admin.controller';
-import { AdminService } from './admin.service';
-import { UsersModule } from '../users/users.module';
-import { WalletModule } from '../wallet/wallet.module';
+import { Module } from "@nestjs/common";
+import { UsersModule } from "../users/users.module";
+import { WalletModule } from "../wallet/wallet.module";
+import { AdminController } from "./admin.controller";
+import { AdminService } from "./admin.service";
 
 @Module({
   imports: [UsersModule, WalletModule],

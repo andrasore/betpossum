@@ -18,10 +18,13 @@ declare global {
 // That route handler reads process.env at request time, so values come from the
 // container's environment — not build-time NEXT_PUBLIC_* substitution.
 export function getConfig(): AppConfig {
-  if (typeof window === 'undefined') {
-    throw new Error('getConfig() must only be called from client code');
+  if (typeof window === "undefined") {
+    throw new Error("getConfig() must only be called from client code");
   }
   const cfg = window.__APP_CONFIG__;
-  if (!cfg) throw new Error('window.__APP_CONFIG__ was not loaded — is /runtime-config.js reachable?');
+  if (!cfg)
+    throw new Error(
+      "window.__APP_CONFIG__ was not loaded — is /runtime-config.js reachable?",
+    );
   return cfg;
 }

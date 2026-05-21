@@ -1,9 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { passportJwtSecret } from 'jwks-rsa';
-import { UsersService, UserView } from '../users/users.service';
-import { KeycloakService } from './keycloak.service';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { PassportStrategy } from "@nestjs/passport";
+import { passportJwtSecret } from "jwks-rsa";
+import { ExtractJwt, Strategy } from "passport-jwt";
+import type { UsersService, UserView } from "../users/users.service";
+import type { KeycloakService } from "./keycloak.service";
 
 export interface KeycloakJwtPayload {
   sub: string;
@@ -24,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       issuer: keycloak.issuerUrl,
-      algorithms: ['RS256'],
+      algorithms: ["RS256"],
       secretOrKeyProvider: passportJwtSecret({
         jwksUri: keycloak.jwksUri,
         cache: true,
@@ -36,8 +36,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: KeycloakJwtPayload) {
     if (!payload?.sub) throw new UnauthorizedException();
 
-    const fullName = [payload.given_name, payload.family_name].filter(Boolean).join(' ').trim();
-    const name = payload.name ?? (fullName || payload.preferred_username || null);
+    const fullName = [payload.given_name, payload.family_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const name =
+      payload.name ?? (fullName || payload.preferred_username || null);
     const email = payload.email ?? null;
 
     const existing = await this.users.findById(payload.sub);

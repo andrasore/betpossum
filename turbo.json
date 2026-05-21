@@ -5,7 +5,7 @@
     "init": {
       "inputs": ["pyproject.toml"],
       "outputs": [".venv/**"]
-      },
+    },
     "build": {
       "dependsOn": ["init"],
       "inputs": ["src/**"],
@@ -26,15 +26,23 @@
       ],
       "outputs": []
     },
-    "test": {
+    "lint": {
       "dependsOn": ["build"],
       "inputs": [
-        "src/**",
-        "test/**",
-        "jest.config.js",
-        "tsconfig.json"
+        "**/*.ts",
+        "**/*.tsx",
+        "**/*.py",
+        "tsconfig.json",
+        "pyproject.toml"
       ],
       "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "inputs": ["src/**", "test/**", "jest.config.js", "tsconfig.json"],
+      "outputs": []
+    },
+    "format": {
     }
   }
 }

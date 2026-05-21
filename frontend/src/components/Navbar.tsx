@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { LogOut } from 'lucide-react';
-import { Button, Flex, Text } from '@chakra-ui/react';
-import { logout } from '@/lib/keycloak';
+import { Button, Flex, Text } from "@chakra-ui/react";
+import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { logout } from "@/lib/keycloak";
 
 interface NavbarProps {
   balance?: number | null;
