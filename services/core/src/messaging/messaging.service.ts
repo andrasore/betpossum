@@ -65,7 +65,9 @@ export class MessagingService implements OnModuleInit, OnModuleDestroy {
     await this.channel.consume(
       queue,
       (msg) => {
-        if (!msg) return;
+        if (!msg) {
+          return;
+        }
         if (durable) {
           Promise.resolve()
             .then(() => handler(msg.content))

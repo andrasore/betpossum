@@ -62,8 +62,12 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   private async resolveAddress(address: string): Promise<string> {
     const [host, port] = address.split(":");
-    if (!port) return address;
-    if (net.isIP(host)) return address;
+    if (!port) {
+      return address;
+    }
+    if (net.isIP(host)) {
+      return address;
+    }
     const { address: ip } = await dns.lookup(host, { family: 4 });
     return `${ip}:${port}`;
   }
@@ -85,7 +89,9 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   async getBalanceCents(userId: string): Promise<number> {
     const accounts = await this.client.lookupAccounts([this.toId(userId)]);
-    if (accounts.length === 0) return 0;
+    if (accounts.length === 0) {
+      return 0;
+    }
     const a = accounts[0];
     return Number(a.credits_posted - a.debits_posted - a.debits_pending);
   }

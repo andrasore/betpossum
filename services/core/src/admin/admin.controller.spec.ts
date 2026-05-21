@@ -35,7 +35,9 @@ describe("AdminController (auth boundary)", () => {
           const req = ctx
             .switchToHttp()
             .getRequest<Request & { user?: AuthUser }>();
-          if (!currentUser) return false;
+          if (!currentUser) {
+            return false;
+          }
           req.user = currentUser;
           return true;
         },

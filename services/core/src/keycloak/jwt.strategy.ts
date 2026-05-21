@@ -34,7 +34,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: KeycloakJwtPayload) {
-    if (!payload?.sub) throw new UnauthorizedException();
+    if (!payload?.sub) {
+      throw new UnauthorizedException();
+    }
 
     const fullName = [payload.given_name, payload.family_name]
       .filter(Boolean)

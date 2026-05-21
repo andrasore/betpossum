@@ -20,14 +20,18 @@ describe("WalletService", () => {
 
   const readRawBalance = async (id: bigint): Promise<number> => {
     const accounts = await probe.lookupAccounts([id]);
-    if (accounts.length === 0) return 0;
+    if (accounts.length === 0) {
+      return 0;
+    }
     const a = accounts[0];
     return Number(a.credits_posted - a.debits_posted);
   };
 
   const readPendingDebit = async (id: bigint): Promise<number> => {
     const accounts = await probe.lookupAccounts([id]);
-    if (accounts.length === 0) return 0;
+    if (accounts.length === 0) {
+      return 0;
+    }
     return Number(accounts[0].debits_pending);
   };
 
@@ -41,8 +45,12 @@ describe("WalletService", () => {
           provide: ConfigService,
           useValue: {
             get: (key: string, fallback?: string) => {
-              if (key === "TIGERBEETLE_ADDRESS") return tb.address;
-              if (key === "TIGERBEETLE_CLUSTER_ID") return "0";
+              if (key === "TIGERBEETLE_ADDRESS") {
+                return tb.address;
+              }
+              if (key === "TIGERBEETLE_CLUSTER_ID") {
+                return "0";
+              }
               return fallback;
             },
           },

@@ -36,9 +36,15 @@ export class LoggingMiddleware implements NestMiddleware {
 }
 
 function safeStringify(value: unknown): string {
-  if (value === undefined) return "undefined";
-  if (typeof value === "string") return value;
-  if (Buffer.isBuffer(value)) return `<Buffer ${value.length}b>`;
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (Buffer.isBuffer(value)) {
+    return `<Buffer ${value.length}b>`;
+  }
   try {
     return JSON.stringify(value);
   } catch {

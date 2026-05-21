@@ -20,7 +20,9 @@ const TB_BIN_DIR = path.join(os.tmpdir(), "tb_bin");
 const TB_BIN = path.join(TB_BIN_DIR, "tigerbeetle");
 
 export async function ensureBinary(): Promise<void> {
-  if (fs.existsSync(TB_BIN)) return;
+  if (fs.existsSync(TB_BIN)) {
+    return;
+  }
   await fsp.mkdir(TB_BIN_DIR, { recursive: true });
   const zipPath = path.join(TB_BIN_DIR, "tb.zip");
   console.log(`\nDownloading TigerBeetle ${TB_VERSION} …`);

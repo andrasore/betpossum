@@ -33,7 +33,8 @@
         "**/*.tsx",
         "**/*.py",
         "tsconfig.json",
-        "pyproject.toml"
+        "pyproject.toml",
+        "biome.jsonc"
       ],
       "outputs": []
     },
@@ -43,6 +44,9 @@
       "outputs": []
     },
     "format": {
+      "inputs": [
+        "biome.jsonc"
+      ]
     }
   }
 }

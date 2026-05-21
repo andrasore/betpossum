@@ -68,8 +68,12 @@ describe("BetsService", () => {
           provide: ConfigService,
           useValue: {
             get: (key: string, fallback?: string) => {
-              if (key === "TIGERBEETLE_ADDRESS") return tb.address;
-              if (key === "TIGERBEETLE_CLUSTER_ID") return "0";
+              if (key === "TIGERBEETLE_ADDRESS") {
+                return tb.address;
+              }
+              if (key === "TIGERBEETLE_CLUSTER_ID") {
+                return "0";
+              }
               return fallback;
             },
           },
