@@ -1,2 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 npm run typecheck
+npm run test
+npm run lint
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+bash "$REPO_ROOT/tools/protobuf_guard.sh"
