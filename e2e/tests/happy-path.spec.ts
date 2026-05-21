@@ -1,14 +1,8 @@
-import {
-  expect,
-  type Page,
-  request as playwrightRequest,
-  test,
-} from "@playwright/test";
-
-const GATEWAY_URL = "http://localhost:18080";
+import { expect, type Page, test } from "@playwright/test";
 
 async function loginAs(page: Page, username: string): Promise<void> {
   await page.goto("/");
+  await page.getByTestId("login-button").click();
   await page.locator("#username").fill(username);
   await page.locator("#password").fill("password");
   await page.locator("#kc-login").click();
@@ -24,6 +18,12 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   const aliceWarmupPage = await aliceWarmupCtx.newPage();
   await loginAs(aliceWarmupPage, "alice");
   await aliceWarmupPage.waitForURL("**/dashboard");
+  // Wait until the client session has resolved (signalled by the logout
+  // button appearing). At that point the dashboard hooks have fired their
+  // authed requests, which is what creates Alice's row lazily in core.
+  await expect(aliceWarmupPage.getByTestId("logout-button")).toBeVisible({
+    timeout: 15_000,
+  });
   await aliceWarmupCtx.close();
 
   const bobCtx = await browser.newContext();
@@ -36,12 +36,6 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   await aliceRow.getByRole("spinbutton").fill("100");
   await aliceRow.getByRole("button", { name: "Confirm" }).click();
   await expect(aliceRow.getByRole("button", { name: "Confirm" })).toBeHidden();
-
-  // Grab bob's admin token before tearing down his context — we use it later
-  // to drive event resolution via the admin REST API.
-  const bobToken = await bobPage.evaluate(() => localStorage.getItem("token"));
-  expect(bobToken, "bob should have a token").toBeTruthy();
-  await bobCtx.close();
 
   const aliceCtx = await browser.newContext();
   const alicePage = await aliceCtx.newPage();
@@ -69,20 +63,19 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   // Started at £100, staked £10 → £90 held until settlement.
   await expect(alicePage.getByTestId("balance")).toHaveText("Balance: £90.00");
 
-  // Resolve the event in alice's favour via the admin endpoint.
-  const apiContext = await playwrightRequest.newContext();
-  const resp = await apiContext.post(
-    `${GATEWAY_URL}/admin/events/${eventId}/result`,
+  // Resolve the event in alice's favour via the admin endpoint. We go through
+  // bob's BFF proxy (his session cookie carries the auth) rather than hitting
+  // the gateway directly, since the access token never reaches the browser
+  // under the NextAuth + BFF setup.
+  const resp = await bobPage.request.post(
+    `/api/proxy/admin/events/${eventId}/result`,
     {
-      headers: {
-        Authorization: `Bearer ${bobToken}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       data: { outcome: "home" },
     },
   );
   expect(resp.status(), await resp.text()).toBe(201);
-  await apiContext.dispose();
+  await bobCtx.close();
 
   // Bet row flips to "Won" via the socket-driven useBets revalidation.
   await expect(betRow).toContainText(/won/i, { timeout: 20_000 });

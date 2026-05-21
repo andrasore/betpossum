@@ -1,14 +1,14 @@
 "use client";
 
 import { Flex, Text } from "@chakra-ui/react";
+import { signIn } from "next-auth/react";
 import { useEffect } from "react";
 import { useForceTheme } from "@/hooks/useForceTheme";
-import { startLogin } from "@/lib/keycloak";
 
 export default function LoginPage() {
   useForceTheme("dark");
   useEffect(() => {
-    startLogin().catch((err) => console.error(err));
+    void signIn("keycloak", { callbackUrl: "/dashboard" });
   }, []);
 
   return (

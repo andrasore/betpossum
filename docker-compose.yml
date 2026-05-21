@@ -75,6 +75,7 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HOSTNAME: http://localhost:8090
       KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HTTP_ENABLED: "true"
       KC_PROXY_HEADERS: xforwarded
     volumes:
@@ -162,10 +163,14 @@ services:
       context: .
       target: frontend
     environment:
-      KEYCLOAK_URL: http://localhost:8090
-      KEYCLOAK_REALM: betting
-      KEYCLOAK_CLIENT_ID: betting-frontend
-      GATEWAY_PORT: "8080"
+      NEXTAUTH_SECRET: dev-secret-do-not-use-in-prod-aaaaaaaaaaaaaaaa
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_KEYCLOAK_ID: betting-frontend
+      NEXTAUTH_KEYCLOAK_SECRET: betting-frontend-secret
+      NEXTAUTH_KEYCLOAK_ISSUER: http://localhost:8090/realms/betting
+      NEXTAUTH_KEYCLOAK_ISSUER_INTERNAL: http://keycloak:8080/realms/betting
+      GATEWAY_URL: http://nginx:80
+      GATEWAY_PUBLIC_PORT: "8080"
     ports:
       - "3000:3000"
     depends_on:

@@ -36,7 +36,8 @@ services:
       - "18080:80"
   frontend:
     environment:
-      KEYCLOAK_URL: http://localhost:18090
-      GATEWAY_PORT: "18080"
+      NEXTAUTH_URL: http://localhost:13000
+      NEXTAUTH_KEYCLOAK_ISSUER: http://localhost:18090/realms/betting
+      GATEWAY_PUBLIC_PORT: "18080"
     ports: !override
       - "13000:3000"

@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge, Box, Card, Flex, Heading, Stack, Text } from "@chakra-ui/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BetSlip } from "@/components/BetSlip";
@@ -10,7 +11,6 @@ import { useBalance } from "@/hooks/useBalance";
 import { useBets } from "@/hooks/useBets";
 import { useForceTheme } from "@/hooks/useForceTheme";
 import { useOdds } from "@/hooks/useOdds";
-import { isAdmin } from "@/lib/keycloak";
 import type { Bet, OddsEvent } from "@/types";
 
 type Choice = "home" | "away" | "draw";
@@ -26,30 +26,26 @@ const statusPalette: Record<Bet["status"], string> = {
 export default function DashboardPage() {
   useForceTheme("dark");
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
+  const { data: session, status } = useSession();
   const [selection, setSelection] = useState<Selection>(null);
-  const odds = useOdds(token);
-  const { data: bets, mutate } = useBets(token);
-  const balance = useBalance(token);
+
+  // Hooks below use the session token as a "logged in?" key, not as a
+  // credential — the actual token never leaves the BFF.
+  const sessionKey = session?.accessToken ?? null;
+  const odds = useOdds(sessionKey);
+  const { data: bets, mutate } = useBets(sessionKey);
+  const balance = useBalance(sessionKey);
 
   useEffect(() => {
-    const t = localStorage.getItem("token");
-    if (!t) {
-      router.replace("/login");
-      return;
-    }
-    if (isAdmin(t)) {
-      router.replace("/admin");
-      return;
-    }
-    setToken(t);
-  }, [router]);
+    if (status !== "authenticated") return;
+    if (session.roles.includes("admin")) router.replace("/admin");
+  }, [status, session, router]);
 
-  if (!token) return null;
+  const loggedIn = status === "authenticated";
 
   return (
     <Flex direction="column" h="100vh">
-      <Navbar balance={balance} />
+      <Navbar balance={balance} loggedIn={loggedIn} />
       <Flex flex="1" overflow="hidden">
         <Box as="main" flex="1" overflowY="auto" p={6}>
           <Heading as="h2" size="md" mb={4}>
@@ -67,7 +63,7 @@ export default function DashboardPage() {
             }
           />
 
-          {bets && bets.length > 0 && (
+          {loggedIn && bets && bets.length > 0 && (
             <Box mt={8}>
               <Heading as="h2" size="md" mb={3}>
                 My Bets

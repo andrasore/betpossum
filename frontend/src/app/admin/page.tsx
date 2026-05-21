@@ -11,6 +11,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { Check, X } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
@@ -21,37 +22,30 @@ import {
   fetchAdminUsers,
   setAdminUserBalance,
 } from "@/lib/api";
-import { isAdmin } from "@/lib/keycloak";
 
 export default function AdminPage() {
   useForceTheme("light");
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
-    const t = localStorage.getItem("token");
-    if (!t) {
-      router.replace("/login");
-      return;
-    }
-    if (!isAdmin(t)) {
-      router.replace("/dashboard");
-      return;
-    }
-    setToken(t);
-  }, [router]);
+    if (status !== "authenticated") return;
+    if (!session.roles.includes("admin")) router.replace("/dashboard");
+  }, [status, session, router]);
+
+  const isAdmin = status === "authenticated" && session.roles.includes("admin");
 
   const {
     data: users,
     isLoading,
     mutate,
   } = useSWR<AdminUserRow[]>(
-    token ? "admin-users" : null,
+    isAdmin ? "admin-users" : null,
     () => fetchAdminUsers(),
     { refreshInterval: 15_000 },
   );
 
-  if (!token) return null;
+  if (!isAdmin) return null;
 
   return (
     <Flex direction="column" h="100vh">

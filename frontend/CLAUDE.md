@@ -18,52 +18,79 @@ There is no test or lint script configured.
 
 ## Environment
 
-The REST and WebSocket URLs are resolved at runtime in the browser from
-`window.location.hostname`, pointing at the nginx gateway on port 8080. They
-are not configurable via env vars — nginx routes `/` to core and `/socket.io/`
-to the notifications service.
+Auth uses **NextAuth.js v4** with a Keycloak provider, configured via
+`authOptions` in `src/auth.ts`. The Keycloak client is **confidential** —
+the frontend container holds `NEXTAUTH_KEYCLOAK_SECRET` and never ships
+tokens to the browser. The session cookie is httpOnly; `/api/auth/*` is
+the standard NextAuth handler.
 
-Keycloak's URL (a separate origin the browser is redirected to for OAuth) is
-*also* resolved at runtime — via the `/runtime-config.js` route handler
-(`src/app/runtime-config.js/route.ts`), which reads `process.env.KEYCLOAK_URL`
-on every request and returns a tiny JS payload that sets `window.__APP_CONFIG__`.
-The root layout includes it as a blocking `<script src="/runtime-config.js">`
-in `<head>`, so by the time any client bundle runs, the config is set.
-`src/lib/keycloak.ts` reads from `window.__APP_CONFIG__` via `getConfig()` —
-never `process.env.NEXT_PUBLIC_*`. This lets one image serve dev (port 8090)
-and e2e (port 18090) without rebuilding.
+Server-side env, set in `docker-compose.yml`:
 
-Copy `.env.example` to `.env.local` for Keycloak settings only.
+- `NEXTAUTH_SECRET` — cookie/JWT signing key
+- `NEXTAUTH_URL` — public origin of the app (used for callback URLs)
+- `NEXTAUTH_KEYCLOAK_ID` / `NEXTAUTH_KEYCLOAK_SECRET` — client credentials
+- `NEXTAUTH_KEYCLOAK_ISSUER` — public issuer (matches `iss` in tokens, the URL the browser is redirected to)
+- `NEXTAUTH_KEYCLOAK_ISSUER_INTERNAL` — server-only Keycloak URL used for OIDC discovery (e.g. `http://keycloak:8080/...`). Backchannel endpoints in the discovery response (`token_endpoint`, `userinfo_endpoint`, `jwks_uri`) come back under this host because Keycloak runs with `KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true`
+- `GATEWAY_URL` — server-side upstream for the BFF (e.g. `http://nginx:80`)
+- `GATEWAY_PUBLIC_PORT` — browser-facing nginx port for the WebSocket
+
+The browser-facing gateway port is exposed at runtime via a blocking
+`<script>` in the root layout that sets `window.__GATEWAY_PORT__` from
+`GATEWAY_PUBLIC_PORT`. There are no build-time `NEXT_PUBLIC_*` vars —
+one image serves dev (8080 / 8090) and e2e (18080 / 18090).
 
 ## Architecture
 
-**BetPossum** is a Next.js 16 (App Router) sports betting frontend. It is part of a Turbo monorepo (`@betting/frontend`).
+**BetPossum** is a Next.js 16 (App Router, Turbopack) sports betting
+frontend, part of a Turbo monorepo (`@betting/frontend`).
 
 ### Routes
 
-| Route        | Description                                                    |
-|--------------|----------------------------------------------------------------|
-| `/`          | Redirects to `/dashboard`                                      |
-| `/login`     | Login / register form; stores JWT in `localStorage` as `token` |
-| `/dashboard` | Protected main page; redirects to `/login` if no token         |
+| Route        | Description                                                |
+|--------------|------------------------------------------------------------|
+| `/`          | Redirects to `/dashboard`                                  |
+| `/login`     | "Sign in with Keycloak" button → `signIn("keycloak")`      |
+| `/dashboard` | Protected; `proxy.ts` redirects unauthenticated to `/login`|
+| `/admin`     | Protected; `session.roles` must include `admin`            |
+| `/api/auth/[...nextauth]` | NextAuth handler                              |
+| `/api/proxy/[...path]`    | BFF: attaches `Authorization: Bearer <accessToken>` server-side and forwards to `GATEWAY_URL` |
+| `/api/socket-token`       | Returns the current session's access token for the WebSocket handshake |
+
+`src/proxy.ts` is the route-protection middleware (renamed from
+`middleware.ts` per Next 16's deprecation). It re-exports
+`next-auth/middleware` to gate `/dashboard` and `/admin`; unauthenticated
+hits go to `/login` (configured via `pages.signIn` in `authOptions`).
 
 ### Data flow
 
-- **REST** (`src/lib/api.ts`): `login`, `register`, `placeBet`, `fetchBets` — all protected calls attach `Authorization: Bearer <token>`.
-- **WebSocket** (`src/lib/websocket.ts`): Singleton Socket.io instance authenticated via the token. The `useOdds` hook subscribes to `odds.updated` events and maintains a `Map<eventId, OddsEvent>`. Incoming events are validated with the Zod schema in `src/lib/schemas.ts`.
-- **Bets** (`src/hooks/useBets.ts`): SWR-backed. No interval polling — invalidation is socket-driven via `bet.held` / `bet.settled` events (per-user filtered server-side via socket.io rooms keyed on the JWT `sub`), plus a `connect` listener that revalidates after any disconnect.
+- **REST** (`src/lib/api.ts`): calls `/api/proxy/...` same-origin. The
+  BFF route handler reads the session, attaches the Bearer token, and
+  forwards to `GATEWAY_URL`. No tokens or refresh logic in the browser.
+- **WebSocket** (`src/lib/websocket.ts`): browser opens Socket.io
+  directly to the gateway port (`window.__GATEWAY_PORT__`). The auth
+  token comes from `GET /api/socket-token` on each (re)connect. On
+  persistent `connect_error`, falls back to `signIn("keycloak")`.
+- **Bets** (`src/hooks/useBets.ts`): SWR-backed, invalidated by
+  `bet.held` / `bet.settled` socket events (per-user rooms keyed on JWT
+  `sub`).
+- **Odds** (`src/hooks/useOdds.ts`): subscribes to `odds.updated`,
+  validates with the Zod schema in `src/lib/schemas.ts`.
 
 ### Component hierarchy (dashboard)
 
 ```
 DashboardPage
-├── Navbar               — logout clears token, redirects to /login
+├── Navbar               — signOut({ callbackUrl: "/login" }) → federated logout via Keycloak end-session
 ├── OddsBoard            — reads from useOdds; emits selection up via callback
 ├── My Bets section      — reads from useBets; Badge colored by status
 └── BetSlip (sidebar)    — controlled stake input; calls placeBet on submit
 ```
 
-All interactive components are `'use client'`. Domain components live in `src/components/`; there is no `ui/` primitives folder — Chakra UI v3 supplies the primitives directly.
+All interactive components are `'use client'`. Domain components live in
+`src/components/`; there is no `ui/` primitives folder — Chakra UI v3
+supplies the primitives directly. `useSession()` from `next-auth/react`
+provides session state under `<SessionProvider>` in
+`src/app/providers.tsx`.
 
 ### Key types (`src/types/index.ts`)
 
@@ -73,4 +100,6 @@ All interactive components are `'use client'`. Domain components live in `src/co
 
 ### Styling
 
-Chakra UI v3 with `defaultSystem`. `next-themes` forces dark mode via `forcedTheme="dark"` in `src/app/providers.tsx`. There is no Tailwind, no global CSS file, and no `cn()` helper — styling is via Chakra props (`bg`, `color`, `p`, etc.) and tokens (`bg.muted`, `fg.muted`, `border`, color palettes like `green`/`red`).
+Chakra UI v3 with `defaultSystem`. `next-themes` forces dark mode via
+`forcedTheme="dark"` in `src/app/providers.tsx`. No Tailwind, no global
+CSS, no `cn()` — styling is via Chakra props and tokens.

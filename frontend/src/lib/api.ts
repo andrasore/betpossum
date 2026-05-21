@@ -1,57 +1,20 @@
-import { getConfig } from "@/lib/config";
-import { logout, refreshAccessToken } from "@/lib/keycloak";
 import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
 
-function baseUrl(): string {
-  return `${window.location.protocol}//${window.location.hostname}:${getConfig().gatewayPort}`;
-}
-
-function send(
-  path: string,
-  init: RequestInit | undefined,
-  token: string,
-): Promise<Response> {
-  return fetch(`${baseUrl()}${path}`, {
+// All authenticated calls route through the Next.js BFF proxy, which
+// attaches the Keycloak access token server-side. The browser never sees
+// the token.
+async function api(path: string, init?: RequestInit): Promise<Response> {
+  return fetch(`/api/proxy${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
       ...(init?.headers ?? {}),
     },
   });
 }
 
-async function authedFetch(
-  path: string,
-  init?: RequestInit,
-): Promise<Response> {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    logout();
-    throw new Error("Session expired");
-  }
-
-  const res = await send(path, init, token);
-  if (res.status !== 401) return res;
-
-  let fresh: string;
-  try {
-    fresh = await refreshAccessToken();
-  } catch {
-    logout();
-    throw new Error("Session expired");
-  }
-
-  const retry = await send(path, init, fresh);
-  if (retry.status === 401) {
-    logout();
-    throw new Error("Session expired");
-  }
-  return retry;
-}
-
 export async function placeBet(payload: PlaceBetPayload): Promise<Bet> {
-  const res = await authedFetch("/bets", {
+  const res = await api("/bets", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -60,19 +23,19 @@ export async function placeBet(payload: PlaceBetPayload): Promise<Bet> {
 }
 
 export async function fetchBets(): Promise<Bet[]> {
-  const res = await authedFetch("/bets");
+  const res = await api("/bets");
   if (!res.ok) throw new Error("Failed to fetch bets");
   return res.json();
 }
 
 export async function fetchOdds(): Promise<OddsEvent[]> {
-  const res = await authedFetch("/odds");
+  const res = await api("/odds");
   if (!res.ok) throw new Error("Failed to fetch odds");
   return res.json();
 }
 
 export async function fetchBalance(): Promise<number> {
-  const res = await authedFetch("/wallet/balance");
+  const res = await api("/wallet/balance");
   if (!res.ok) throw new Error("Failed to fetch balance");
   const { balance } = (await res.json()) as { balance: number };
   return balance;
@@ -87,7 +50,7 @@ export interface AdminUserRow {
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
-  const res = await authedFetch("/admin/users");
+  const res = await api("/admin/users");
   if (!res.ok) throw new Error("Failed to fetch users");
   return res.json();
 }
@@ -96,7 +59,7 @@ export async function setAdminUserBalance(
   userId: string,
   amount: number,
 ): Promise<void> {
-  const res = await authedFetch(`/admin/users/${userId}/balance`, {
+  const res = await api(`/admin/users/${userId}/balance`, {
     method: "PUT",
     body: JSON.stringify({ amount }),
   });

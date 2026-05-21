@@ -1,15 +1,16 @@
 "use client";
 
 import { Button, Flex, Text } from "@chakra-ui/react";
-import { LogOut } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
+import { signIn, signOut } from "next-auth/react";
 import Link from "next/link";
-import { logout } from "@/lib/keycloak";
 
 interface NavbarProps {
   balance?: number | null;
+  loggedIn?: boolean;
 }
 
-export function Navbar({ balance }: NavbarProps) {
+export function Navbar({ balance, loggedIn }: NavbarProps) {
   return (
     <Flex
       as="nav"
@@ -31,10 +32,31 @@ export function Navbar({ balance }: NavbarProps) {
             Balance: £{balance.toFixed(2)}
           </Text>
         )}
-        <Button variant="ghost" size="sm" onClick={logout}>
-          <LogOut size={16} />
-          Sign out
-        </Button>
+        {loggedIn ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              void signOut({ callbackUrl: "/login" });
+            }}
+            data-testid="logout-button"
+          >
+            <LogOut size={16} />
+            Sign out
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              void signIn("keycloak", { callbackUrl: "/dashboard" });
+            }}
+            data-testid="login-button"
+          >
+            <LogIn size={16} />
+            Sign in
+          </Button>
+        )}
       </Flex>
     </Flex>
   );
