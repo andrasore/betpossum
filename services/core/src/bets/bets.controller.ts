@@ -1,8 +1,8 @@
 import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { type AuthUser, CurrentUser } from "../common/current-user.decorator";
-import type { BetsService } from "./bets.service";
-import type { PlaceBetDto } from "./dto/place-bet.dto";
+import { BetsService } from "./bets.service";
+import { PlaceBetDto } from "./dto/place-bet.dto";
 
 @Controller("bets")
 @UseGuards(AuthGuard("jwt"))

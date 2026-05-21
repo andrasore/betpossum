@@ -3,6 +3,14 @@
     "indentStyle": "space",
     "indentWidth": 2
   },
+  "linter": {
+    "rules": {
+      "//": "This breaks nestjs' import system",
+      "style": {
+        "useImportType": "off"
+      }
+    }
+  },
   "vcs": {
     "enabled": true,
     "clientKind": "git",

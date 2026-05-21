@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { EventResolvedEvent, Outcome } from "../generated/events";
-import type { MessagingService } from "../messaging/messaging.service";
-import type { UsersService } from "../users/users.service";
-import type { WalletService } from "../wallet/wallet.service";
+import { MessagingService } from "../messaging/messaging.service";
+import { UsersService } from "../users/users.service";
+import { WalletService } from "../wallet/wallet.service";
 
 export interface AdminUserRow {
   id: string;

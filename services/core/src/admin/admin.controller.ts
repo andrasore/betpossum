@@ -11,9 +11,9 @@ import {
 import { AuthGuard } from "@nestjs/passport";
 import { Roles } from "../common/roles.decorator";
 import { RolesGuard } from "../common/roles.guard";
-import type { AdminService } from "./admin.service";
-import type { SetBalanceDto } from "./dto/set-balance.dto";
-import type { SettleEventDto } from "./dto/settle-event.dto";
+import { AdminService } from "./admin.service";
+import { SetBalanceDto } from "./dto/set-balance.dto";
+import { SettleEventDto } from "./dto/settle-event.dto";
 
 @Controller("admin")
 @UseGuards(AuthGuard("jwt"), RolesGuard)

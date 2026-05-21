@@ -2,8 +2,8 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { passportJwtSecret } from "jwks-rsa";
 import { ExtractJwt, Strategy } from "passport-jwt";
-import type { UsersService, UserView } from "../users/users.service";
-import type { KeycloakService } from "./keycloak.service";
+import { UsersService, type UserView } from "../users/users.service";
+import { KeycloakService } from "./keycloak.service";
 
 export interface KeycloakJwtPayload {
   sub: string;

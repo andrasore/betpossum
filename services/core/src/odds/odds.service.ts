@@ -2,8 +2,8 @@ import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 import { OddsUpdatedEvent } from "../generated/events";
-import type { MessagingService } from "../messaging/messaging.service";
-import type { NotificationsClient } from "../notifications/notifications.client";
+import { MessagingService } from "../messaging/messaging.service";
+import { NotificationsClient } from "../notifications/notifications.client";
 import { OddsCurrent } from "./odds-current.entity";
 
 @Injectable()

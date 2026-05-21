@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { NotificationEvent } from "../generated/events";
-import type { MessagingService } from "../messaging/messaging.service";
+import { MessagingService } from "../messaging/messaging.service";
 
 const CHANNEL = "notifications";
 

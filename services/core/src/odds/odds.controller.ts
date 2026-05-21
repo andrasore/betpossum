@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
-import type { OddsService } from "./odds.service";
+import { OddsService } from "./odds.service";
 
 @Controller("odds")
 @UseGuards(AuthGuard("jwt"))

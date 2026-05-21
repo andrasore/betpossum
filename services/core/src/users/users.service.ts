@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
-import type { WalletService } from "../wallet/wallet.service";
+import { WalletService } from "../wallet/wallet.service";
 import type { CreateUserDto } from "./dto/create-user.dto";
 import { User } from "./user.entity";
 
