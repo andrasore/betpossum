@@ -36,3 +36,6 @@ exclude = ["src/generated"]
 extraPaths = ["src"]
 venvPath = "."
 venv = ".venv"
+
+[tool.ruff]
+extend-exclude = ["src/generated"]

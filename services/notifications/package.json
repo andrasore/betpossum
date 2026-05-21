@@ -5,7 +5,7 @@
     "init": "python -m venv .venv && .venv/bin/pip install -e '.[dev]'",
     "proto:gen": "mkdir -p ./src/generated && .venv/bin/python -m grpc_tools.protoc -I../../proto --python_out=src/generated --mypy_out=src/generated --plugin=protoc-gen-mypy=.venv/bin/protoc-gen-mypy ../../proto/events.proto",
     "typecheck": ".venv/bin/pyright src/",
-    "lint": ".venv/bin/ruff check",
+    "lint": ".venv/bin/ruff check && .venv/bin/ruff format --check",
     "format": ".venv/bin/ruff format"
   }
 }

@@ -20,7 +20,9 @@ KEYCLOAK_ISSUER_URL = os.environ.get(
     "KEYCLOAK_ISSUER_URL", f"{KEYCLOAK_INTERNAL_URL}/realms/{KEYCLOAK_REALM}"
 )
 
-JWKS_URL = f"{KEYCLOAK_INTERNAL_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
+JWKS_URL = (
+    f"{KEYCLOAK_INTERNAL_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
+)
 jwks_client = jwt.PyJWKClient(JWKS_URL)
 
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")  # pyright: ignore[reportUnknownMemberType]
@@ -28,7 +30,9 @@ sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")  # pyrig
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-    subscriber = asyncio.create_task(run_subscriber(RABBITMQ_URL, sio), name="notifications-subscriber")
+    subscriber = asyncio.create_task(
+        run_subscriber(RABBITMQ_URL, sio), name="notifications-subscriber"
+    )
     try:
         yield
     finally:
@@ -51,7 +55,9 @@ app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)  # pyright: ignore[repor
 
 
 @sio.event  # pyright: ignore[reportUnknownMemberType, reportUntypedFunctionDecorator]
-async def connect(sid: str, _environ: dict[str, Any], auth: dict[str, Any] | None) -> bool:
+async def connect(
+    sid: str, _environ: dict[str, Any], auth: dict[str, Any] | None
+) -> bool:
     token = auth.get("token") if isinstance(auth, dict) else None
     if not isinstance(token, str):
         logger.info("Rejecting socket %s: no token", sid)

@@ -65,7 +65,9 @@ class OddsPublisher:
             resolved_at=result.resolved_at,
         ).SerializeToString()
         await exchange.publish(
-            aio_pika.Message(body=payload, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
+            aio_pika.Message(
+                body=payload, delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+            ),
             routing_key="",
         )
 

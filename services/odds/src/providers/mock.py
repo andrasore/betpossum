@@ -5,6 +5,7 @@ their odds on each tick so the frontend sees realistic live-market movement
 without calling the real API. After MOCK_RESOLVE_TICKS ticks, each fixture
 resolves to a random outcome (biased by inverse current odds) and drops out.
 """
+
 import logging
 import os
 import random
@@ -25,13 +26,48 @@ class Fixture(TypedDict):
 
 
 FIXTURES: list[Fixture] = [
-    {"event_id": "mock-epl-001", "sport": "soccer_epl",            "home_team": "Arsenal",               "away_team": "Chelsea"},
-    {"event_id": "mock-epl-002", "sport": "soccer_epl",            "home_team": "Liverpool",              "away_team": "Manchester City"},
-    {"event_id": "mock-epl-003", "sport": "soccer_epl",            "home_team": "Tottenham",              "away_team": "Manchester United"},
-    {"event_id": "mock-nba-001", "sport": "basketball_nba",        "home_team": "LA Lakers",              "away_team": "Golden State Warriors"},
-    {"event_id": "mock-nba-002", "sport": "basketball_nba",        "home_team": "Boston Celtics",         "away_team": "Miami Heat"},
-    {"event_id": "mock-nfl-001", "sport": "americanfootball_nfl",  "home_team": "Kansas City Chiefs",     "away_team": "San Francisco 49ers"},
-    {"event_id": "mock-nfl-002", "sport": "americanfootball_nfl",  "home_team": "Dallas Cowboys",         "away_team": "New York Giants"},
+    {
+        "event_id": "mock-epl-001",
+        "sport": "soccer_epl",
+        "home_team": "Arsenal",
+        "away_team": "Chelsea",
+    },
+    {
+        "event_id": "mock-epl-002",
+        "sport": "soccer_epl",
+        "home_team": "Liverpool",
+        "away_team": "Manchester City",
+    },
+    {
+        "event_id": "mock-epl-003",
+        "sport": "soccer_epl",
+        "home_team": "Tottenham",
+        "away_team": "Manchester United",
+    },
+    {
+        "event_id": "mock-nba-001",
+        "sport": "basketball_nba",
+        "home_team": "LA Lakers",
+        "away_team": "Golden State Warriors",
+    },
+    {
+        "event_id": "mock-nba-002",
+        "sport": "basketball_nba",
+        "home_team": "Boston Celtics",
+        "away_team": "Miami Heat",
+    },
+    {
+        "event_id": "mock-nfl-001",
+        "sport": "americanfootball_nfl",
+        "home_team": "Kansas City Chiefs",
+        "away_team": "San Francisco 49ers",
+    },
+    {
+        "event_id": "mock-nfl-002",
+        "sport": "americanfootball_nfl",
+        "home_team": "Dallas Cowboys",
+        "away_team": "New York Giants",
+    },
 ]
 
 DEFAULT_RESOLVE_TICKS = 3
@@ -55,7 +91,10 @@ def _drift(value: float, lo: float, hi: float) -> float:
 
 def _sample_outcome(odds: dict[str, float], has_draw: bool) -> Outcome:
     """Sample an outcome with probability inversely proportional to current odds."""
-    choices: list[tuple[Outcome, float]] = [("home", 1.0 / odds["home"]), ("away", 1.0 / odds["away"])]
+    choices: list[tuple[Outcome, float]] = [
+        ("home", 1.0 / odds["home"]),
+        ("away", 1.0 / odds["away"]),
+    ]
     if has_draw and odds["draw"] > 0:
         choices.append(("draw", 1.0 / odds["draw"]))
     total = sum(w for _, w in choices)
@@ -71,7 +110,11 @@ def _sample_outcome(odds: dict[str, float], has_draw: bool) -> Outcome:
 class MockProvider(OddsProvider):
     name: ClassVar[str] = "mock"
 
-    def __init__(self, fixtures: list[Fixture] = FIXTURES, resolve_ticks: int = DEFAULT_RESOLVE_TICKS):
+    def __init__(
+        self,
+        fixtures: list[Fixture] = FIXTURES,
+        resolve_ticks: int = DEFAULT_RESOLVE_TICKS,
+    ):
         self._fixtures = fixtures
         self._resolve_ticks = resolve_ticks
         self._state: dict[str, dict[str, float]] = {}
@@ -81,7 +124,9 @@ class MockProvider(OddsProvider):
 
     @classmethod
     def from_env(cls) -> "MockProvider":
-        resolve_ticks = int(os.environ.get("MOCK_RESOLVE_TICKS", str(DEFAULT_RESOLVE_TICKS)))
+        resolve_ticks = int(
+            os.environ.get("MOCK_RESOLVE_TICKS", str(DEFAULT_RESOLVE_TICKS))
+        )
         return cls(resolve_ticks=resolve_ticks)
 
     async def fetch_tick(self) -> AsyncIterator[OddsEvent]:
@@ -127,7 +172,11 @@ class MockProvider(OddsProvider):
                 logger.info("Mock fixture %s resolved as %s", eid, outcome)
 
         active = sum(1 for f in self._fixtures if f["event_id"] not in self._resolved)
-        logger.info("Published mock odds for %d active fixtures (%d resolved)", active, len(self._resolved))
+        logger.info(
+            "Published mock odds for %d active fixtures (%d resolved)",
+            active,
+            len(self._resolved),
+        )
 
     async def fetch_results(self) -> AsyncIterator[EventResult]:
         while self._pending_results:

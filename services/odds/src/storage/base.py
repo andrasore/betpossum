@@ -10,8 +10,7 @@ class OddsStorage(ABC):
 
     @classmethod
     @abstractmethod
-    def from_env(cls) -> "OddsStorage":
-        ...
+    def from_env(cls) -> "OddsStorage": ...
 
     async def __aenter__(self) -> "OddsStorage":
         return self
@@ -28,5 +27,4 @@ class OddsStorage(ABC):
         return None
 
     @abstractmethod
-    async def record(self, event: OddsEvent) -> None:
-        ...
+    async def record(self, event: OddsEvent) -> None: ...

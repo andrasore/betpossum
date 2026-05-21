@@ -80,7 +80,9 @@ class PostgresStorage(OddsStorage):
 
     async def __aenter__(self) -> "PostgresStorage":
         self._pool = await asyncpg.create_pool(  # pyright: ignore[reportUnknownMemberType]
-            dsn=self._dsn, min_size=1, max_size=4,
+            dsn=self._dsn,
+            min_size=1,
+            max_size=4,
         )
         return self
 

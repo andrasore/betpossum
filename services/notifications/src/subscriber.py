@@ -1,4 +1,5 @@
 """RabbitMQ subscriber — relays NotificationEvent messages to socket.io clients."""
+
 import json
 import logging
 from typing import Any
@@ -19,7 +20,9 @@ async def run(rabbitmq_url: str, sio: socketio.AsyncServer) -> None:
     exchange = await channel.declare_exchange(
         EXCHANGE_NAME, aio_pika.ExchangeType.FANOUT, durable=False
     )
-    queue = await channel.declare_queue("", exclusive=True, auto_delete=True, durable=False)
+    queue = await channel.declare_queue(
+        "", exclusive=True, auto_delete=True, durable=False
+    )
     await queue.bind(exchange)
 
     logger.info("Notifications subscriber ready")
@@ -27,7 +30,9 @@ async def run(rabbitmq_url: str, sio: socketio.AsyncServer) -> None:
         async for message in messages:
             try:
                 event = NotificationEvent.FromString(message.body)
-                payload: dict[str, Any] = json.loads(event.payload) if event.payload else {}
+                payload: dict[str, Any] = (
+                    json.loads(event.payload) if event.payload else {}
+                )
                 if event.user_id:
                     await sio.emit(event.event, payload, to=event.user_id)  # pyright: ignore[reportUnknownMemberType]
                 else:

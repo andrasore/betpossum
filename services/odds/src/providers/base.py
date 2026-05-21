@@ -10,8 +10,7 @@ class OddsProvider(ABC):
 
     @classmethod
     @abstractmethod
-    def from_env(cls) -> "OddsProvider":
-        ...
+    def from_env(cls) -> "OddsProvider": ...
 
     async def __aenter__(self) -> "OddsProvider":
         return self
@@ -25,8 +24,7 @@ class OddsProvider(ABC):
         return None
 
     @abstractmethod
-    def fetch_tick(self) -> AsyncIterator[OddsEvent]:
-        ...
+    def fetch_tick(self) -> AsyncIterator[OddsEvent]: ...
 
     async def fetch_results(self) -> AsyncIterator[EventResult]:
         """Emit any newly-resolved events since the last call.

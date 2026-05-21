@@ -1,8 +1,8 @@
 import {
-  test,
   expect,
-  request as playwrightRequest,
   type Page,
+  request as playwrightRequest,
+  test,
 } from "@playwright/test";
 
 const GATEWAY_URL = "http://localhost:18080";

@@ -53,7 +53,9 @@ class TheOddsApiProvider(OddsProvider):
     def from_env(cls) -> "TheOddsApiProvider":
         api_key = os.environ.get("THE_ODDS_API_KEY", "demo")
         sports_env = os.environ.get("THE_ODDS_API_SPORTS")
-        sports = [s.strip() for s in sports_env.split(",")] if sports_env else DEFAULT_SPORTS
+        sports = (
+            [s.strip() for s in sports_env.split(",")] if sports_env else DEFAULT_SPORTS
+        )
         return cls(api_key=api_key, sports=sports)
 
     async def __aenter__(self) -> "TheOddsApiProvider":
@@ -82,7 +84,9 @@ class TheOddsApiProvider(OddsProvider):
                     url, timeout=aiohttp.ClientTimeout(total=10)
                 ) as resp:
                     if resp.status != 200:
-                        logger.warning("Odds API returned %s for %s", resp.status, sport)
+                        logger.warning(
+                            "Odds API returned %s for %s", resp.status, sport
+                        )
                         continue
                     events: list[dict[str, Any]] = await resp.json()
                     for raw in events:
