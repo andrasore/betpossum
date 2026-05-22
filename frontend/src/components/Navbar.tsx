@@ -3,6 +3,7 @@
 import { Button, Flex, Text } from "@chakra-ui/react";
 import { LogIn, LogOut } from "lucide-react";
 import { signIn, signOut } from "next-auth/react";
+import Image from "next/image";
 import Link from "next/link";
 
 interface NavbarProps {
@@ -22,9 +23,18 @@ export function Navbar({ balance, loggedIn }: NavbarProps) {
       borderColor="border"
     >
       <Link href="/dashboard">
-        <Text fontSize="xl" fontWeight="bold" letterSpacing="tight">
-          BetPossum
-        </Text>
+        <Flex align="center" gap={3}>
+          <Image
+            src="/possum.png"
+            alt=""
+            width={90}
+            height={48}
+            priority
+          />
+          <Text fontSize="xl" fontWeight="bold" letterSpacing="tight">
+            BetPossum
+          </Text>
+        </Flex>
       </Link>
       <Flex align="center" gap={4}>
         {balance != null && (
