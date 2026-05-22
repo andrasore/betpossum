@@ -13,16 +13,6 @@ async function api(path: string, init?: RequestInit): Promise<Response> {
   });
 }
 
-// Public, unauthenticated endpoints hit the gateway directly — no session,
-// no Bearer header. The browser uses the same port the WebSocket does.
-function gatewayUrl(path: string): string {
-  const port = window.__GATEWAY_PORT__;
-  if (!port) {
-    throw new Error("window.__GATEWAY_PORT__ not set — check root layout");
-  }
-  return `${window.location.protocol}//${window.location.hostname}:${port}${path}`;
-}
-
 export async function placeBet(payload: PlaceBetPayload): Promise<Bet> {
   const res = await api("/bets", {
     method: "POST",
@@ -39,7 +29,7 @@ export async function fetchBets(): Promise<Bet[]> {
 }
 
 export async function fetchOdds(): Promise<OddsEvent[]> {
-  const res = await fetch(gatewayUrl("/odds"));
+  const res = await fetch("/odds");
   if (!res.ok) throw new Error("Failed to fetch odds");
   return res.json();
 }

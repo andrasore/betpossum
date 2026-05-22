@@ -2,7 +2,7 @@ import { captureLogs, compose } from "./compose";
 
 const KEYCLOAK_DISCOVERY =
   "http://localhost:18090/realms/betting/.well-known/openid-configuration";
-const FRONTEND_URL = "http://localhost:13000";
+const FRONTEND_URL = "http://localhost:18080";
 
 async function waitFor(
   url: string,

@@ -32,17 +32,39 @@ messages.
 ## Services
 
 ### Edge proxy (Nginx)
-Nginx sits in front of the services and does path-based routing only — it is
-**not** a smart API gateway. Any service that exposes HTTP endpoints needed by
-the frontend is reachable through it.
+Nginx is the sole browser-facing port and fronts *everything* — the frontend
+and the public backend endpoints — so the browser only ever sees one origin.
+This eliminates CORS and any need for runtime URL injection in the client
+bundle. It still does path-based routing only and is **not** a smart API
+gateway.
+
+Path routing:
+
+| Prefix         | Upstream                          | Notes                     |
+|----------------|-----------------------------------|---------------------------|
+| `/socket.io/*` | Notifications                     | WebSocket upgrade         |
+| `/odds`        | Odds Service                      | Public, unauthenticated   |
+| `/` (default)  | Frontend (Next.js)                | Includes HMR WebSocket    |
 
 Responsibilities:
-- Path-based routing: `/socket.io/*` → Notifications, everything else → Core
-- WebSocket connection upgrade (for the live odds, balance, and bet feeds)
+- Path-based routing as above
+- WebSocket connection upgrade for both the live event feed (`/socket.io/`)
+  and Turbopack's HMR (`/_next/*`)
+- Bumped `proxy_buffer_size` on the frontend location so NextAuth's
+  callback `Set-Cookie` (JWT-bearing) doesn't overflow the default 4k
+  header buffer
 
 Explicitly **not** responsibilities of the proxy:
 - **Authentication / authorisation** — each service verifies its own JWTs.
 - **Rate limiting** — handled per-service if at all.
+- **Server-to-server traffic** — the BFF (`/api/proxy/*` inside Next) talks
+  to Core directly via the docker network, not back through nginx. Routing
+  internal calls through the public-facing proxy would create a frontend ↔
+  nginx loop and is explicitly avoided.
+
+Keycloak is *not* behind nginx — it has its own port (`8090` dev / `18090`
+e2e). The browser → Keycloak hop is just a login redirect, no CORS
+implications, so the split is harmless.
 
 ### Keycloak — Identity provider
 Keycloak owns all authentication. The realm `betting` defines two roles —
@@ -84,6 +106,9 @@ provider. Responsibilities:
 - Normalises the incoming odds payload into a consistent internal schema
 - Persists current odds to Postgres
 - Publishes `OddsUpdatedEvent` messages to the `odds.updated` fanout exchange
+- Serves the public `GET /odds` HTTP endpoint used by the frontend to
+  hydrate the live markets board on first paint (live updates after that
+  arrive via the notifications socket)
 
 > **Note:** This service does not calculate odds. It is purely an ingestion and
 > normalisation layer over an external feed.
@@ -97,8 +122,12 @@ Buffer** payloads — `.proto` schema files serve as the contract. The wallet
 logic is colocated inside Core as a Nest module; bets call the wallet via
 direct in-process method calls.
 
-The frontend talks to Core over HTTP and to Notifications over a socket.io
-connection (both through the Nginx proxy).
+The frontend talks to Core and Odds over HTTP and to Notifications over a
+socket.io connection — all through the Nginx proxy on a single origin.
+Authenticated calls go via the Next.js BFF (`/api/proxy/*`), which attaches
+the Keycloak access token server-side and forwards to Core directly (the
+browser never sees the token). The `/odds` hydrate is public and hits the
+gateway without auth.
 
 Each exchange is a `fanout` type. Subscribers declare their own anonymous
 exclusive auto-delete queue and bind it to the exchange — semantically

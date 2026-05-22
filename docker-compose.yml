@@ -160,6 +160,7 @@ services:
       - core
       - notifications
       - odds
+      - frontend
 
   frontend:
     build:
@@ -167,17 +168,12 @@ services:
       target: frontend
     environment:
       NEXTAUTH_SECRET: dev-secret-do-not-use-in-prod-aaaaaaaaaaaaaaaa
-      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:8080
       NEXTAUTH_KEYCLOAK_ID: betting-frontend
       NEXTAUTH_KEYCLOAK_SECRET: betting-frontend-secret
       NEXTAUTH_KEYCLOAK_ISSUER: http://localhost:8090/realms/betting
       NEXTAUTH_KEYCLOAK_ISSUER_INTERNAL: http://keycloak:8080/realms/betting
-      GATEWAY_URL: http://nginx:80
-      GATEWAY_PUBLIC_PORT: "8080"
-    ports:
-      - "3000:3000"
-    depends_on:
-      - nginx
+      GATEWAY_URL: http://core:4000
 
 volumes:
   postgres_data:

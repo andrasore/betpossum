@@ -10,3 +10,4 @@ export default async function globalTeardown(): Promise<void> {
   console.log("→ Tearing down e2e stack");
   compose(["down", "--volumes"]);
 }
+

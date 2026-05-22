@@ -10,7 +10,7 @@ export default defineConfig({
   globalTeardown: "./global-teardown.ts",
   reporter: "list",
   use: {
-    baseURL: "http://localhost:13000",
+    baseURL: "http://localhost:18080",
     browserName: "chromium",
     channel: "chromium",
     trace: "on-first-retry",

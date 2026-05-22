@@ -3,12 +3,6 @@
 import { signIn } from "next-auth/react";
 import { io, type Socket } from "socket.io-client";
 
-declare global {
-  interface Window {
-    __GATEWAY_PORT__?: number;
-  }
-}
-
 let socket: Socket | null = null;
 
 async function fetchSocketToken(): Promise<string> {
@@ -18,19 +12,10 @@ async function fetchSocketToken(): Promise<string> {
   return token;
 }
 
-function wsUrl(): string {
-  const port = window.__GATEWAY_PORT__;
-  if (!port) {
-    throw new Error("window.__GATEWAY_PORT__ not set — check root layout");
-  }
-  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${window.location.hostname}:${port}`;
-}
-
 export function getSocket(): Socket {
   if (socket) return socket;
 
-  socket = io(wsUrl(), {
+  socket = io({
     // socket.io re-invokes this on every (re)connect, so the BFF can mint
     // a freshly-refreshed token if the previous one expired.
     auth: (cb) => {

@@ -37,10 +37,10 @@
       "directAccessGrantsEnabled": false,
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["http://localhost:3000/api/auth/callback/keycloak"],
-      "webOrigins": ["http://localhost:3000"],
+      "redirectUris": ["http://localhost:8080/api/auth/callback/keycloak"],
+      "webOrigins": ["http://localhost:8080"],
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:3000/*"
+        "post.logout.redirect.uris": "http://localhost:8080/*"
       }
     },
     {
