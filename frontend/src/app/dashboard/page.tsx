@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge, Box, Card, Flex, Heading, Stack, Text } from "@chakra-ui/react";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BetSlip } from "@/components/BetSlip";
@@ -108,12 +108,16 @@ export default function DashboardPage() {
         >
           <BetSlip
             selection={selection}
+            loggedIn={loggedIn}
             onChoiceChange={(choice) =>
               setSelection((s) => (s ? { ...s, choice } : s))
             }
             onPlaced={() => {
               setSelection(null);
               mutate();
+            }}
+            onLogin={() => {
+              void signIn("keycloak", { callbackUrl: "/dashboard" });
             }}
           />
         </Box>

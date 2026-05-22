@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
     "typecheck": "tsc --noEmit",
     "lint": "pnpx @biomejs/biome check",
     "format": "pnpx @biomejs/biome format --write"

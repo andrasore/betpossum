@@ -61,14 +61,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             run(provider, storage, publisher, POLL_INTERVAL_SECONDS),
             name=f"odds-worker-{PROVIDER_NAME}-{STORAGE_NAME}",
         )
-        try:
-            yield
-        finally:
-            worker.cancel()
-            try:
-                await worker
-            except asyncio.CancelledError:
-                pass
+        yield
+        worker.cancel()
 
 
 app = FastAPI(lifespan=lifespan)

@@ -12,6 +12,7 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
+import { LogIn } from "lucide-react";
 import { useState } from "react";
 import { placeBet } from "@/lib/api";
 import type { OddsEvent } from "@/types";
@@ -25,11 +26,19 @@ interface Selection {
 
 interface Props {
   selection: Selection | null;
+  loggedIn: boolean;
   onChoiceChange: (choice: Choice) => void;
   onPlaced: () => void;
+  onLogin: () => void;
 }
 
-export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
+export function BetSlip({
+  selection,
+  loggedIn,
+  onChoiceChange,
+  onPlaced,
+  onLogin,
+}: Props) {
   const [stake, setStake] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +111,7 @@ export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
             size="sm"
             width="full"
             value={choice}
+            disabled={!loggedIn}
             onValueChange={(d) => {
               if (d.value) onChoiceChange(d.value as Choice);
             }}
@@ -134,6 +144,7 @@ export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
               min={0}
               step={1}
               width="full"
+              disabled={!loggedIn}
             >
               <NumberInput.Control />
               <NumberInput.Input placeholder="0.00" data-testid="stake-input" />
@@ -152,15 +163,26 @@ export function BetSlip({ selection, onChoiceChange, onPlaced }: Props) {
         </Stack>
       </Card.Body>
       <Card.Footer>
-        <Button
-          w="full"
-          onClick={submit}
-          loading={loading}
-          disabled={!stake}
-          data-testid="place-bet-button"
-        >
-          Place Bet
-        </Button>
+        {loggedIn ? (
+          <Button
+            w="full"
+            onClick={submit}
+            loading={loading}
+            disabled={!stake}
+            data-testid="place-bet-button"
+          >
+            Place Bet
+          </Button>
+        ) : (
+          <Button
+            w="full"
+            onClick={onLogin}
+            data-testid="betslip-login-button"
+          >
+            <LogIn size={16} />
+            Sign in to Place Bet
+          </Button>
+        )}
       </Card.Footer>
     </Card.Root>
   );

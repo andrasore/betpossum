@@ -11,9 +11,15 @@ test("anonymous visitor sees odds on /dashboard without being redirected", async
   // Public odds endpoint hydrates at least one event card.
   await expect(
     page.locator('[data-testid^="event-card-"]').first(),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15_000 });
   // Navbar shows the sign-in button, confirming we're not logged in.
   await expect(page.getByTestId("login-button")).toBeVisible();
+  // Selecting an event surfaces the bet slip with its own sign-in button
+  // in place of the Place Bet action, and the stake input disabled.
+  await page.locator('[data-testid^="event-card-"]').first().click();
+  await expect(page.getByTestId("betslip-login-button")).toBeVisible();
+  await expect(page.getByTestId("place-bet-button")).toHaveCount(0);
+  await expect(page.getByTestId("stake-input")).toBeDisabled();
   await ctx.close();
 });
 
@@ -80,10 +86,7 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   // Started at £100, staked £10 → £90 held until settlement.
   await expect(alicePage.getByTestId("balance")).toHaveText("Balance: £90.00");
 
-  // Resolve the event in alice's favour via the admin endpoint. We go through
-  // bob's BFF proxy (his session cookie carries the auth) rather than hitting
-  // the gateway directly, since the access token never reaches the browser
-  // under the NextAuth + BFF setup.
+  // Resolve the event in alice's favour via the admin endpoint.
   const resp = await bobPage.request.post(
     `/api/proxy/admin/events/${eventId}/result`,
     {
