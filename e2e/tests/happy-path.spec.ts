@@ -1,5 +1,22 @@
 import { expect, type Page, test } from "@playwright/test";
 
+test("anonymous visitor sees odds on /dashboard without being redirected", async ({
+  browser,
+}) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.goto("/dashboard");
+  // Dashboard renders for unauthenticated users — no redirect to /login.
+  await page.waitForURL("**/dashboard");
+  // Public odds endpoint hydrates at least one event card.
+  await expect(
+    page.locator('[data-testid^="event-card-"]').first(),
+  ).toBeVisible();
+  // Navbar shows the sign-in button, confirming we're not logged in.
+  await expect(page.getByTestId("login-button")).toBeVisible();
+  await ctx.close();
+});
+
 async function loginAs(page: Page, username: string): Promise<void> {
   await page.goto("/");
   await page.getByTestId("login-button").click();

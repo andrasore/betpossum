@@ -1,6 +1,6 @@
 import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
 
-// All authenticated calls route through the Next.js BFF proxy, which
+// Authenticated calls route through the Next.js BFF proxy, which
 // attaches the Keycloak access token server-side. The browser never sees
 // the token.
 async function api(path: string, init?: RequestInit): Promise<Response> {
@@ -11,6 +11,16 @@ async function api(path: string, init?: RequestInit): Promise<Response> {
       ...(init?.headers ?? {}),
     },
   });
+}
+
+// Public, unauthenticated endpoints hit the gateway directly — no session,
+// no Bearer header. The browser uses the same port the WebSocket does.
+function gatewayUrl(path: string): string {
+  const port = window.__GATEWAY_PORT__;
+  if (!port) {
+    throw new Error("window.__GATEWAY_PORT__ not set — check root layout");
+  }
+  return `${window.location.protocol}//${window.location.hostname}:${port}${path}`;
 }
 
 export async function placeBet(payload: PlaceBetPayload): Promise<Bet> {
@@ -29,7 +39,7 @@ export async function fetchBets(): Promise<Bet[]> {
 }
 
 export async function fetchOdds(): Promise<OddsEvent[]> {
-  const res = await api("/odds");
+  const res = await fetch(gatewayUrl("/odds"));
   if (!res.ok) throw new Error("Failed to fetch odds");
   return res.json();
 }

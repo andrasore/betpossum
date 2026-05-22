@@ -1,11 +1,9 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { Body, Controller, Get, Post } from "@nestjs/common";
 import { type AuthUser, CurrentUser } from "../common/current-user.decorator";
 import { BetsService } from "./bets.service";
 import { PlaceBetDto } from "./dto/place-bet.dto";
 
 @Controller("bets")
-@UseGuards(AuthGuard("jwt"))
 export class BetsController {
   constructor(private readonly bets: BetsService) {}
 

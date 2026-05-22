@@ -6,11 +6,12 @@ import { OddsEventSchema } from "@/lib/schemas";
 import { getSocket } from "@/lib/websocket";
 import type { OddsEvent } from "@/types";
 
-export function useOdds(token: string | null) {
+// REST hydrate is public; the live-update socket still requires a session,
+// so we only subscribe when logged in.
+export function useOdds(loggedIn: boolean) {
   const [odds, setOdds] = useState<Map<string, OddsEvent>>(new Map());
 
   useEffect(() => {
-    if (!token) return;
     let cancelled = false;
 
     fetchOdds()
@@ -23,6 +24,12 @@ export function useOdds(token: string | null) {
         setOdds(new Map(parsed.map((e) => [e.eventId, e])));
       })
       .catch((err) => console.warn("[useOdds] hydrate failed", err));
+
+    if (!loggedIn) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const socket = getSocket();
     socket.on("odds.updated", (raw: unknown) => {
@@ -39,7 +46,7 @@ export function useOdds(token: string | null) {
       cancelled = true;
       socket.off("odds.updated");
     };
-  }, [token]);
+  }, [loggedIn]);
 
   return Array.from(odds.values());
 }

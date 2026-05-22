@@ -8,7 +8,6 @@ import {
   Put,
   UseGuards,
 } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
 import { Roles } from "../common/roles.decorator";
 import { RolesGuard } from "../common/roles.guard";
 import { AdminService } from "./admin.service";
@@ -16,7 +15,7 @@ import { SetBalanceDto } from "./dto/set-balance.dto";
 import { SettleEventDto } from "./dto/settle-event.dto";
 
 @Controller("admin")
-@UseGuards(AuthGuard("jwt"), RolesGuard)
+@UseGuards(RolesGuard)
 @Roles("admin")
 export class AdminController {
   constructor(private readonly admin: AdminService) {}

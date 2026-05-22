@@ -32,7 +32,7 @@ export default function DashboardPage() {
   // Hooks below use the session token as a "logged in?" key, not as a
   // credential — the actual token never leaves the BFF.
   const sessionKey = session?.accessToken ?? null;
-  const odds = useOdds(sessionKey);
+  const odds = useOdds(sessionKey !== null);
   const { data: bets, mutate } = useBets(sessionKey);
   const balance = useBalance(sessionKey);
 

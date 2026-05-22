@@ -1,5 +1,5 @@
 import type { ExecutionContext, INestApplication } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { APP_GUARD } from "@nestjs/core";
 import { Test } from "@nestjs/testing";
 import type { Request } from "express";
 import request from "supertest";
@@ -24,24 +24,26 @@ describe("AdminController (auth boundary)", () => {
       providers: [
         RolesGuard,
         {
+          provide: APP_GUARD,
+          useValue: {
+            canActivate: (ctx: ExecutionContext) => {
+              const req = ctx
+                .switchToHttp()
+                .getRequest<Request & { user?: AuthUser }>();
+              if (!currentUser) {
+                return false;
+              }
+              req.user = currentUser;
+              return true;
+            },
+          },
+        },
+        {
           provide: AdminService,
           useValue: { listUsers, setUserBalance, resolveEvent },
         },
       ],
     })
-      .overrideGuard(AuthGuard("jwt"))
-      .useValue({
-        canActivate: (ctx: ExecutionContext) => {
-          const req = ctx
-            .switchToHttp()
-            .getRequest<Request & { user?: AuthUser }>();
-          if (!currentUser) {
-            return false;
-          }
-          req.user = currentUser;
-          return true;
-        },
-      })
       .compile();
 
     app = moduleRef.createNestApplication();
