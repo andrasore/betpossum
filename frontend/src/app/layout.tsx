@@ -26,10 +26,7 @@ export default function RootLayout({
           render dynamically. beforeInteractive guarantees the script runs
           before any client bundle does.
         */}
-        <Script
-          src="/runtime-config.js"
-          strategy="beforeInteractive"
-        />
+        <Script src="/runtime-config.js" strategy="beforeInteractive" />
       </head>
       <body style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}>
         <Providers>{children}</Providers>

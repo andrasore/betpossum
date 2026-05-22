@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
-    "lint": "pnpx @biomejs/biome check",
+    "lint": "pnpx @biomejs/biome format && pnpx @biomejs/biome check",
     "format": "pnpx @biomejs/biome format --write"
   },
   "dependencies": {
@@ -15,6 +15,7 @@
     "@emotion/react": "^11.14.0",
     "@nestjs/core": "^11.0.0",
     "@tabler/icons-react": "^3.43.0",
+    "jose": "^6.2.3",
     "lucide-react": "^1.14.0",
     "next": "16.2.4",
     "next-auth": "^4.24.11",

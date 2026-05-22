@@ -1,6 +1,12 @@
+import { decodeJwt } from "jose";
 import type { NextAuthOptions } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import KeycloakProvider from "next-auth/providers/keycloak";
+import { z } from "zod";
+
+const AccessTokenPayloadSchema = z.object({
+  realm_access: z.object({ roles: z.array(z.string()) }),
+});
 
 // The public issuer matches the `iss` claim in tokens and is the URL the
 // browser is redirected to. Server-to-server calls from inside docker reach
@@ -12,6 +18,8 @@ import KeycloakProvider from "next-auth/providers/keycloak";
 const publicIssuer = (): string => process.env.NEXTAUTH_KEYCLOAK_ISSUER ?? "";
 const internalIssuer = (): string =>
   process.env.NEXTAUTH_KEYCLOAK_ISSUER_INTERNAL ?? publicIssuer();
+
+// TODO maybe clean up typings
 
 declare module "next-auth" {
   interface Session {
@@ -38,26 +46,16 @@ declare module "next-auth/jwt" {
   }
 }
 
-function rolesFromAccessToken(jwt: string | undefined): string[] {
-  if (!jwt) return [];
-  const parts = jwt.split(".");
-  if (parts.length !== 3) return [];
-  try {
-    const payload = JSON.parse(
-      Buffer.from(
-        parts[1].replace(/-/g, "+").replace(/_/g, "/"),
-        "base64",
-      ).toString("utf8"),
-    ) as { realm_access?: { roles?: string[] } };
-    return payload.realm_access?.roles ?? [];
-  } catch {
-    return [];
-  }
+function rolesFromAccessToken(jwt: string): string[] {
+  const payload = AccessTokenPayloadSchema.parse(decodeJwt(jwt));
+  return payload.realm_access.roles;
 }
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    if (!token.refreshToken) throw new Error("No refresh token");
+    if (!token.refreshToken) {
+      throw new Error("No refresh token");
+    }
     const res = await fetch(
       `${internalIssuer()}/protocol/openid-connect/token`,
       {
@@ -71,7 +69,9 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
         }),
       },
     );
-    if (!res.ok) throw new Error(`refresh failed: ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`refresh failed: ${res.status}`);
+    }
     const json = (await res.json()) as {
       access_token: string;
       refresh_token?: string;
@@ -110,7 +110,7 @@ export const authOptions: NextAuthOptions = {
           refreshToken: account.refresh_token,
           expiresAt: account.expires_at,
           idToken: account.id_token,
-          roles: rolesFromAccessToken(account.access_token),
+          roles: rolesFromAccessToken(account.access_token!),
         };
       }
       if (token.expiresAt && Date.now() < token.expiresAt * 1000 - 30_000) {
@@ -122,14 +122,18 @@ export const authOptions: NextAuthOptions = {
       session.accessToken = token.accessToken;
       session.roles = token.roles ?? [];
       session.error = token.error;
-      if (token.sub) session.user.id = token.sub;
+      if (token.sub) {
+        session.user.id = token.sub;
+      }
       return session;
     },
   },
   events: {
     async signOut({ token }) {
       const idToken = token?.idToken;
-      if (!idToken) return;
+      if (!idToken) {
+        return;
+      }
       await fetch(
         `${internalIssuer()}/protocol/openid-connect/logout?${new URLSearchParams(
           {
@@ -137,7 +141,7 @@ export const authOptions: NextAuthOptions = {
             client_id: process.env.NEXTAUTH_KEYCLOAK_ID ?? "",
           },
         )}`,
-      ).catch(() => undefined);
+      );
     },
   },
 };

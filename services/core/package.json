@@ -8,7 +8,7 @@
     "start:dev": "nest start --watch",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "lint": "pnpx @biomejs/biome check",
+    "lint": "pnpx @biomejs/biome format && pnpx @biomejs/biome check",
     "format": "pnpx @biomejs/biome format --write"
   },
   "files": [
