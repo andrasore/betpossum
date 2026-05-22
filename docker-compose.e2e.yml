@@ -21,6 +21,8 @@ services:
     environment:
       KEYCLOAK_ISSUER_URL: http://localhost:18090/realms/betting
     ports: !reset []
+  odds:
+    ports: !reset []
   notifications:
     environment:
       KEYCLOAK_ISSUER_URL: http://localhost:18090/realms/betting

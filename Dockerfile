@@ -24,6 +24,7 @@ WORKDIR /app
 ENV NODE_ENV=development
 COPY --chown=appuser:appgroup --from=builder-node /app/frontend/.next/standalone/ ./
 COPY --chown=appuser:appgroup --from=builder-node /app/frontend/.next/static ./frontend/.next/static
+COPY --chown=appuser:appgroup --from=builder-node /app/frontend/public ./frontend/public
 # TODO also copy public folder if we have one
 USER appuser
 EXPOSE 3001

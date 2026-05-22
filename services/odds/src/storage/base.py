@@ -28,3 +28,9 @@ class OddsStorage(ABC):
 
     @abstractmethod
     async def record(self, event: OddsEvent) -> None: ...
+
+    @abstractmethod
+    async def list_current(self, sport: str | None = None) -> list[OddsEvent]: ...
+
+    @abstractmethod
+    async def get_current(self, event_id: str) -> OddsEvent | None: ...

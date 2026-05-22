@@ -1,10 +1,14 @@
+# pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+# asyncpg ships no type stubs; rather than peppering every call site with
+# per-line ignores, silence the unknown-types family for this file only.
+
 import logging
 import os
 from types import TracebackType
 from typing import ClassVar
 
 # TODO maybe use sqlalchemy
-import asyncpg  # pyright: ignore[reportMissingTypeStubs]
+import asyncpg
 
 from models import OddsEvent
 from .base import OddsStorage
@@ -63,6 +67,22 @@ ON CONFLICT (event_id) DO UPDATE SET
   updated_at = EXCLUDED.updated_at
 """
 
+_SELECT_COLS = (
+    "event_id, sport, home_team, away_team, "
+    "home_odds, away_odds, draw_odds, updated_at"
+)
+
+_SELECT_ALL = (
+    f"SELECT {_SELECT_COLS} FROM odds_current ORDER BY updated_at DESC"  
+)
+_SELECT_BY_SPORT = (
+    f"SELECT {_SELECT_COLS} FROM odds_current "
+    "WHERE sport = $1 ORDER BY updated_at DESC"
+)
+_SELECT_BY_EVENT = (
+    f"SELECT {_SELECT_COLS} FROM odds_current WHERE event_id = $1"
+)
+
 
 class PostgresStorage(OddsStorage):
     name: ClassVar[str] = "postgres"
@@ -79,7 +99,7 @@ class PostgresStorage(OddsStorage):
         return cls(dsn=dsn)
 
     async def __aenter__(self) -> "PostgresStorage":
-        self._pool = await asyncpg.create_pool(  # pyright: ignore[reportUnknownMemberType]
+        self._pool = await asyncpg.create_pool(
             dsn=self._dsn,
             min_size=1,
             max_size=4,
@@ -98,9 +118,9 @@ class PostgresStorage(OddsStorage):
 
     async def init_schema(self) -> None:
         assert self._pool is not None, "init_schema called outside async-with"
-        async with self._pool.acquire() as conn:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        async with self._pool.acquire() as conn:
             for stmt in _SCHEMA_STATEMENTS:
-                await conn.execute(stmt)  # pyright: ignore[reportUnknownMemberType]
+                await conn.execute(stmt)
         logger.info("Postgres odds schema ready")
 
     async def record(self, event: OddsEvent) -> None:
@@ -115,7 +135,22 @@ class PostgresStorage(OddsStorage):
             event.draw_odds,
             event.updated_at,
         )
-        async with self._pool.acquire() as conn:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-            async with conn.transaction():  # pyright: ignore[reportUnknownMemberType]
-                await conn.execute(_INSERT_HISTORY, *args)  # pyright: ignore[reportUnknownMemberType]
-                await conn.execute(_UPSERT_CURRENT, *args)  # pyright: ignore[reportUnknownMemberType]
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(_INSERT_HISTORY, *args)
+                await conn.execute(_UPSERT_CURRENT, *args)
+
+    async def list_current(self, sport: str | None = None) -> list[OddsEvent]:
+        assert self._pool is not None, "list_current called outside async-with"
+        async with self._pool.acquire() as conn:
+            if sport is not None:
+                rows = await conn.fetch(_SELECT_BY_SPORT, sport)
+            else:
+                rows = await conn.fetch(_SELECT_ALL)
+        return [OddsEvent(**dict(r)) for r in rows]
+
+    async def get_current(self, event_id: str) -> OddsEvent | None:
+        assert self._pool is not None, "get_current called outside async-with"
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(_SELECT_BY_EVENT, event_id)
+        return OddsEvent(**dict(row)) if row is not None else None

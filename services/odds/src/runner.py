@@ -14,8 +14,7 @@ async def run(
     publisher: OddsPublisher,
     interval: int,
 ) -> None:
-    async with provider, storage:
-        await storage.init_schema()
+    async with provider:
         while True:
             try:
                 async for event in provider.fetch_tick():

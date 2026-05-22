@@ -1,11 +1,18 @@
+import json
+
 import aio_pika
 
 from models import EventResult, OddsEvent, Outcome
-from generated.events_pb2 import EventResolvedEvent, OddsUpdatedEvent
+from generated.events_pb2 import (
+    EventResolvedEvent,
+    NotificationEvent,
+    OddsUpdatedEvent,
+)
 from generated import events_pb2
 
 ODDS_EXCHANGE = "odds.updated"
 RESULTS_EXCHANGE = "events.resolved"
+NOTIFICATIONS_EXCHANGE = "notifications"
 
 _OUTCOME_MAP: dict[Outcome, "events_pb2.Outcome.ValueType"] = {
     "home": events_pb2.OUTCOME_HOME,
@@ -14,12 +21,29 @@ _OUTCOME_MAP: dict[Outcome, "events_pb2.Outcome.ValueType"] = {
 }
 
 
+def _odds_event_json(event: OddsEvent) -> str:
+    # Frontend expects camelCase (see frontend/src/lib/schemas.ts).
+    return json.dumps(
+        {
+            "eventId": event.event_id,
+            "sport": event.sport,
+            "homeTeam": event.home_team,
+            "awayTeam": event.away_team,
+            "homeOdds": event.home_odds,
+            "awayOdds": event.away_odds,
+            "drawOdds": event.draw_odds,
+            "updatedAt": event.updated_at,
+        }
+    )
+
+
 class OddsPublisher:
     def __init__(self, rabbitmq_url: str):
         self._url = rabbitmq_url
         self._connection: aio_pika.abc.AbstractRobustConnection | None = None
         self._odds_exchange: aio_pika.abc.AbstractExchange | None = None
         self._results_exchange: aio_pika.abc.AbstractExchange | None = None
+        self._notifications_exchange: aio_pika.abc.AbstractExchange | None = None
 
     async def _ensure_channel(self) -> aio_pika.abc.AbstractChannel:
         if self._connection is None:
@@ -42,8 +66,16 @@ class OddsPublisher:
             )
         return self._results_exchange
 
+    async def _ensure_notifications_exchange(self) -> aio_pika.abc.AbstractExchange:
+        if self._notifications_exchange is None:
+            channel = await self._ensure_channel()
+            self._notifications_exchange = await channel.declare_exchange(
+                NOTIFICATIONS_EXCHANGE, aio_pika.ExchangeType.FANOUT, durable=False
+            )
+        return self._notifications_exchange
+
     async def publish(self, event: OddsEvent) -> None:
-        exchange = await self._ensure_odds_exchange()
+        odds_exchange = await self._ensure_odds_exchange()
         payload = OddsUpdatedEvent(
             event_id=event.event_id,
             sport=event.sport,
@@ -54,7 +86,17 @@ class OddsPublisher:
             draw_odds=event.draw_odds,
             updated_at=event.updated_at,
         ).SerializeToString()
-        await exchange.publish(aio_pika.Message(body=payload), routing_key="")
+        await odds_exchange.publish(aio_pika.Message(body=payload), routing_key="")
+
+        notifications_exchange = await self._ensure_notifications_exchange()
+        notification = NotificationEvent(
+            user_id="",
+            event="odds.updated",
+            payload=_odds_event_json(event),
+        ).SerializeToString()
+        await notifications_exchange.publish(
+            aio_pika.Message(body=notification), routing_key=""
+        )
 
     async def publish_result(self, result: EventResult) -> None:
         exchange = await self._ensure_results_exchange()
@@ -77,3 +119,4 @@ class OddsPublisher:
             self._connection = None
             self._odds_exchange = None
             self._results_exchange = None
+            self._notifications_exchange = None

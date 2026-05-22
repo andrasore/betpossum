@@ -127,6 +127,8 @@ services:
       ODDS_PROVIDER: mock
       ODDS_STORAGE: postgres
       POLL_INTERVAL_SECONDS: 30
+    ports:
+      - "8000:8000"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -157,6 +159,7 @@ services:
     depends_on:
       - core
       - notifications
+      - odds
 
   frontend:
     build:

@@ -12,8 +12,6 @@ import { LoggingMiddleware } from "./common/logging.middleware";
 import { KeycloakModule } from "./keycloak/keycloak.module";
 import { KeycloakAuthModule } from "./keycloak/keycloak-auth.module";
 import { MessagingModule } from "./messaging/messaging.module";
-import { OddsModule } from "./odds/odds.module";
-import { OddsCurrent } from "./odds/odds-current.entity";
 import { User } from "./users/user.entity";
 import { UsersModule } from "./users/users.module";
 import { WalletModule } from "./wallet/wallet.module";
@@ -26,7 +24,7 @@ import { WalletModule } from "./wallet/wallet.module";
       useFactory: (config: ConfigService) => ({
         type: "postgres",
         url: config.get("DATABASE_URL"),
-        entities: [User, Bet, OddsCurrent],
+        entities: [User, Bet],
         synchronize: true, // use migrations in production
       }),
     }),
@@ -36,7 +34,6 @@ import { WalletModule } from "./wallet/wallet.module";
     KeycloakAuthModule,
     BetsModule,
     WalletModule,
-    OddsModule,
     AdminModule,
   ],
 })
