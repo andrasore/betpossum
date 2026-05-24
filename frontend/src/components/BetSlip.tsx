@@ -41,7 +41,6 @@ export function BetSlip({
 }: Props) {
   const [stake, setStake] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   if (!selection) {
     return (
@@ -75,7 +74,6 @@ export function BetSlip({
   async function submit() {
     if (!stake || Number.isNaN(Number(stake))) return;
     setLoading(true);
-    setError(null);
     try {
       await placeBet({
         eventId: event.eventId,
@@ -85,8 +83,9 @@ export function BetSlip({
       });
       setStake("");
       onPlaced();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+    } catch {
+      // Failures surface via the insufficient-balance toast (or are logged
+      // server-side for other errors).
     } finally {
       setLoading(false);
     }
@@ -155,11 +154,6 @@ export function BetSlip({
             <Text color="fg.muted">Potential return</Text>
             <Text fontWeight="semibold">£{potentialReturn}</Text>
           </Flex>
-          {error && (
-            <Text fontSize="xs" color="red.500">
-              {error}
-            </Text>
-          )}
         </Stack>
       </Card.Body>
       <Card.Footer>

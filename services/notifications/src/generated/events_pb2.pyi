@@ -191,6 +191,33 @@ class BalanceUpdatedNotification(_message.Message):
 Global___BalanceUpdatedNotification: _TypeAlias = BalanceUpdatedNotification  # noqa: Y015
 
 @_typing.final
+class InsufficientBalanceNotification(_message.Message):
+    """Core API → Notifications Service.
+    Per-user notification: a bet placement was rejected because the
+    requested stake exceeded the user's available balance.
+    """
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    STAKE_FIELD_NUMBER: _builtins.int
+    BALANCE_FIELD_NUMBER: _builtins.int
+    stake: _builtins.float
+    balance: _builtins.float
+    def __init__(
+        self,
+        *,
+        stake: _builtins.float = ...,
+        balance: _builtins.float = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["balance", b"balance", "stake", b"stake"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___InsufficientBalanceNotification: _TypeAlias = InsufficientBalanceNotification  # noqa: Y015
+
+@_typing.final
 class NotificationEvent(_message.Message):
     """Any service → Notifications Service.
     Fire-and-forget envelope; `user_id` empty means broadcast.
@@ -203,6 +230,7 @@ class NotificationEvent(_message.Message):
     BET_HELD_FIELD_NUMBER: _builtins.int
     BET_SETTLED_FIELD_NUMBER: _builtins.int
     BALANCE_UPDATED_FIELD_NUMBER: _builtins.int
+    INSUFFICIENT_BALANCE_FIELD_NUMBER: _builtins.int
     user_id: _builtins.str
     @_builtins.property
     def odds_updated(self) -> Global___OddsUpdatedEvent: ...
@@ -212,6 +240,8 @@ class NotificationEvent(_message.Message):
     def bet_settled(self) -> Global___BetSettledNotification: ...
     @_builtins.property
     def balance_updated(self) -> Global___BalanceUpdatedNotification: ...
+    @_builtins.property
+    def insufficient_balance(self) -> Global___InsufficientBalanceNotification: ...
     def __init__(
         self,
         *,
@@ -220,12 +250,13 @@ class NotificationEvent(_message.Message):
         bet_held: Global___BetHeldNotification | None = ...,
         bet_settled: Global___BetSettledNotification | None = ...,
         balance_updated: Global___BalanceUpdatedNotification | None = ...,
+        insufficient_balance: Global___InsufficientBalanceNotification | None = ...,
     ) -> None: ...
-    _HasFieldArgType: _TypeAlias = _typing.Literal["balance_updated", b"balance_updated", "bet_held", b"bet_held", "bet_settled", b"bet_settled", "body", b"body", "odds_updated", b"odds_updated"]  # noqa: Y015
+    _HasFieldArgType: _TypeAlias = _typing.Literal["balance_updated", b"balance_updated", "bet_held", b"bet_held", "bet_settled", b"bet_settled", "body", b"body", "insufficient_balance", b"insufficient_balance", "odds_updated", b"odds_updated"]  # noqa: Y015
     def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["balance_updated", b"balance_updated", "bet_held", b"bet_held", "bet_settled", b"bet_settled", "body", b"body", "odds_updated", b"odds_updated", "user_id", b"user_id"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["balance_updated", b"balance_updated", "bet_held", b"bet_held", "bet_settled", b"bet_settled", "body", b"body", "insufficient_balance", b"insufficient_balance", "odds_updated", b"odds_updated", "user_id", b"user_id"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
-    _WhichOneofReturnType_body: _TypeAlias = _typing.Literal["odds_updated", "bet_held", "bet_settled", "balance_updated"]  # noqa: Y015
+    _WhichOneofReturnType_body: _TypeAlias = _typing.Literal["odds_updated", "bet_held", "bet_settled", "balance_updated", "insufficient_balance"]  # noqa: Y015
     _WhichOneofArgType_body: _TypeAlias = _typing.Literal["body", b"body"]  # noqa: Y015
     def WhichOneof(self, oneof_group: _WhichOneofArgType_body) -> _WhichOneofReturnType_body | None: ...
 

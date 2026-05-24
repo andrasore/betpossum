@@ -120,6 +120,23 @@ export interface BalanceUpdatedNotification {
     balance: number;
 }
 /**
+ * Core API → Notifications Service.
+ * Per-user notification: a bet placement was rejected because the
+ * requested stake exceeded the user's available balance.
+ *
+ * @generated from protobuf message betting.events.InsufficientBalanceNotification
+ */
+export interface InsufficientBalanceNotification {
+    /**
+     * @generated from protobuf field: double stake = 1
+     */
+    stake: number;
+    /**
+     * @generated from protobuf field: double balance = 2
+     */
+    balance: number;
+}
+/**
  * Any service → Notifications Service.
  * Fire-and-forget envelope; `user_id` empty means broadcast.
  *
@@ -157,6 +174,12 @@ export interface NotificationEvent {
          * @generated from protobuf field: betting.events.BalanceUpdatedNotification balance_updated = 5
          */
         balanceUpdated: BalanceUpdatedNotification;
+    } | {
+        oneofKind: "insufficientBalance";
+        /**
+         * @generated from protobuf field: betting.events.InsufficientBalanceNotification insufficient_balance = 6
+         */
+        insufficientBalance: InsufficientBalanceNotification;
     } | {
         oneofKind: undefined;
     };
@@ -514,6 +537,61 @@ class BalanceUpdatedNotification$Type extends MessageType<BalanceUpdatedNotifica
  */
 export const BalanceUpdatedNotification = new BalanceUpdatedNotification$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class InsufficientBalanceNotification$Type extends MessageType<InsufficientBalanceNotification> {
+    constructor() {
+        super("betting.events.InsufficientBalanceNotification", [
+            { no: 1, name: "stake", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ },
+            { no: 2, name: "balance", kind: "scalar", T: 1 /*ScalarType.DOUBLE*/ }
+        ]);
+    }
+    create(value?: PartialMessage<InsufficientBalanceNotification>): InsufficientBalanceNotification {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.stake = 0;
+        message.balance = 0;
+        if (value !== undefined)
+            reflectionMergePartial<InsufficientBalanceNotification>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: InsufficientBalanceNotification): InsufficientBalanceNotification {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* double stake */ 1:
+                    message.stake = reader.double();
+                    break;
+                case /* double balance */ 2:
+                    message.balance = reader.double();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: InsufficientBalanceNotification, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* double stake = 1; */
+        if (message.stake !== 0)
+            writer.tag(1, WireType.Bit64).double(message.stake);
+        /* double balance = 2; */
+        if (message.balance !== 0)
+            writer.tag(2, WireType.Bit64).double(message.balance);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message betting.events.InsufficientBalanceNotification
+ */
+export const InsufficientBalanceNotification = new InsufficientBalanceNotification$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class NotificationEvent$Type extends MessageType<NotificationEvent> {
     constructor() {
         super("betting.events.NotificationEvent", [
@@ -521,7 +599,8 @@ class NotificationEvent$Type extends MessageType<NotificationEvent> {
             { no: 2, name: "odds_updated", kind: "message", oneof: "body", T: () => OddsUpdatedEvent },
             { no: 3, name: "bet_held", kind: "message", oneof: "body", T: () => BetHeldNotification },
             { no: 4, name: "bet_settled", kind: "message", oneof: "body", T: () => BetSettledNotification },
-            { no: 5, name: "balance_updated", kind: "message", oneof: "body", T: () => BalanceUpdatedNotification }
+            { no: 5, name: "balance_updated", kind: "message", oneof: "body", T: () => BalanceUpdatedNotification },
+            { no: 6, name: "insufficient_balance", kind: "message", oneof: "body", T: () => InsufficientBalanceNotification }
         ]);
     }
     create(value?: PartialMessage<NotificationEvent>): NotificationEvent {
@@ -564,6 +643,12 @@ class NotificationEvent$Type extends MessageType<NotificationEvent> {
                         balanceUpdated: BalanceUpdatedNotification.internalBinaryRead(reader, reader.uint32(), options, (message.body as any).balanceUpdated)
                     };
                     break;
+                case /* betting.events.InsufficientBalanceNotification insufficient_balance */ 6:
+                    message.body = {
+                        oneofKind: "insufficientBalance",
+                        insufficientBalance: InsufficientBalanceNotification.internalBinaryRead(reader, reader.uint32(), options, (message.body as any).insufficientBalance)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -591,6 +676,9 @@ class NotificationEvent$Type extends MessageType<NotificationEvent> {
         /* betting.events.BalanceUpdatedNotification balance_updated = 5; */
         if (message.body.oneofKind === "balanceUpdated")
             BalanceUpdatedNotification.internalBinaryWrite(message.body.balanceUpdated, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+        /* betting.events.InsufficientBalanceNotification insufficient_balance = 6; */
+        if (message.body.oneofKind === "insufficientBalance")
+            InsufficientBalanceNotification.internalBinaryWrite(message.body.insufficientBalance, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

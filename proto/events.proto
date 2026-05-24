@@ -52,14 +52,23 @@ message BalanceUpdatedNotification {
   double balance = 1;
 }
 
+// Core API → Notifications Service.
+// Per-user notification: a bet placement was rejected because the
+// requested stake exceeded the user's available balance.
+message InsufficientBalanceNotification {
+  double stake   = 1;
+  double balance = 2;
+}
+
 // Any service → Notifications Service.
 // Fire-and-forget envelope; `user_id` empty means broadcast.
 message NotificationEvent {
   string user_id = 1;
   oneof body {
-    OddsUpdatedEvent           odds_updated    = 2;
-    BetHeldNotification        bet_held        = 3;
-    BetSettledNotification     bet_settled     = 4;
-    BalanceUpdatedNotification balance_updated = 5;
+    OddsUpdatedEvent               odds_updated         = 2;
+    BetHeldNotification            bet_held             = 3;
+    BetSettledNotification         bet_settled          = 4;
+    BalanceUpdatedNotification     balance_updated      = 5;
+    InsufficientBalanceNotification insufficient_balance = 6;
   }
 }

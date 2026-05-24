@@ -37,6 +37,20 @@ export class NotificationsClient {
     });
   }
 
+  insufficientBalance(
+    userId: string,
+    stake: number,
+    balance: number,
+  ): Promise<void> {
+    return this.publish({
+      userId,
+      body: {
+        oneofKind: "insufficientBalance",
+        insufficientBalance: { stake, balance },
+      },
+    });
+  }
+
   oddsUpdated(event: OddsUpdatedEvent): Promise<void> {
     return this.publish({
       userId: "",

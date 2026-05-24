@@ -10,6 +10,7 @@ import { OddsBoard } from "@/components/OddsBoard";
 import { useBalance } from "@/hooks/useBalance";
 import { useBets } from "@/hooks/useBets";
 import { useForceTheme } from "@/hooks/useForceTheme";
+import { useInsufficientBalanceToast } from "@/hooks/useInsufficientBalanceToast";
 import { useOdds } from "@/hooks/useOdds";
 import type { Bet, OddsEvent } from "@/types";
 
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const odds = useOdds(sessionKey !== null);
   const { data: bets, mutate } = useBets(sessionKey);
   const balance = useBalance(sessionKey);
+  useInsufficientBalanceToast(sessionKey);
 
   useEffect(() => {
     if (status !== "authenticated") return;

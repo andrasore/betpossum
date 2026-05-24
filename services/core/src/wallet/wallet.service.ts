@@ -19,6 +19,13 @@ import {
 } from "tigerbeetle-node";
 import { NotificationsClient } from "../notifications/notifications.client";
 
+export class InsufficientBalanceError extends Error {
+  constructor() {
+    super("Insufficient balance");
+    this.name = "InsufficientBalanceError";
+  }
+}
+
 const HOUSE_ID = 2n;
 
 const LEDGER = 1;
@@ -285,11 +292,13 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
   private async createTransfers(transfers: Transfer[]): Promise<void> {
     const results = await this.client.createTransfers(transfers);
     for (const r of results) {
-      if (r.status !== CreateTransferStatus.created) {
-        throw new Error(
-          `TigerBeetle transfer failed: ${CreateTransferStatus[r.status]}`,
-        );
+      if (r.status === CreateTransferStatus.created) continue;
+      if (r.status === CreateTransferStatus.exceeds_credits) {
+        throw new InsufficientBalanceError();
       }
+      throw new Error(
+        `TigerBeetle transfer failed: ${CreateTransferStatus[r.status]}`,
+      );
     }
   }
 
