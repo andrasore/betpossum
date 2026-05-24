@@ -31,11 +31,35 @@ message EventResolvedEvent {
   int64   resolved_at = 4; // Unix ms
 }
 
+// Core API → Notifications Service.
+// Per-user notification: a bet entered the held state.
+message BetHeldNotification {
+  string bet_id = 1;
+}
+
+// Core API → Notifications Service.
+// Per-user notification: a bet was settled. `payout` is profit only
+// (matches Bet.payout semantics — see bets.service.ts).
+message BetSettledNotification {
+  string bet_id = 1;
+  bool   won    = 2;
+  double payout = 3;
+}
+
+// Core API → Notifications Service.
+// Per-user notification: wallet balance changed (in dollars, not cents).
+message BalanceUpdatedNotification {
+  double balance = 1;
+}
+
 // Any service → Notifications Service.
-// Fire-and-forget envelope for events that should be relayed to the browser
-// over the WebSocket. `payload` is JSON; `user_id` empty means broadcast.
+// Fire-and-forget envelope; `user_id` empty means broadcast.
 message NotificationEvent {
   string user_id = 1;
-  string event   = 2;
-  string payload = 3;
+  oneof body {
+    OddsUpdatedEvent           odds_updated    = 2;
+    BetHeldNotification        bet_held        = 3;
+    BetSettledNotification     bet_settled     = 4;
+    BalanceUpdatedNotification balance_updated = 5;
+  }
 }

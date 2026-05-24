@@ -7,7 +7,7 @@
       "outputs": [".venv/**"]
     },
     "build": {
-      "dependsOn": ["init"],
+      "dependsOn": ["init", "proto:gen"],
       "inputs": ["src/**"],
       "outputs": ["dist/**", ".next/**"]
     },

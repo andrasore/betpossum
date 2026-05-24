@@ -24,19 +24,25 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x65vents.proto\x12\x0e\x62\x65tting.events\"\xa6\x01\n\x10OddsUpdatedEvent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\r\n\x05sport\x18\x02 \x01(\t\x12\x11\n\thome_team\x18\x03 \x01(\t\x12\x11\n\taway_team\x18\x04 \x01(\t\x12\x11\n\thome_odds\x18\x05 \x01(\x01\x12\x11\n\taway_odds\x18\x06 \x01(\x01\x12\x11\n\tdraw_odds\x18\x07 \x01(\x01\x12\x12\n\nupdated_at\x18\x08 \x01(\x03\"t\n\x12\x45ventResolvedEvent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\r\n\x05sport\x18\x02 \x01(\t\x12(\n\x07outcome\x18\x03 \x01(\x0e\x32\x17.betting.events.Outcome\x12\x13\n\x0bresolved_at\x18\x04 \x01(\x03\"D\n\x11NotificationEvent\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\r\n\x05\x65vent\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\t*X\n\x07Outcome\x12\x17\n\x13OUTCOME_UNSPECIFIED\x10\x00\x12\x10\n\x0cOUTCOME_HOME\x10\x01\x12\x10\n\x0cOUTCOME_AWAY\x10\x02\x12\x10\n\x0cOUTCOME_DRAW\x10\x03\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x65vents.proto\x12\x0e\x62\x65tting.events\"\xa6\x01\n\x10OddsUpdatedEvent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\r\n\x05sport\x18\x02 \x01(\t\x12\x11\n\thome_team\x18\x03 \x01(\t\x12\x11\n\taway_team\x18\x04 \x01(\t\x12\x11\n\thome_odds\x18\x05 \x01(\x01\x12\x11\n\taway_odds\x18\x06 \x01(\x01\x12\x11\n\tdraw_odds\x18\x07 \x01(\x01\x12\x12\n\nupdated_at\x18\x08 \x01(\x03\"t\n\x12\x45ventResolvedEvent\x12\x10\n\x08\x65vent_id\x18\x01 \x01(\t\x12\r\n\x05sport\x18\x02 \x01(\t\x12(\n\x07outcome\x18\x03 \x01(\x0e\x32\x17.betting.events.Outcome\x12\x13\n\x0bresolved_at\x18\x04 \x01(\x03\"%\n\x13\x42\x65tHeldNotification\x12\x0e\n\x06\x62\x65t_id\x18\x01 \x01(\t\"E\n\x16\x42\x65tSettledNotification\x12\x0e\n\x06\x62\x65t_id\x18\x01 \x01(\t\x12\x0b\n\x03won\x18\x02 \x01(\x08\x12\x0e\n\x06payout\x18\x03 \x01(\x01\"-\n\x1a\x42\x61lanceUpdatedNotification\x12\x0f\n\x07\x62\x61lance\x18\x01 \x01(\x01\"\xa5\x02\n\x11NotificationEvent\x12\x0f\n\x07user_id\x18\x01 \x01(\t\x12\x38\n\x0codds_updated\x18\x02 \x01(\x0b\x32 .betting.events.OddsUpdatedEventH\x00\x12\x37\n\x08\x62\x65t_held\x18\x03 \x01(\x0b\x32#.betting.events.BetHeldNotificationH\x00\x12=\n\x0b\x62\x65t_settled\x18\x04 \x01(\x0b\x32&.betting.events.BetSettledNotificationH\x00\x12\x45\n\x0f\x62\x61lance_updated\x18\x05 \x01(\x0b\x32*.betting.events.BalanceUpdatedNotificationH\x00\x42\x06\n\x04\x62ody*X\n\x07Outcome\x12\x17\n\x13OUTCOME_UNSPECIFIED\x10\x00\x12\x10\n\x0cOUTCOME_HOME\x10\x01\x12\x10\n\x0cOUTCOME_AWAY\x10\x02\x12\x10\n\x0cOUTCOME_DRAW\x10\x03\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'events_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_OUTCOME']._serialized_start=389
-  _globals['_OUTCOME']._serialized_end=477
+  _globals['_OUTCOME']._serialized_start=772
+  _globals['_OUTCOME']._serialized_end=860
   _globals['_ODDSUPDATEDEVENT']._serialized_start=33
   _globals['_ODDSUPDATEDEVENT']._serialized_end=199
   _globals['_EVENTRESOLVEDEVENT']._serialized_start=201
   _globals['_EVENTRESOLVEDEVENT']._serialized_end=317
-  _globals['_NOTIFICATIONEVENT']._serialized_start=319
-  _globals['_NOTIFICATIONEVENT']._serialized_end=387
+  _globals['_BETHELDNOTIFICATION']._serialized_start=319
+  _globals['_BETHELDNOTIFICATION']._serialized_end=356
+  _globals['_BETSETTLEDNOTIFICATION']._serialized_start=358
+  _globals['_BETSETTLEDNOTIFICATION']._serialized_end=427
+  _globals['_BALANCEUPDATEDNOTIFICATION']._serialized_start=429
+  _globals['_BALANCEUPDATEDNOTIFICATION']._serialized_end=474
+  _globals['_NOTIFICATIONEVENT']._serialized_start=477
+  _globals['_NOTIFICATIONEVENT']._serialized_end=770
 # @@protoc_insertion_point(module_scope)

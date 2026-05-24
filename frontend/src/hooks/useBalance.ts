@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchBalance } from "@/lib/api";
+import { BalanceUpdatedNotification } from "@/generated/events";
 import { getSocket } from "@/lib/websocket";
 
 export function useBalance(token: string | null) {
@@ -15,9 +16,10 @@ export function useBalance(token: string | null) {
       .catch(() => {});
 
     const socket = getSocket();
-    socket.on("balance.updated", ({ balance: b }: { balance: number }) =>
-      setBalance(b),
-    );
+    socket.on("balance.updated", (raw: ArrayBuffer) => {
+      const msg = BalanceUpdatedNotification.fromBinary(new Uint8Array(raw));
+      setBalance(msg.balance);
+    });
     return () => {
       socket.off("balance.updated");
     };

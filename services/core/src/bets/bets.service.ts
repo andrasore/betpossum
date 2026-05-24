@@ -56,7 +56,7 @@ export class BetsService implements OnModuleInit {
     const stakeCents = Math.round(stake * 100);
     await this.wallet.hold(userId, bet.id, stakeCents);
     await this.repo.update(bet.id, { status: "held" });
-    await this.notifications.toUser(userId, "bet.held", { betId: bet.id });
+    await this.notifications.betHeld(userId, bet.id);
 
     return { ...bet, status: "held" };
   }
@@ -91,11 +91,7 @@ export class BetsService implements OnModuleInit {
       status: won ? "won" : "lost",
       payout: won ? payout : 0,
     });
-    await this.notifications.toUser(bet.userId, "bet.settled", {
-      betId,
-      won,
-      payout,
-    });
+    await this.notifications.betSettled(bet.userId, betId, won, payout);
   }
 
   // Idempotency is provided by the `status: 'held'` filter: once a bet is

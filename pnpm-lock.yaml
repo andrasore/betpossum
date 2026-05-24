@@ -36,6 +36,9 @@ importers:
       '@nestjs/core':
         specifier: ^11.0.0
         version: 11.1.21(@nestjs/common@11.1.21(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/microservices@11.1.21)(@nestjs/platform-express@11.1.21)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@protobuf-ts/runtime':
+        specifier: ^2.9.4
+        version: 2.11.1
       '@tabler/icons-react':
         specifier: ^3.43.0
         version: 3.44.0(react@19.2.6)
@@ -73,6 +76,12 @@ importers:
       '@biomejs/biome':
         specifier: ^2.4.15
         version: 2.4.15
+      '@protobuf-ts/plugin':
+        specifier: ^2.9.4
+        version: 2.11.1
+      '@protobuf-ts/protoc':
+        specifier: ^2.9.4
+        version: 2.11.1
       '@types/node':
         specifier: ^25.6.0
         version: 25.8.0

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchOdds } from "@/lib/api";
+import { OddsUpdatedEvent } from "@/generated/events";
 import { OddsEventSchema } from "@/lib/schemas";
 import { getSocket } from "@/lib/websocket";
 import type { OddsEvent } from "@/types";
@@ -32,13 +33,8 @@ export function useOdds(loggedIn: boolean) {
     }
 
     const socket = getSocket();
-    socket.on("odds.updated", (raw: unknown) => {
-      const result = OddsEventSchema.safeParse(raw);
-      if (!result.success) {
-        console.warn("[useOdds] Invalid odds event:", result.error.flatten());
-        return;
-      }
-      const event = result.data;
+    socket.on("odds.updated", (raw: ArrayBuffer) => {
+      const event = OddsUpdatedEvent.fromBinary(new Uint8Array(raw));
       setOdds((prev) => new Map(prev).set(event.eventId, event));
     });
 

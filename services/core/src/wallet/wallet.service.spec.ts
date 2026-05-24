@@ -57,7 +57,12 @@ describe("WalletService", () => {
         },
         {
           provide: NotificationsClient,
-          useValue: { toUser: jest.fn(), broadcast: jest.fn() },
+          useValue: {
+            betHeld: jest.fn(),
+            betSettled: jest.fn(),
+            balanceUpdated: jest.fn(),
+            oddsUpdated: jest.fn(),
+          },
         },
       ],
     }).compile();

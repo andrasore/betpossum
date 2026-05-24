@@ -40,7 +40,12 @@ describe("BetsService", () => {
   let bets: BetsService;
   let userRepo: Repository<User>;
   let betRepo: Repository<Bet>;
-  const notifications = { toUser: jest.fn(), broadcast: jest.fn() };
+  const notifications = {
+    betHeld: jest.fn(),
+    betSettled: jest.fn(),
+    balanceUpdated: jest.fn(),
+    oddsUpdated: jest.fn(),
+  };
   const messaging = { publish: jest.fn(), subscribe: jest.fn() };
 
   beforeAll(async () => {
@@ -106,7 +111,7 @@ describe("BetsService", () => {
 
   it("places a bet, holds the stake, and transitions to held", async () => {
     const userId = await newFundedUser(10000);
-    notifications.toUser.mockClear();
+    notifications.betHeld.mockClear();
 
     const bet = await bets.place(userId, "evt-1", "home", 2, 5);
 
@@ -118,15 +123,13 @@ describe("BetsService", () => {
 
     expect(await wallet.getBalanceCents(userId)).toBe(9500);
 
-    expect(notifications.toUser).toHaveBeenCalledWith(userId, "bet.held", {
-      betId: bet.id,
-    });
+    expect(notifications.betHeld).toHaveBeenCalledWith(userId, bet.id);
   });
 
   it("settles a winning bet: releases hold, pays profit, updates row", async () => {
     const userId = await newFundedUser(10000);
     const bet = await bets.place(userId, "evt-2", "home", 3, 10);
-    notifications.toUser.mockClear();
+    notifications.betSettled.mockClear();
 
     // stake 10 at odds 3 → profit = 10 * (3 - 1) = 20
     await bets.settle(bet.id, true, 20);
@@ -138,17 +141,18 @@ describe("BetsService", () => {
     // release voids the 1000c hold (stake returns) + payout adds 2000c profit.
     expect(await wallet.getBalanceCents(userId)).toBe(12000);
 
-    expect(notifications.toUser).toHaveBeenCalledWith(userId, "bet.settled", {
-      betId: bet.id,
-      won: true,
-      payout: 20,
-    });
+    expect(notifications.betSettled).toHaveBeenCalledWith(
+      userId,
+      bet.id,
+      true,
+      20,
+    );
   });
 
   it("settles a losing bet: keeps the hold, no payout", async () => {
     const userId = await newFundedUser(10000);
     const bet = await bets.place(userId, "evt-3", "home", 3, 10);
-    notifications.toUser.mockClear();
+    notifications.betSettled.mockClear();
 
     await bets.settle(bet.id, false, 0);
 
@@ -159,11 +163,12 @@ describe("BetsService", () => {
     // keep makes the 1000c hold permanent → balance drops by stake.
     expect(await wallet.getBalanceCents(userId)).toBe(9000);
 
-    expect(notifications.toUser).toHaveBeenCalledWith(userId, "bet.settled", {
-      betId: bet.id,
-      won: false,
-      payout: 0,
-    });
+    expect(notifications.betSettled).toHaveBeenCalledWith(
+      userId,
+      bet.id,
+      false,
+      0,
+    );
   });
 
   it("settle throws when called twice — duplicate invocations are the caller-side bug", async () => {

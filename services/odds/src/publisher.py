@@ -1,5 +1,3 @@
-import json
-
 import aio_pika
 
 from models import EventResult, OddsEvent, Outcome
@@ -19,22 +17,6 @@ _OUTCOME_MAP: dict[Outcome, "events_pb2.Outcome.ValueType"] = {
     "away": events_pb2.OUTCOME_AWAY,
     "draw": events_pb2.OUTCOME_DRAW,
 }
-
-
-def _odds_event_json(event: OddsEvent) -> str:
-    # Frontend expects camelCase (see frontend/src/lib/schemas.ts).
-    return json.dumps(
-        {
-            "eventId": event.event_id,
-            "sport": event.sport,
-            "homeTeam": event.home_team,
-            "awayTeam": event.away_team,
-            "homeOdds": event.home_odds,
-            "awayOdds": event.away_odds,
-            "drawOdds": event.draw_odds,
-            "updatedAt": event.updated_at,
-        }
-    )
 
 
 class OddsPublisher:
@@ -75,8 +57,7 @@ class OddsPublisher:
         return self._notifications_exchange
 
     async def publish(self, event: OddsEvent) -> None:
-        odds_exchange = await self._ensure_odds_exchange()
-        payload = OddsUpdatedEvent(
+        odds_updated = OddsUpdatedEvent(
             event_id=event.event_id,
             sport=event.sport,
             home_team=event.home_team,
@@ -85,17 +66,17 @@ class OddsPublisher:
             away_odds=event.away_odds,
             draw_odds=event.draw_odds,
             updated_at=event.updated_at,
-        ).SerializeToString()
-        await odds_exchange.publish(aio_pika.Message(body=payload), routing_key="")
+        )
+
+        odds_exchange = await self._ensure_odds_exchange()
+        await odds_exchange.publish(
+            aio_pika.Message(body=odds_updated.SerializeToString()), routing_key=""
+        )
 
         notifications_exchange = await self._ensure_notifications_exchange()
-        notification = NotificationEvent(
-            user_id="",
-            event="odds.updated",
-            payload=_odds_event_json(event),
-        ).SerializeToString()
+        notification = NotificationEvent(user_id="", odds_updated=odds_updated)
         await notifications_exchange.publish(
-            aio_pika.Message(body=notification), routing_key=""
+            aio_pika.Message(body=notification.SerializeToString()), routing_key=""
         )
 
     async def publish_result(self, result: EventResult) -> None:

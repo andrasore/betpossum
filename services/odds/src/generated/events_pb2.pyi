@@ -115,31 +115,118 @@ class EventResolvedEvent(_message.Message):
 Global___EventResolvedEvent: _TypeAlias = EventResolvedEvent  # noqa: Y015
 
 @_typing.final
+class BetHeldNotification(_message.Message):
+    """Core API → Notifications Service.
+    Per-user notification: a bet entered the held state.
+    """
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    BET_ID_FIELD_NUMBER: _builtins.int
+    bet_id: _builtins.str
+    def __init__(
+        self,
+        *,
+        bet_id: _builtins.str = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["bet_id", b"bet_id"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___BetHeldNotification: _TypeAlias = BetHeldNotification  # noqa: Y015
+
+@_typing.final
+class BetSettledNotification(_message.Message):
+    """Core API → Notifications Service.
+    Per-user notification: a bet was settled. `payout` is profit only
+    (matches Bet.payout semantics — see bets.service.ts).
+    """
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    BET_ID_FIELD_NUMBER: _builtins.int
+    WON_FIELD_NUMBER: _builtins.int
+    PAYOUT_FIELD_NUMBER: _builtins.int
+    bet_id: _builtins.str
+    won: _builtins.bool
+    payout: _builtins.float
+    def __init__(
+        self,
+        *,
+        bet_id: _builtins.str = ...,
+        won: _builtins.bool = ...,
+        payout: _builtins.float = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["bet_id", b"bet_id", "payout", b"payout", "won", b"won"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___BetSettledNotification: _TypeAlias = BetSettledNotification  # noqa: Y015
+
+@_typing.final
+class BalanceUpdatedNotification(_message.Message):
+    """Core API → Notifications Service.
+    Per-user notification: wallet balance changed (in dollars, not cents).
+    """
+
+    DESCRIPTOR: _descriptor.Descriptor
+
+    BALANCE_FIELD_NUMBER: _builtins.int
+    balance: _builtins.float
+    def __init__(
+        self,
+        *,
+        balance: _builtins.float = ...,
+    ) -> None: ...
+    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["balance", b"balance"]  # noqa: Y015
+    def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
+    def WhichOneof(self, oneof_group: _Never) -> None: ...
+
+Global___BalanceUpdatedNotification: _TypeAlias = BalanceUpdatedNotification  # noqa: Y015
+
+@_typing.final
 class NotificationEvent(_message.Message):
     """Any service → Notifications Service.
-    Fire-and-forget envelope for events that should be relayed to the browser
-    over the WebSocket. `payload` is JSON; `user_id` empty means broadcast.
+    Fire-and-forget envelope; `user_id` empty means broadcast.
     """
 
     DESCRIPTOR: _descriptor.Descriptor
 
     USER_ID_FIELD_NUMBER: _builtins.int
-    EVENT_FIELD_NUMBER: _builtins.int
-    PAYLOAD_FIELD_NUMBER: _builtins.int
+    ODDS_UPDATED_FIELD_NUMBER: _builtins.int
+    BET_HELD_FIELD_NUMBER: _builtins.int
+    BET_SETTLED_FIELD_NUMBER: _builtins.int
+    BALANCE_UPDATED_FIELD_NUMBER: _builtins.int
     user_id: _builtins.str
-    event: _builtins.str
-    payload: _builtins.str
+    @_builtins.property
+    def odds_updated(self) -> Global___OddsUpdatedEvent: ...
+    @_builtins.property
+    def bet_held(self) -> Global___BetHeldNotification: ...
+    @_builtins.property
+    def bet_settled(self) -> Global___BetSettledNotification: ...
+    @_builtins.property
+    def balance_updated(self) -> Global___BalanceUpdatedNotification: ...
     def __init__(
         self,
         *,
         user_id: _builtins.str = ...,
-        event: _builtins.str = ...,
-        payload: _builtins.str = ...,
+        odds_updated: Global___OddsUpdatedEvent | None = ...,
+        bet_held: Global___BetHeldNotification | None = ...,
+        bet_settled: Global___BetSettledNotification | None = ...,
+        balance_updated: Global___BalanceUpdatedNotification | None = ...,
     ) -> None: ...
-    _HasFieldArgType: _TypeAlias = _Never  # noqa: Y015
+    _HasFieldArgType: _TypeAlias = _typing.Literal["balance_updated", b"balance_updated", "bet_held", b"bet_held", "bet_settled", b"bet_settled", "body", b"body", "odds_updated", b"odds_updated"]  # noqa: Y015
     def HasField(self, field_name: _HasFieldArgType) -> _builtins.bool: ...
-    _ClearFieldArgType: _TypeAlias = _typing.Literal["event", b"event", "payload", b"payload", "user_id", b"user_id"]  # noqa: Y015
+    _ClearFieldArgType: _TypeAlias = _typing.Literal["balance_updated", b"balance_updated", "bet_held", b"bet_held", "bet_settled", b"bet_settled", "body", b"body", "odds_updated", b"odds_updated", "user_id", b"user_id"]  # noqa: Y015
     def ClearField(self, field_name: _ClearFieldArgType) -> None: ...
-    def WhichOneof(self, oneof_group: _Never) -> None: ...
+    _WhichOneofReturnType_body: _TypeAlias = _typing.Literal["odds_updated", "bet_held", "bet_settled", "balance_updated"]  # noqa: Y015
+    _WhichOneofArgType_body: _TypeAlias = _typing.Literal["body", b"body"]  # noqa: Y015
+    def WhichOneof(self, oneof_group: _WhichOneofArgType_body) -> _WhichOneofReturnType_body | None: ...
 
 Global___NotificationEvent: _TypeAlias = NotificationEvent  # noqa: Y015

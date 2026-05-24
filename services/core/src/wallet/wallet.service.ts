@@ -231,7 +231,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
 
   private async pushBalanceUpdated(userId: string): Promise<void> {
     const balance = await this.getBalance(userId);
-    await this.notifications.toUser(userId, "balance.updated", { balance });
+    await this.notifications.balanceUpdated(userId, balance);
   }
 
   private buildAccount(
