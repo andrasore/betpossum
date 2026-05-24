@@ -111,6 +111,7 @@ export default function DashboardPage() {
           <BetSlip
             selection={selection}
             loggedIn={loggedIn}
+            balance={balance}
             onChoiceChange={(choice) =>
               setSelection((s) => (s ? { ...s, choice } : s))
             }

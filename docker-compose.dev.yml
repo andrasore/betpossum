@@ -1,0 +1,11 @@
+services:
+  nginx:
+    extra_hosts:
+      - "frontend:host-gateway"
+    depends_on: !reset [
+      core,
+      notifications,
+      odds,
+    ]
+  frontend:
+    profiles: ["disabled"]

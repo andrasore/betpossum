@@ -186,7 +186,7 @@ describe("WalletService", () => {
     await wallet.payout(userId, newId(), 500);
 
     await expect(wallet.hold(userId, newId(), 1000)).rejects.toThrow(
-      /TigerBeetle transfer failed/,
+      /Insufficient balance/,
     );
     expect(await wallet.getBalanceCents(userId)).toBe(500);
   });

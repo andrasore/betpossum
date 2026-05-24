@@ -27,6 +27,7 @@ interface Selection {
 interface Props {
   selection: Selection | null;
   loggedIn: boolean;
+  balance: number | null;
   onChoiceChange: (choice: Choice) => void;
   onPlaced: () => void;
   onLogin: () => void;
@@ -35,6 +36,7 @@ interface Props {
 export function BetSlip({
   selection,
   loggedIn,
+  balance,
   onChoiceChange,
   onPlaced,
   onLogin,
@@ -61,7 +63,11 @@ export function BetSlip({
       : choice === "away"
         ? event.awayOdds
         : event.drawOdds;
-  const potentialReturn = stake ? (parseFloat(stake) * odds).toFixed(2) : "—";
+  const stakeNum = parseFloat(stake);
+  const stakeValid = stake !== "" && Number.isFinite(stakeNum) && stakeNum > 0;
+  const overBalance =
+    stakeValid && balance !== null && stakeNum > balance;
+  const potentialReturn = stakeValid ? (stakeNum * odds).toFixed(2) : "—";
 
   const segments: { value: Choice; label: string; odds: number }[] = [
     { value: "home", label: event.homeTeam, odds: event.homeOdds },
@@ -135,12 +141,14 @@ export function BetSlip({
               justifyContent="center"
             />
           </SegmentGroup.Root>
-          <Field.Root>
+          <Field.Root invalid={overBalance}>
             <Field.Label>Stake (£)</Field.Label>
             <NumberInput.Root
               value={stake}
               onValueChange={(d) => setStake(d.value)}
               min={0}
+              max={balance ?? undefined}
+              clampValueOnBlur
               step={1}
               width="full"
               disabled={!loggedIn}
@@ -148,6 +156,11 @@ export function BetSlip({
               <NumberInput.Control />
               <NumberInput.Input placeholder="0.00" data-testid="stake-input" />
             </NumberInput.Root>
+            {overBalance && (
+              <Field.ErrorText>
+                Stake exceeds your balance of £{balance?.toFixed(2)}.
+              </Field.ErrorText>
+            )}
           </Field.Root>
           <Separator />
           <Flex justify="space-between" fontSize="sm">
@@ -162,7 +175,7 @@ export function BetSlip({
             w="full"
             onClick={submit}
             loading={loading}
-            disabled={!stake}
+            disabled={!stakeValid || overBalance}
             data-testid="place-bet-button"
           >
             Place Bet

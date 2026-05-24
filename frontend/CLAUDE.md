@@ -32,7 +32,6 @@ Server-side env, set in `docker-compose.yml`:
 - `NEXTAUTH_KEYCLOAK_ISSUER` — public issuer (matches `iss` in tokens, the URL the browser is redirected to)
 - `NEXTAUTH_KEYCLOAK_ISSUER_INTERNAL` — server-only Keycloak URL used for OIDC discovery (e.g. `http://keycloak:8080/...`). Backchannel endpoints in the discovery response (`token_endpoint`, `userinfo_endpoint`, `jwks_uri`) come back under this host because Keycloak runs with `KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true`
 - `GATEWAY_URL` — server-side upstream for the BFF (e.g. `http://nginx:80`)
-- `GATEWAY_PUBLIC_PORT` — browser-facing nginx port for the WebSocket
 
 The browser-facing gateway port is exposed at runtime via a blocking
 `<script>` in the root layout that sets `window.__GATEWAY_PORT__` from
