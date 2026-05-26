@@ -1,17 +1,28 @@
 
+import { signOut } from "next-auth/react";
 import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
+
+let signingOut = false;
 
 // Authenticated calls route through the Next.js BFF proxy, which
 // attaches the Keycloak access token server-side. The browser never sees
 // the token.
 async function api(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(`/api/proxy${path}`, {
+  const res = await fetch(`/api/proxy${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
       ...(init?.headers ?? {}),
     },
   });
+  // A 401 here means upstream rejected the cookie's access token (e.g.
+  // Keycloak signing keys rotated after a full restart). NextAuth won't
+  // refresh until `expiresAt` is near, so clear the dead session now.
+  if (res.status === 401 && !signingOut) {
+    signingOut = true;
+    void signOut({ callbackUrl: "/login" });
+  }
+  return res;
 }
 
 export async function placeBet(payload: PlaceBetPayload): Promise<Bet> {
