@@ -16,6 +16,7 @@ import {
   type Transfer,
   TransferFlags,
   id as tbId,
+  amount_max as AMOUNT_MAX,
 } from "tigerbeetle-node";
 import { NotificationsClient } from "../notifications/notifications.client";
 
@@ -167,14 +168,14 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
   async release(
     userId: string,
     betId: string,
-    amountCents: number,
   ): Promise<void> {
     await this.createTransfers([
       {
         id: tbId(),
         debit_account_id: this.toId(userId),
         credit_account_id: HOUSE_ID,
-        amount: BigInt(amountCents),
+        // Voiding a pending transfer does not require an amount
+        amount: 0n,
         pending_id: this.toId(betId),
         user_data_128: this.toId(betId),
         user_data_64: 0n,
@@ -192,14 +193,14 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
   async keep(
     userId: string,
     betId: string,
-    amountCents: number,
   ): Promise<void> {
     await this.createTransfers([
       {
         id: tbId(),
         debit_account_id: this.toId(userId),
         credit_account_id: HOUSE_ID,
-        amount: BigInt(amountCents),
+        // By definition AMOUNT_MAX transfers the whole amount
+        amount: AMOUNT_MAX,
         pending_id: this.toId(betId),
         user_data_128: this.toId(betId),
         user_data_64: 0n,

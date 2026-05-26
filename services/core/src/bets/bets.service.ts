@@ -87,16 +87,14 @@ export class BetsService implements OnModuleInit {
       );
     }
 
-    const stakeCents = Math.round(Number(bet.stake) * 100);
-
     if (won) {
-      await this.wallet.release(bet.userId, betId, stakeCents);
+      await this.wallet.release(bet.userId, betId);
       const profitCents = Math.round(payout * 100);
       if (profitCents > 0) {
         await this.wallet.payout(bet.userId, betId, profitCents);
       }
     } else {
-      await this.wallet.keep(bet.userId, betId, stakeCents);
+      await this.wallet.keep(bet.userId, betId);
     }
 
     await this.repo.update(betId, {

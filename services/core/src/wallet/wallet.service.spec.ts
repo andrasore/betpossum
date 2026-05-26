@@ -117,7 +117,7 @@ describe("WalletService", () => {
     await wallet.createAccount(userId);
     await wallet.payout(userId, newId(), 1000);
     await wallet.hold(userId, betId, 400);
-    await wallet.release(userId, betId, 400);
+    await wallet.release(userId, betId);
     expect(await wallet.getBalanceCents(userId)).toBe(1000);
   });
 
@@ -127,7 +127,7 @@ describe("WalletService", () => {
     await wallet.createAccount(userId);
     await wallet.payout(userId, newId(), 1000);
     await wallet.hold(userId, betId, 600);
-    await wallet.keep(userId, betId, 600);
+    await wallet.keep(userId, betId);
     expect(await wallet.getBalanceCents(userId)).toBe(400);
   });
 
@@ -149,7 +149,7 @@ describe("WalletService", () => {
     await wallet.hold(userId, betId, 400);
     expect(await readPendingDebit(toAccountId(userId))).toBe(400);
 
-    await wallet.release(userId, betId, 400);
+    await wallet.release(userId, betId);
     expect(await readPendingDebit(toAccountId(userId))).toBe(0);
   });
 
@@ -161,7 +161,7 @@ describe("WalletService", () => {
 
     const houseBefore = await readRawBalance(HOUSE_ID);
     await wallet.hold(userId, betId, 600);
-    await wallet.keep(userId, betId, 600);
+    await wallet.keep(userId, betId);
     const houseAfter = await readRawBalance(HOUSE_ID);
 
     expect(houseAfter - houseBefore).toBe(600);
@@ -197,11 +197,11 @@ describe("WalletService", () => {
 
     await wallet.setBalance(userId, 10000);
     expect(await wallet.getBalanceCents(userId)).toBe(10000);
+    
+    await wallet.setBalance(userId, 0);
+    expect(await wallet.getBalanceCents(userId)).toBe(0);
 
     await wallet.setBalance(userId, 2500);
     expect(await wallet.getBalanceCents(userId)).toBe(2500);
-
-    await wallet.setBalance(userId, 0);
-    expect(await wallet.getBalanceCents(userId)).toBe(0);
   });
 });
