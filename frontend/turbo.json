@@ -5,10 +5,6 @@
     "build": {
       "inputs": ["src/**"],
       "outputs": [".next/**", "out/**"]
-    },
-    "proto:gen": {
-      "inputs": ["../proto/**/*.proto"],
-      "outputs": ["src/generated/**"]
     }
   }
 }

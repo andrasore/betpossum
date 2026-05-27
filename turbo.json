@@ -7,13 +7,9 @@
       "outputs": [".venv/**"]
     },
     "build": {
-      "dependsOn": ["init", "proto:gen"],
+      "dependsOn": ["init"],
       "inputs": ["src/**"],
       "outputs": ["dist/**", ".next/**"]
-    },
-    "proto:gen": {
-      "inputs": ["../../proto/**/*.proto"],
-      "outputs": ["src/generated/**"]
     },
     "typecheck": {
       "dependsOn": ["build"],
