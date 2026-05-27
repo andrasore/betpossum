@@ -65,8 +65,7 @@ export function BetSlip({
         : event.drawOdds;
   const stakeNum = parseFloat(stake);
   const stakeValid = stake !== "" && Number.isFinite(stakeNum) && stakeNum > 0;
-  const overBalance =
-    stakeValid && balance !== null && stakeNum > balance;
+  const overBalance = stakeValid && balance !== null && stakeNum > balance;
   const potentialReturn = stakeValid ? (stakeNum * odds).toFixed(2) : "—";
 
   const segments: { value: Choice; label: string; odds: number }[] = [
@@ -181,11 +180,7 @@ export function BetSlip({
             Place Bet
           </Button>
         ) : (
-          <Button
-            w="full"
-            onClick={onLogin}
-            data-testid="betslip-login-button"
-          >
+          <Button w="full" onClick={onLogin} data-testid="betslip-login-button">
             <LogIn size={16} />
             Sign in to Place Bet
           </Button>

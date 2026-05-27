@@ -1,6 +1,4 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { EventResolvedEvent, Outcome } from "../generated/events";
-import { MessagingService } from "../messaging/messaging.service";
 import { UsersService } from "../users/users.service";
 import { WalletService } from "../wallet/wallet.service";
 
@@ -12,12 +10,6 @@ export interface AdminUserRow {
   balance: number;
 }
 
-const OUTCOME_TO_PROTO: Record<"home" | "away" | "draw", Outcome> = {
-  home: Outcome.HOME,
-  away: Outcome.AWAY,
-  draw: Outcome.DRAW,
-};
-
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
@@ -25,7 +17,6 @@ export class AdminService {
   constructor(
     private readonly users: UsersService,
     private readonly wallet: WalletService,
-    private readonly messaging: MessagingService,
   ) {}
 
   async listUsers(): Promise<AdminUserRow[]> {
@@ -47,23 +38,5 @@ export class AdminService {
       `Admin setting balance for ${userId} to ${targetCents} cents`,
     );
     await this.wallet.setBalance(userId, targetCents);
-  }
-
-  async resolveEvent(
-    eventId: string,
-    outcome: "home" | "away" | "draw",
-  ): Promise<void> {
-    this.logger.log(`Admin resolving event ${eventId} as ${outcome}`);
-    const msg = EventResolvedEvent.create({
-      eventId,
-      sport: "",
-      outcome: OUTCOME_TO_PROTO[outcome],
-      resolvedAt: Date.now(),
-    });
-    await this.messaging.publish(
-      "events.resolved",
-      Buffer.from(EventResolvedEvent.toBinary(msg)),
-      { durable: true },
-    );
   }
 }

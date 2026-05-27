@@ -25,13 +25,7 @@ export function Navbar({ balance, loggedIn }: NavbarProps) {
     >
       <Link href="/dashboard">
         <Flex align="center" gap={3}>
-          <Image
-            src="/possum.png"
-            alt=""
-            width={90}
-            height={48}
-            priority
-          />
+          <Image src="/possum.png" alt="" width={90} height={48} priority />
           <Text fontSize="xl" fontWeight="bold" letterSpacing="tight">
             BetPossum
           </Text>

@@ -31,7 +31,11 @@ function getServerSnapshot() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const session = useSyncExternalStore(subscribe, getSession, getServerSnapshot);
+  const session = useSyncExternalStore(
+    subscribe,
+    getSession,
+    getServerSnapshot,
+  );
 
   // First mount: if this browser was previously authenticated, attempt a
   // silent refresh against Keycloak. Top-level navigation, so Keycloak's
@@ -53,9 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
   };
 
-  return (
-    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthValue {

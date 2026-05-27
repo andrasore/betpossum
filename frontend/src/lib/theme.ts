@@ -1,11 +1,16 @@
-import { createSystem, defaultConfig, defineConfig, defineRecipe } from "@chakra-ui/react";
+import {
+  createSystem,
+  defaultConfig,
+  defineConfig,
+  defineRecipe,
+} from "@chakra-ui/react";
 
 const config = defineConfig({
   theme: {
     tokens: {
       colors: {
         brand: {
-          50:  { value: "#EEEDFE" },
+          50: { value: "#EEEDFE" },
           100: { value: "#CECBF6" },
           200: { value: "#AFA9EC" },
           400: { value: "#7F77DD" },
@@ -26,16 +31,16 @@ const config = defineConfig({
           600: { value: "#993556" },
         },
         bg: {
-          page:   { value: "#0D0B18" },   // deep black for page
-          app:    { value: "#080610" },   // near-black app background
-          card:   { value: "#2a2044" },   // visible purple card bg
-          border: { value: "#534AB7" },   // brand.600 purple borders
+          page: { value: "#0D0B18" }, // deep black for page
+          app: { value: "#080610" }, // near-black app background
+          card: { value: "#2a2044" }, // visible purple card bg
+          border: { value: "#534AB7" }, // brand.600 purple borders
         },
       },
     },
     semanticTokens: {
       colors: {
-        "chakra-body-bg":   { value: "{colors.bg.app}" },
+        "chakra-body-bg": { value: "{colors.bg.app}" },
         "chakra-body-text": { value: "{colors.brand.100}" },
       },
     },

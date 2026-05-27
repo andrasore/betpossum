@@ -5,10 +5,11 @@ import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Awaitable, Callable
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from models import OddsEvent
+from auth import require_admin
+from models import EventResult, OddsEvent, Outcome
 from providers import get_provider
 from publisher import OddsPublisher
 from runner import run
@@ -34,6 +35,8 @@ class OddsEventResponse(BaseModel):
     away_odds: float = Field(serialization_alias="awayOdds")
     draw_odds: float = Field(serialization_alias="drawOdds")
     updated_at: int = Field(serialization_alias="updatedAt")
+    outcome: Outcome | None = None
+    resolved_at: int | None = Field(default=None, serialization_alias="resolvedAt")
 
     @classmethod
     def from_event(cls, event: OddsEvent) -> "OddsEventResponse":
@@ -46,6 +49,8 @@ class OddsEventResponse(BaseModel):
             away_odds=event.away_odds,
             draw_odds=event.draw_odds,
             updated_at=event.updated_at,
+            outcome=event.outcome,
+            resolved_at=event.resolved_at,
         )
 
 
@@ -57,12 +62,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async with storage:
         await storage.init_schema()
         app.state.storage = storage
+        app.state.publisher = publisher
         worker = asyncio.create_task(
             run(provider, storage, publisher, POLL_INTERVAL_SECONDS),
             name=f"odds-worker-{PROVIDER_NAME}-{STORAGE_NAME}",
         )
-        yield
-        worker.cancel()
+        try:
+            yield
+        finally:
+            worker.cancel()
+            await publisher.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -105,6 +114,24 @@ def _storage(app: FastAPI) -> OddsStorage:
     return storage
 
 
+def _publisher(app: FastAPI) -> OddsPublisher:
+    publisher = getattr(app.state, "publisher", None)
+    assert publisher is not None, "publisher not initialised"
+    return publisher
+
+
+class ResolveEventRequest(BaseModel):
+    outcome: Outcome
+
+
+class ResolveEventResponse(BaseModel):
+    model_config = {"populate_by_name": True}
+
+    event_id: str = Field(serialization_alias="eventId")
+    outcome: Outcome
+    resolved_at: int = Field(serialization_alias="resolvedAt")
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "provider": PROVIDER_NAME, "storage": STORAGE_NAME}
@@ -122,3 +149,29 @@ async def get_odds(event_id: str) -> dict[str, object]:
     if event is None:
         raise HTTPException(status_code=404, detail="event not found")
     return OddsEventResponse.from_event(event).model_dump(by_alias=True)
+
+
+# Admin action: resolve an event and fan out the result. Auth is enforced via
+# a Keycloak access token requiring the `admin` realm role.
+@app.post(
+    "/odds/{event_id}/result",
+    status_code=201,
+    dependencies=[Depends(require_admin)],
+)
+async def resolve_event(event_id: str, body: ResolveEventRequest) -> dict[str, object]:
+    storage = _storage(app)
+    current = await storage.get_current(event_id)
+    sport = current.sport if current is not None else ""
+    result = EventResult(
+        event_id=event_id,
+        sport=sport,
+        outcome=body.outcome,
+        resolved_at=int(time.time() * 1000),
+    )
+    await storage.record_result(result)
+    await _publisher(app).publish_result(result)
+    return ResolveEventResponse(
+        event_id=result.event_id,
+        outcome=result.outcome,
+        resolved_at=result.resolved_at,
+    ).model_dump(by_alias=True)

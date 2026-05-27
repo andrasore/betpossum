@@ -21,6 +21,7 @@ async def run(
                     await storage.record(event)
                     await publisher.publish(event)
                 async for result in provider.fetch_results():
+                    await storage.record_result(result)
                     await publisher.publish_result(result)
             except Exception:
                 logger.exception("Tick failed for provider %s", provider.name)

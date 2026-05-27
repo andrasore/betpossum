@@ -1,11 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
 
-declare global {
-  interface Window {
-    __betting?: { getAccessToken: () => string | null };
-  }
-}
-
 test("anonymous visitor sees odds on /dashboard without being redirected", async ({
   browser,
 }) => {
@@ -92,22 +86,18 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   // Started at £100, staked £10 → £90 held until settlement.
   await expect(alicePage.getByTestId("balance")).toHaveText("Balance: £90.00");
 
-  // Resolve the event in alice's favour via the admin endpoint. The
-  // access token lives in bob's page memory (no BFF cookie anymore), so
-  // we drive the request from inside the page.
-  const respStatus = await bobPage.evaluate(async (id) => {
-    const token = window.__betting?.getAccessToken();
-    const r = await fetch(`/api/admin/events/${id}/result`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token ?? ""}`,
-      },
-      body: JSON.stringify({ outcome: "home" }),
-    });
-    return { status: r.status, body: await r.text() };
-  }, eventId);
-  expect(respStatus.status, respStatus.body).toBe(201);
+  // Resolve the event in alice's favour by clicking the Home button on
+  // the row in bob's Events admin tab.
+  await bobPage.getByTestId("admin-events-tab").click();
+  const resolveButton = bobPage.getByTestId(
+    `admin-event-resolve-${eventId}-home`,
+  );
+  await expect(resolveButton).toBeVisible();
+  await resolveButton.click();
+  await expect(bobPage.getByTestId(`admin-event-status-${eventId}`)).toHaveText(
+    /resolved \(home\)/i,
+    { timeout: 10_000 },
+  );
   await bobCtx.close();
 
   // Bet row flips to "Won" via the socket-driven useBets revalidation.

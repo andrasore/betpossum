@@ -13,10 +13,6 @@ describe("AdminController (auth boundary)", () => {
   let currentUser: AuthUser | null;
   const listUsers = jest.fn<Promise<unknown[]>, []>();
   const setUserBalance = jest.fn<Promise<void>, [string, number]>();
-  const resolveEvent = jest.fn<
-    Promise<void>,
-    [string, "home" | "away" | "draw"]
-  >();
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -40,11 +36,10 @@ describe("AdminController (auth boundary)", () => {
         },
         {
           provide: AdminService,
-          useValue: { listUsers, setUserBalance, resolveEvent },
+          useValue: { listUsers, setUserBalance },
         },
       ],
-    })
-      .compile();
+    }).compile();
 
     app = moduleRef.createNestApplication();
     await app.init();
@@ -57,7 +52,6 @@ describe("AdminController (auth boundary)", () => {
   beforeEach(() => {
     listUsers.mockReset();
     setUserBalance.mockReset();
-    resolveEvent.mockReset();
   });
 
   const authedAs = (roles: string[]): AuthUser =>
@@ -92,25 +86,5 @@ describe("AdminController (auth boundary)", () => {
       .expect(200);
     expect(res.body).toEqual([{ id: "u1", balance: 50 }]);
     expect(listUsers).toHaveBeenCalledTimes(1);
-  });
-
-  it("rejects a non-admin user with 403 on POST /admin/events/:id/result", async () => {
-    currentUser = authedAs(["user"]);
-    await request(app.getHttpServer())
-      .post("/admin/events/evt-x/result")
-      .send({ outcome: "home" })
-      .expect(403);
-    expect(resolveEvent).not.toHaveBeenCalled();
-  });
-
-  it("admin POST /admin/events/:id/result forwards to AdminService.resolveEvent", async () => {
-    resolveEvent.mockResolvedValue();
-    currentUser = authedAs(["admin"]);
-
-    await request(app.getHttpServer())
-      .post("/admin/events/evt-x/result")
-      .send({ outcome: "home" })
-      .expect(201);
-    expect(resolveEvent).toHaveBeenCalledWith("evt-x", "home");
   });
 });

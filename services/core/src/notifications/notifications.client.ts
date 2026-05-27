@@ -1,8 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import {
-  NotificationEvent,
-  type OddsUpdatedEvent,
-} from "../generated/events";
+import { NotificationEvent, type OddsUpdatedEvent } from "../generated/events";
 import { MessagingService } from "../messaging/messaging.service";
 
 const CHANNEL = "notifications";

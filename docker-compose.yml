@@ -127,6 +127,9 @@ services:
       ODDS_PROVIDER: mock
       ODDS_STORAGE: postgres
       POLL_INTERVAL_SECONDS: 30
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_ISSUER_URL: http://localhost:8090/realms/betting
+      KEYCLOAK_REALM: betting
     ports:
       - "8000:8000"
     depends_on:

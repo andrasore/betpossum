@@ -165,10 +165,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     await this.pushBalanceUpdated(userId);
   }
 
-  async release(
-    userId: string,
-    betId: string,
-  ): Promise<void> {
+  async release(userId: string, betId: string): Promise<void> {
     await this.createTransfers([
       {
         id: tbId(),
@@ -190,10 +187,7 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     await this.pushBalanceUpdated(userId);
   }
 
-  async keep(
-    userId: string,
-    betId: string,
-  ): Promise<void> {
+  async keep(userId: string, betId: string): Promise<void> {
     await this.createTransfers([
       {
         id: tbId(),

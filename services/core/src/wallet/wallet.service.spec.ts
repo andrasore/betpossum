@@ -197,7 +197,7 @@ describe("WalletService", () => {
 
     await wallet.setBalance(userId, 10000);
     expect(await wallet.getBalanceCents(userId)).toBe(10000);
-    
+
     await wallet.setBalance(userId, 0);
     expect(await wallet.getBalanceCents(userId)).toBe(0);
 

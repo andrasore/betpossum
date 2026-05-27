@@ -8,9 +8,6 @@ import { KeycloakModule } from "./keycloak.module";
 
 @Module({
   imports: [PassportModule, KeycloakModule, UsersModule],
-  providers: [
-    JwtStrategy,
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-  ],
+  providers: [JwtStrategy, { provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
 export class KeycloakAuthModule {}

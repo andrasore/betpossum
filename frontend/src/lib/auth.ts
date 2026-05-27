@@ -28,7 +28,6 @@ interface AppConfig {
 declare global {
   interface Window {
     __APP_CONFIG__?: AppConfig;
-    __betting?: { getAccessToken: () => string | null };
   }
 }
 
@@ -180,17 +179,17 @@ export async function handleCallback(): Promise<CallbackResult> {
     redirect_uri: redirectUri(),
     code_verifier: pending.verifier,
   });
-  const res = await fetch(
-    `${keycloakIssuer}/protocol/openid-connect/token`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body,
-    },
-  );
+  const res = await fetch(`${keycloakIssuer}/protocol/openid-connect/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
   if (!res.ok) {
     refreshing = false;
-    return { returnTo: pending.returnTo, error: `token_exchange_${res.status}` };
+    return {
+      returnTo: pending.returnTo,
+      error: `token_exchange_${res.status}`,
+    };
   }
   const json = TokenResponseSchema.parse(await res.json());
   const { sub, roles } = decodeAccess(json.access_token);
@@ -230,11 +229,4 @@ export function logout(): void {
 // AuthProvider to attempt a silent refresh on bootstrap.
 export function hasPreviousAuth(): boolean {
   return localStorage.getItem(PREVIOUS_AUTH_KEY) === "1";
-}
-
-if (typeof window !== "undefined") {
-  // Test hook: lets the e2e suite read the current access token to perform
-  // authed requests from outside the React tree. Same XSS surface as any
-  // other in-memory access-token SPA.
-  window.__betting = { getAccessToken };
 }

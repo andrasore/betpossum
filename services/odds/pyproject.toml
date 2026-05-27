@@ -15,6 +15,7 @@ dependencies = [
   "protobuf==6.33.6",
   "pydantic==2.13.3",
   "pydantic-core==2.46.3",
+  "pyjwt[crypto]==2.10.1",
   "pex==2.93.4",
   "grpcio-tools==1.80.0",
 ]

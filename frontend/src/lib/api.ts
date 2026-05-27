@@ -1,13 +1,14 @@
 import { getAccessToken, refresh } from "./auth";
+import type { Outcome } from "./schemas";
 import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
 
-async function api(path: string, init?: RequestInit): Promise<Response> {
+async function authedFetch(url: string, init?: RequestInit): Promise<Response> {
   const token = getAccessToken();
   if (!token) {
     refresh();
     throw new Error("Unauthenticated");
   }
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(url, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -20,6 +21,10 @@ async function api(path: string, init?: RequestInit): Promise<Response> {
     throw new Error("Unauthenticated");
   }
   return res;
+}
+
+function api(path: string, init?: RequestInit): Promise<Response> {
+  return authedFetch(`/api${path}`, init);
 }
 
 export async function placeBet(payload: PlaceBetPayload): Promise<Bet> {
@@ -73,4 +78,15 @@ export async function setAdminUserBalance(
     body: JSON.stringify({ amount }),
   });
   if (!res.ok) throw new Error("Failed to update balance");
+}
+
+export async function resolveAdminEvent(
+  eventId: string,
+  outcome: Outcome,
+): Promise<void> {
+  const res = await authedFetch(`/odds/${eventId}/result`, {
+    method: "POST",
+    body: JSON.stringify({ outcome }),
+  });
+  if (!res.ok) throw new Error("Failed to resolve event");
 }

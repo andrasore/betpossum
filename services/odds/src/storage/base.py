@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import ClassVar
 
-from models import OddsEvent
+from models import EventResult, OddsEvent
 
 
 class OddsStorage(ABC):
@@ -28,6 +28,9 @@ class OddsStorage(ABC):
 
     @abstractmethod
     async def record(self, event: OddsEvent) -> None: ...
+
+    @abstractmethod
+    async def record_result(self, result: EventResult) -> None: ...
 
     @abstractmethod
     async def list_current(self, sport: str | None = None) -> list[OddsEvent]: ...

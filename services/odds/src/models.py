@@ -14,6 +14,8 @@ class OddsEvent(BaseModel):
     away_odds: float
     draw_odds: float = 0.0
     updated_at: int  # Unix ms
+    outcome: Outcome | None = None
+    resolved_at: int | None = None  # Unix ms
 
 
 class EventResult(BaseModel):
