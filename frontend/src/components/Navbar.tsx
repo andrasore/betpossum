@@ -1,18 +1,18 @@
 "use client";
 
 import { Box, Button, Flex, Text } from "@chakra-ui/react";
-import { LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
 interface NavbarProps {
   balance?: number | null;
-  loggedIn?: boolean;
 }
 
-export function Navbar({ balance, loggedIn }: NavbarProps) {
-  const { login, logout } = useAuth();
+export function Navbar({ balance }: NavbarProps) {
+  const { isAuthenticated, roles, login, logout } = useAuth();
+  const isAdmin = isAuthenticated && roles.includes("admin");
   return (
     <Flex
       as="nav"
@@ -39,7 +39,15 @@ export function Navbar({ balance, loggedIn }: NavbarProps) {
             Balance: £{balance.toFixed(2)}
           </Text>
         )}
-        {loggedIn ? (
+        {isAdmin && (
+          <Button asChild variant="ghost" size="sm" data-testid="admin-link">
+            <Link href="/admin">
+              <Shield size={16} />
+              Admin
+            </Link>
+          </Button>
+        )}
+        {isAuthenticated ? (
           <Button
             variant="ghost"
             size="sm"

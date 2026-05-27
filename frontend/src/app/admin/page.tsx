@@ -35,8 +35,9 @@ export default function AdminPage() {
   const { isAuthenticated, roles } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    if (!roles.includes("admin")) router.replace("/dashboard");
+    if (!isAuthenticated || !roles.includes("admin")) {
+      router.replace("/dashboard");
+    }
   }, [isAuthenticated, roles, router]);
 
   const isAdmin = isAuthenticated && roles.includes("admin");

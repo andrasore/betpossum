@@ -1,8 +1,7 @@
 "use client";
 
 import { Badge, Box, Card, Flex, Heading, Stack, Text } from "@chakra-ui/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BetSlip } from "@/components/BetSlip";
 import { Navbar } from "@/components/Navbar";
 import { OddsBoard } from "@/components/OddsBoard";
@@ -26,8 +25,7 @@ const statusPalette: Record<Bet["status"], string> = {
 
 export default function DashboardPage() {
   useForceTheme("dark");
-  const router = useRouter();
-  const { isAuthenticated, accessToken, roles, login } = useAuth();
+  const { isAuthenticated, accessToken, login } = useAuth();
   const [selection, setSelection] = useState<Selection>(null);
 
   const sessionKey = accessToken;
@@ -36,14 +34,9 @@ export default function DashboardPage() {
   const balance = useBalance(sessionKey);
   useInsufficientBalanceToast(sessionKey);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    if (roles.includes("admin")) router.replace("/admin");
-  }, [isAuthenticated, roles, router]);
-
   return (
     <Flex direction="column" h="100vh">
-      <Navbar balance={balance} loggedIn={isAuthenticated} />
+      <Navbar balance={balance} />
       <Flex flex="1" overflow="hidden">
         <Box as="main" flex="1" overflowY="auto" p={6}>
           <Heading as="h2" size="md" mb={4}>

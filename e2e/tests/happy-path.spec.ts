@@ -52,6 +52,8 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   const bobCtx = await browser.newContext();
   const bobPage = await bobCtx.newPage();
   await loginAs(bobPage, "bob");
+  await bobPage.waitForURL("**/dashboard");
+  await bobPage.getByTestId("admin-link").click();
   await bobPage.waitForURL("**/admin");
 
   const aliceRow = bobPage.locator("tr", { hasText: "alice@example.com" });
