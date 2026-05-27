@@ -8,8 +8,8 @@
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
     "proto:gen": "mkdir -p ./src/generated && protoc --ts_out ./src/generated --ts_opt long_type_number --proto_path ../proto ../proto/events.proto",
-    "lint": "pnpx @biomejs/biome format && pnpx @biomejs/biome check",
-    "format": "pnpx @biomejs/biome format --write"
+    "lint": "pnpx @biomejs/biome check",
+    "lint:fix": "pnpx @biomejs/biome check --write --unsafe"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.30.0",

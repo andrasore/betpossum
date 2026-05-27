@@ -287,7 +287,9 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
   private async createTransfers(transfers: Transfer[]): Promise<void> {
     const results = await this.client.createTransfers(transfers);
     for (const r of results) {
-      if (r.status === CreateTransferStatus.created) continue;
+      if (r.status === CreateTransferStatus.created) {
+        continue;
+      }
       if (r.status === CreateTransferStatus.exceeds_credits) {
         throw new InsufficientBalanceError();
       }
