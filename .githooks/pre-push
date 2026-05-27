@@ -1,6 +1,8 @@
 #!/bin/bash
-npm run typecheck
-npm run test
-npm run lint
+set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 bash "$REPO_ROOT/tools/protobuf_guard.sh"
+npm run typecheck
+npm run lint
+npm run test
+npm run e2e
