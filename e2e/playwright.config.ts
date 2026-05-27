@@ -14,6 +14,7 @@ export default defineConfig({
     browserName: "chromium",
     channel: "chromium",
     trace: "on-first-retry",
+    screenshot: "only-on-failure",
     launchOptions: {
       executablePath: "/usr/bin/chromium",
     },
