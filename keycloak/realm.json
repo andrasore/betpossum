@@ -77,7 +77,7 @@
     },
     {
       "username": "bob",
-      "email": "admin@example.com",
+      "email": "bob@example.com",
       "firstName": "Bob",
       "lastName": "Example",
       "enabled": true,
