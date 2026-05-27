@@ -11,6 +11,10 @@
       "inputs": ["src/**"],
       "outputs": ["dist/**", ".next/**"]
     },
+    "proto:gen": {
+      "inputs": ["../../proto/**/*.proto"],
+      "outputs": ["src/generated/**"]
+    },
     "typecheck": {
       "dependsOn": ["build"],
       "inputs": [
