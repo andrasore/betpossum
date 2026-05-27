@@ -77,7 +77,9 @@ export function BetSlip({
   ];
 
   async function submit() {
-    if (!stake || Number.isNaN(Number(stake))) return;
+    if (!stake || Number.isNaN(Number(stake))) {
+      return;
+    }
     setLoading(true);
     try {
       await placeBet({
@@ -117,7 +119,9 @@ export function BetSlip({
             value={choice}
             disabled={!loggedIn}
             onValueChange={(d) => {
-              if (d.value) onChoiceChange(d.value as Choice);
+              if (d.value) {
+                onChoiceChange(d.value as Choice);
+              }
             }}
           >
             <SegmentGroup.Indicator />

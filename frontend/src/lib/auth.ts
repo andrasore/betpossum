@@ -36,7 +36,9 @@ let refreshing = false;
 const listeners = new Set<() => void>();
 
 function notify(): void {
-  for (const l of listeners) l();
+  for (const l of listeners) {
+    l();
+  }
 }
 
 export function subscribe(listener: () => void): () => void {
@@ -54,7 +56,9 @@ export function getAccessToken(): string | null {
 
 function config(): AppConfig {
   const cfg = window.__APP_CONFIG__;
-  if (!cfg) throw new Error("window.__APP_CONFIG__ not loaded");
+  if (!cfg) {
+    throw new Error("window.__APP_CONFIG__ not loaded");
+  }
   return cfg;
 }
 
@@ -64,7 +68,9 @@ function redirectUri(): string {
 
 function base64UrlEncode(bytes: Uint8Array): string {
   let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
+  for (const b of bytes) {
+    s += String.fromCharCode(b);
+  }
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
@@ -121,7 +127,9 @@ async function startFlow(opts: {
     code_challenge_method: "S256",
     state,
   });
-  if (opts.silent) params.set("prompt", "none");
+  if (opts.silent) {
+    params.set("prompt", "none");
+  }
 
   window.location.assign(
     `${keycloakIssuer}/protocol/openid-connect/auth?${params}`,
@@ -137,7 +145,9 @@ export function login(returnTo?: string): void {
 // bounce straight back with a fresh code, or fail with error=login_required —
 // in which case the callback page falls back to interactive login.
 export function refresh(): void {
-  if (refreshing) return;
+  if (refreshing) {
+    return;
+  }
   refreshing = true;
   void startFlow({ silent: true });
 }
@@ -151,7 +161,9 @@ export async function handleCallback(): Promise<CallbackResult> {
   const params = new URLSearchParams(window.location.search);
   const raw = sessionStorage.getItem(PENDING_KEY);
   sessionStorage.removeItem(PENDING_KEY);
-  if (!raw) return { returnTo: "/", error: "missing_pending_state" };
+  if (!raw) {
+    return { returnTo: "/", error: "missing_pending_state" };
+  }
   const pending = JSON.parse(raw) as PendingAuth;
 
   const error = params.get("error");
@@ -219,7 +231,9 @@ export function logout(): void {
     client_id: clientId,
     post_logout_redirect_uri: `${window.location.origin}/login`,
   });
-  if (idToken) params.set("id_token_hint", idToken);
+  if (idToken) {
+    params.set("id_token_hint", idToken);
+  }
   window.location.assign(
     `${keycloakIssuer}/protocol/openid-connect/logout?${params}`,
   );

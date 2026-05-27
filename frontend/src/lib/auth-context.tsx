@@ -42,7 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // session cookie is sent and the round-trip is invisible if the session is
   // still alive. If it isn't, the callback page clears the flag.
   useEffect(() => {
-    if (session) return;
+    if (session) {
+      return;
+    }
     if (hasPreviousAuth() && window.location.pathname !== "/auth/callback") {
       refresh();
     }
@@ -62,6 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth(): AuthValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  if (!ctx) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
   return ctx;
 }

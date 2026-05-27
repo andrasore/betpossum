@@ -1,6 +1,6 @@
+import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
 import { getAccessToken, refresh } from "./auth";
 import type { Outcome } from "./schemas";
-import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
 
 async function authedFetch(url: string, init?: RequestInit): Promise<Response> {
   const token = getAccessToken();
@@ -32,25 +32,33 @@ export async function placeBet(payload: PlaceBetPayload): Promise<Bet> {
     method: "POST",
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Failed to place bet");
+  if (!res.ok) {
+    throw new Error("Failed to place bet");
+  }
   return res.json();
 }
 
 export async function fetchBets(): Promise<Bet[]> {
   const res = await api("/bets");
-  if (!res.ok) throw new Error("Failed to fetch bets");
+  if (!res.ok) {
+    throw new Error("Failed to fetch bets");
+  }
   return res.json();
 }
 
 export async function fetchOdds(): Promise<OddsEvent[]> {
   const res = await fetch("/odds");
-  if (!res.ok) throw new Error("Failed to fetch odds");
+  if (!res.ok) {
+    throw new Error("Failed to fetch odds");
+  }
   return res.json();
 }
 
 export async function fetchBalance(): Promise<number> {
   const res = await api("/wallet/balance");
-  if (!res.ok) throw new Error("Failed to fetch balance");
+  if (!res.ok) {
+    throw new Error("Failed to fetch balance");
+  }
   const { balance } = (await res.json()) as { balance: number };
   return balance;
 }
@@ -65,7 +73,9 @@ export interface AdminUserRow {
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   const res = await api("/admin/users");
-  if (!res.ok) throw new Error("Failed to fetch users");
+  if (!res.ok) {
+    throw new Error("Failed to fetch users");
+  }
   return res.json();
 }
 
@@ -77,7 +87,9 @@ export async function setAdminUserBalance(
     method: "PUT",
     body: JSON.stringify({ amount }),
   });
-  if (!res.ok) throw new Error("Failed to update balance");
+  if (!res.ok) {
+    throw new Error("Failed to update balance");
+  }
 }
 
 export async function resolveAdminEvent(
@@ -88,5 +100,7 @@ export async function resolveAdminEvent(
     method: "POST",
     body: JSON.stringify({ outcome }),
   });
-  if (!res.ok) throw new Error("Failed to resolve event");
+  if (!res.ok) {
+    throw new Error("Failed to resolve event");
+  }
 }

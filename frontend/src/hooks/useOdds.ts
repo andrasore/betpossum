@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchOdds } from "@/lib/api";
 import { OddsUpdatedEvent } from "@/generated/events";
+import { fetchOdds } from "@/lib/api";
 import { OddsEventSchema } from "@/lib/schemas";
 import { getSocket } from "@/lib/websocket";
 import type { OddsEvent } from "@/types";
@@ -17,7 +17,9 @@ export function useOdds(loggedIn: boolean) {
 
     fetchOdds()
       .then((events) => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         const parsed = events.flatMap((e) => {
           const result = OddsEventSchema.safeParse(e);
           return result.success ? [result.data] : [];

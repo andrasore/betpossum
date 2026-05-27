@@ -10,7 +10,9 @@ export function useBets(token: string | null) {
   const swr = useSWR<Bet[]>(token ? "bets" : null, () => fetchBets());
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      return;
+    }
     const socket = getSocket();
     const revalidate = () => {
       void swr.mutate();

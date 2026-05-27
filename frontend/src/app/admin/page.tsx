@@ -42,7 +42,9 @@ export default function AdminPage() {
 
   const isAdmin = isAuthenticated && roles.includes("admin");
 
-  if (!isAdmin) return null;
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <Flex
@@ -137,7 +139,9 @@ function UserRow({
   const valid = Number.isFinite(parsed) && parsed >= 0;
 
   const confirm = async () => {
-    if (!dirty || !valid) return;
+    if (!dirty || !valid) {
+      return;
+    }
     setSaving(true);
     setError(null);
     try {

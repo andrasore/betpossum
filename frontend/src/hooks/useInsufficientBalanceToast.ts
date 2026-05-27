@@ -7,7 +7,9 @@ import { getSocket } from "@/lib/websocket";
 
 export function useInsufficientBalanceToast(token: string | null) {
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      return;
+    }
     const socket = getSocket();
     const handler = (raw: ArrayBuffer) => {
       const msg = InsufficientBalanceNotification.fromBinary(

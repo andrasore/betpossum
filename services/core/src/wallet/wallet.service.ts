@@ -9,6 +9,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import {
   AccountFlags,
+  amount_max as AMOUNT_MAX,
   type Client,
   CreateAccountStatus,
   CreateTransferStatus,
@@ -16,7 +17,6 @@ import {
   type Transfer,
   TransferFlags,
   id as tbId,
-  amount_max as AMOUNT_MAX,
 } from "tigerbeetle-node";
 import { NotificationsClient } from "../notifications/notifications.client";
 

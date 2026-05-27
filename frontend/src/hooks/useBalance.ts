@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchBalance } from "@/lib/api";
 import { BalanceUpdatedNotification } from "@/generated/events";
+import { fetchBalance } from "@/lib/api";
 import { getSocket } from "@/lib/websocket";
 
 export function useBalance(token: string | null) {
   const [balance, setBalance] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      return;
+    }
 
     fetchBalance()
       .then(setBalance)
