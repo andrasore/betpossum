@@ -1,0 +1,4 @@
+window.__APP_CONFIG__ = {
+  keycloakIssuer: "${KEYCLOAK_ISSUER}",
+  clientId: "${KEYCLOAK_CLIENT_ID}",
+};

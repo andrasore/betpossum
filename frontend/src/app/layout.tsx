@@ -16,6 +16,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={notoSans.variable}>
+      <head>
+        {/* Generated at nginx startup from KEYCLOAK_ISSUER /
+            KEYCLOAK_CLIENT_ID; same image runs on dev (8080/8090) and e2e
+            (18080/18090) without rebuild. */}
+        <script src="/config.js" />
+      </head>
       <body style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}>
         <Providers>{children}</Providers>
       </body>

@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge, Box, Card, Flex, Heading, Stack, Text } from "@chakra-ui/react";
-import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BetSlip } from "@/components/BetSlip";
@@ -12,6 +11,7 @@ import { useBets } from "@/hooks/useBets";
 import { useForceTheme } from "@/hooks/useForceTheme";
 import { useInsufficientBalanceToast } from "@/hooks/useInsufficientBalanceToast";
 import { useOdds } from "@/hooks/useOdds";
+import { useAuth } from "@/lib/auth-context";
 import type { Bet, OddsEvent } from "@/types";
 
 type Choice = "home" | "away" | "draw";
@@ -27,27 +27,23 @@ const statusPalette: Record<Bet["status"], string> = {
 export default function DashboardPage() {
   useForceTheme("dark");
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { isAuthenticated, accessToken, roles, login } = useAuth();
   const [selection, setSelection] = useState<Selection>(null);
 
-  // Hooks below use the session token as a "logged in?" key, not as a
-  // credential — the actual token never leaves the BFF.
-  const sessionKey = session?.accessToken ?? null;
-  const odds = useOdds(sessionKey !== null);
+  const sessionKey = accessToken;
+  const odds = useOdds(isAuthenticated);
   const { data: bets, mutate } = useBets(sessionKey);
   const balance = useBalance(sessionKey);
   useInsufficientBalanceToast(sessionKey);
 
   useEffect(() => {
-    if (status !== "authenticated") return;
-    if (session.roles.includes("admin")) router.replace("/admin");
-  }, [status, session, router]);
-
-  const loggedIn = status === "authenticated";
+    if (!isAuthenticated) return;
+    if (roles.includes("admin")) router.replace("/admin");
+  }, [isAuthenticated, roles, router]);
 
   return (
     <Flex direction="column" h="100vh">
-      <Navbar balance={balance} loggedIn={loggedIn} />
+      <Navbar balance={balance} loggedIn={isAuthenticated} />
       <Flex flex="1" overflow="hidden">
         <Box as="main" flex="1" overflowY="auto" p={6}>
           <Heading as="h2" size="md" mb={4}>
@@ -65,7 +61,7 @@ export default function DashboardPage() {
             }
           />
 
-          {loggedIn && bets && bets.length > 0 && (
+          {isAuthenticated && bets && bets.length > 0 && (
             <Box mt={8}>
               <Heading as="h2" size="md" mb={3}>
                 My Bets
@@ -110,7 +106,7 @@ export default function DashboardPage() {
         >
           <BetSlip
             selection={selection}
-            loggedIn={loggedIn}
+            loggedIn={isAuthenticated}
             balance={balance}
             onChoiceChange={(choice) =>
               setSelection((s) => (s ? { ...s, choice } : s))
@@ -119,9 +115,7 @@ export default function DashboardPage() {
               setSelection(null);
               mutate();
             }}
-            onLogin={() => {
-              void signIn("keycloak", { callbackUrl: "/dashboard" });
-            }}
+            onLogin={() => login("/dashboard")}
           />
         </Box>
       </Flex>

@@ -2,9 +2,9 @@
 
 import { Button, Flex, Text } from "@chakra-ui/react";
 import { LogIn, LogOut } from "lucide-react";
-import { signIn, signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 
 interface NavbarProps {
   balance?: number | null;
@@ -12,6 +12,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ balance, loggedIn }: NavbarProps) {
+  const { login, logout } = useAuth();
   return (
     <Flex
       as="nav"
@@ -46,9 +47,7 @@ export function Navbar({ balance, loggedIn }: NavbarProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              void signOut({ callbackUrl: "/login" });
-            }}
+            onClick={() => logout()}
             data-testid="logout-button"
           >
             <LogOut size={16} />
@@ -58,9 +57,7 @@ export function Navbar({ balance, loggedIn }: NavbarProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              void signIn("keycloak", { callbackUrl: "/dashboard" });
-            }}
+            onClick={() => login("/dashboard")}
             data-testid="login-button"
           >
             <LogIn size={16} />

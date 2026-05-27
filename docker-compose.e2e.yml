@@ -34,10 +34,7 @@ services:
     ports: !override
       - "18090:8080"
   nginx:
+    environment:
+      KEYCLOAK_ISSUER: http://localhost:18090/realms/betting
     ports: !override
       - "18080:80"
-  frontend:
-    environment:
-      NEXTAUTH_URL: http://localhost:18080
-      NEXTAUTH_KEYCLOAK_ISSUER: http://localhost:18090/realms/betting
-    ports: !reset []

@@ -1,43 +1,29 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { io, type Socket } from "socket.io-client";
+import { getAccessToken, refresh } from "./auth";
 
 let socket: Socket | null = null;
-
-async function fetchSocketToken(): Promise<string> {
-  const res = await fetch("/api/socket-token", { cache: "no-store" });
-  if (!res.ok) throw new Error(`socket-token failed: ${res.status}`);
-  const { token } = (await res.json()) as { token: string };
-  return token;
-}
 
 export function getSocket(): Socket {
   if (socket) return socket;
 
   socket = io({
-    // socket.io re-invokes this on every (re)connect, so the BFF can mint
-    // a freshly-refreshed token if the previous one expired.
-    auth: (cb) => {
-      fetchSocketToken()
-        .then((token) => cb({ token }))
-        .catch(() => cb({ token: "" }));
-    },
+    // Re-evaluated by socket.io on every (re)connect — if the access token
+    // has been replaced after a refresh, the new value gets picked up.
+    auth: (cb) => cb({ token: getAccessToken() ?? "" }),
     transports: ["websocket"],
   });
 
-  let refreshing = false;
+  let recovering = false;
   socket.on("connect", () => {
-    refreshing = false;
+    recovering = false;
   });
   socket.on("connect_error", () => {
-    if (refreshing) return;
-    refreshing = true;
-    // A connect_error that survives a token refresh means the session is
-    // dead; bounce the user through sign-in.
-    fetchSocketToken().catch(() => {
-      void signIn("keycloak");
-    });
+    if (recovering) return;
+    recovering = true;
+    // Likely token expiry. Trigger a redirect-based refresh.
+    refresh();
   });
 
   return socket;

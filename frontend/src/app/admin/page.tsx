@@ -11,7 +11,6 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { Check, X } from "lucide-react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
@@ -22,18 +21,19 @@ import {
   fetchAdminUsers,
   setAdminUserBalance,
 } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 export default function AdminPage() {
   useForceTheme("light");
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { isAuthenticated, roles } = useAuth();
 
   useEffect(() => {
-    if (status !== "authenticated") return;
-    if (!session.roles.includes("admin")) router.replace("/dashboard");
-  }, [status, session, router]);
+    if (!isAuthenticated) return;
+    if (!roles.includes("admin")) router.replace("/dashboard");
+  }, [isAuthenticated, roles, router]);
 
-  const isAdmin = status === "authenticated" && session.roles.includes("admin");
+  const isAdmin = isAuthenticated && roles.includes("admin");
 
   const {
     data: users,

@@ -48,19 +48,14 @@ Path routing:
 
 Responsibilities:
 - Path-based routing as above
-- WebSocket connection upgrade for both the live event feed (`/socket.io/`)
-  and Turbopack's HMR (`/_next/*`)
-- Bumped `proxy_buffer_size` on the frontend location so NextAuth's
-  callback `Set-Cookie` (JWT-bearing) doesn't overflow the default 4k
-  header buffer
+- WebSocket connection upgrade for the live event feed (`/socket.io/`)
+- Serves the SPA's static export at `/` and the runtime config script at
+  `/config.js` (rendered from env at container start so the same image runs
+  on dev/8080 and e2e/18080)
 
 Explicitly **not** responsibilities of the proxy:
 - **Authentication / authorisation** — each service verifies its own JWTs.
 - **Rate limiting** — handled per-service if at all.
-- **Server-to-server traffic** — the BFF (`/api/proxy/*` inside Next) talks
-  to Core directly via the docker network, not back through nginx. Routing
-  internal calls through the public-facing proxy would create a frontend ↔
-  nginx loop and is explicitly avoided.
 
 Keycloak is *not* behind nginx — it has its own port (`8090` dev / `18090`
 e2e). The browser → Keycloak hop is just a login redirect, no CORS
@@ -124,10 +119,10 @@ direct in-process method calls.
 
 The frontend talks to Core and Odds over HTTP and to Notifications over a
 socket.io connection — all through the Nginx proxy on a single origin.
-Authenticated calls go via the Next.js BFF (`/api/proxy/*`), which attaches
-the Keycloak access token server-side and forwards to Core directly (the
-browser never sees the token). The `/odds` hydrate is public and hits the
-gateway without auth.
+Authenticated calls go to `/api/*` (proxied to Core) with the Keycloak
+access token attached client-side as `Authorization: Bearer …` from the
+SPA's in-memory store. The `/odds` hydrate is public and hits the gateway
+without auth.
 
 Each exchange is a `fanout` type. Subscribers declare their own anonymous
 exclusive auto-delete queue and bind it to the exchange — semantically

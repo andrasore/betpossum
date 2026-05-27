@@ -31,15 +31,15 @@
     {
       "clientId": "betting-frontend",
       "enabled": true,
-      "publicClient": false,
-      "secret": "betting-frontend-secret",
+      "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["http://localhost:8080/api/auth/callback/keycloak"],
+      "redirectUris": ["http://localhost:8080/auth/callback"],
       "webOrigins": ["http://localhost:8080"],
       "attributes": {
+        "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://localhost:8080/*"
       }
     },

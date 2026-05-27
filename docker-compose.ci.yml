@@ -30,7 +30,7 @@ services:
         - type=gha,scope=notifications
       cache_to:
         - type=gha,mode=max,scope=notifications
-  frontend:
+  nginx:
     build:
       cache_from:
         - type=gha,scope=frontend

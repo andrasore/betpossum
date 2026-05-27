@@ -17,18 +17,15 @@ RUN pnpm --filter '@betting/core' --filter '@betting/frontend' run build
 # pnpm deploy is used to generate a copiable directory for core
 RUN pnpm --filter '@betting/core' deploy --prod services/core/pruned
 
-# Stage 2: Next.js frontend served via its standalone output.
-FROM node:25-alpine AS frontend
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-WORKDIR /app
-ENV NODE_ENV=development
-COPY --chown=appuser:appgroup --from=builder-node /app/frontend/.next/standalone/ ./
-COPY --chown=appuser:appgroup --from=builder-node /app/frontend/.next/static ./frontend/.next/static
-COPY --chown=appuser:appgroup --from=builder-node /app/frontend/public ./frontend/public
-# TODO also copy public folder if we have one
-USER appuser
-EXPOSE 3001
-CMD ["node", "frontend/server.js"]
+# Stage 2: Next.js static export packaged into nginx. Same image is served on
+# dev (8080 / 8090) and e2e (18080 / 18090); runtime Keycloak URL is injected
+# via /config.js generated at container start by docker-entrypoint.d.
+FROM nginx:1.27-alpine AS frontend
+COPY --from=builder-node /app/frontend/out/ /usr/share/nginx/html/
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+COPY nginx/config.js.template /etc/nginx/templates/config.js.template
+COPY nginx/docker-entrypoint.d/30-render-config.sh /docker-entrypoint.d/30-render-config.sh
+RUN chmod +x /docker-entrypoint.d/30-render-config.sh
 
 # Stage 3: Core Node.js service.
 FROM node:25-alpine AS core

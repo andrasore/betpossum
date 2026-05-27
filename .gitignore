@@ -5,6 +5,7 @@ tsconfig.tsbuildinfo
 *.egg-info/
 .turbo/
 .next/
+out/
 next-env.d.ts
 .env
 requirements.txt
