@@ -68,20 +68,14 @@ ON CONFLICT (event_id) DO UPDATE SET
 """
 
 _SELECT_COLS = (
-    "event_id, sport, home_team, away_team, "
-    "home_odds, away_odds, draw_odds, updated_at"
+    "event_id, sport, home_team, away_team, home_odds, away_odds, draw_odds, updated_at"
 )
 
-_SELECT_ALL = (
-    f"SELECT {_SELECT_COLS} FROM odds_current ORDER BY updated_at DESC"  
-)
+_SELECT_ALL = f"SELECT {_SELECT_COLS} FROM odds_current ORDER BY updated_at DESC"
 _SELECT_BY_SPORT = (
-    f"SELECT {_SELECT_COLS} FROM odds_current "
-    "WHERE sport = $1 ORDER BY updated_at DESC"
+    f"SELECT {_SELECT_COLS} FROM odds_current WHERE sport = $1 ORDER BY updated_at DESC"
 )
-_SELECT_BY_EVENT = (
-    f"SELECT {_SELECT_COLS} FROM odds_current WHERE event_id = $1"
-)
+_SELECT_BY_EVENT = f"SELECT {_SELECT_COLS} FROM odds_current WHERE event_id = $1"
 
 
 class PostgresStorage(OddsStorage):
