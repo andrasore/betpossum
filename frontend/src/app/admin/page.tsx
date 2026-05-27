@@ -19,7 +19,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { Navbar } from "@/components/Navbar";
-import { useForceTheme } from "@/hooks/useForceTheme";
 import {
   type AdminUserRow,
   fetchAdminUsers,
@@ -32,7 +31,6 @@ import type { Outcome } from "@/lib/schemas";
 import type { OddsEvent } from "@/types";
 
 export default function AdminPage() {
-  useForceTheme("light");
   const router = useRouter();
   const { isAuthenticated, roles } = useAuth();
 
@@ -46,7 +44,13 @@ export default function AdminPage() {
   if (!isAdmin) return null;
 
   return (
-    <Flex direction="column" h="100vh">
+    <Flex
+      direction="column"
+      h="100vh"
+      data-theme="light"
+      bg="white"
+      color="gray.900"
+    >
       <Navbar />
       <Box as="main" flex="1" overflowY="auto" p={6}>
         <Tabs.Root defaultValue="users" variant="line">
