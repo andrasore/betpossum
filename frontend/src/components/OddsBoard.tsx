@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Card, Grid, Stack, Text } from "@chakra-ui/react";
+import { Badge, Card, Grid, Skeleton, Stack, Text } from "@chakra-ui/react";
 import type { OddsEvent } from "@/types";
 
 interface Props {
@@ -9,19 +9,9 @@ interface Props {
   onToggle: (event: OddsEvent) => void;
 }
 
-export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
-  if (events.length === 0) {
-    return (
-      <Card.Root variant="outline">
-        <Card.Body>
-          <Text fontSize="sm" color="fg.muted" textAlign="center">
-            Waiting for live odds…
-          </Text>
-        </Card.Body>
-      </Card.Root>
-    );
-  }
+const SKELETON_PLACEHOLDER_COUNT = 8;
 
+export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
   return (
     <Grid
       templateColumns={{
@@ -32,6 +22,43 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
       }}
       gap={3}
     >
+      {events.length === 0 &&
+        Array.from({ length: SKELETON_PLACEHOLDER_COUNT }).map((_, i) => (
+          <Card.Root
+            // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list
+            key={i}
+            data-testid="event-card-skeleton"
+            aria-busy="true"
+            aria-label="Loading live odds"
+          >
+            <Card.Body>
+              <Skeleton asChild mb={3} width="14">
+                <Badge
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                  fontSize="2xs"
+                >
+                  sport
+                </Badge>
+              </Skeleton>
+              <Stack gap={1}>
+                <Skeleton asChild width="70%">
+                  <Text fontSize="sm" fontWeight="medium">
+                    Home team
+                  </Text>
+                </Skeleton>
+                <Text fontSize="xs" color="fg.muted">
+                  vs
+                </Text>
+                <Skeleton asChild width="60%">
+                  <Text fontSize="sm" fontWeight="medium">
+                    Away team
+                  </Text>
+                </Skeleton>
+              </Stack>
+            </Card.Body>
+          </Card.Root>
+        ))}
       {events.map((e) => {
         const selected = e.eventId === selectedEventId;
         return (
