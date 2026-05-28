@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Button, Flex, Text } from "@chakra-ui/react";
+import { Button, Flex, Text } from "@chakra-ui/react";
 import { LogIn, LogOut, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -25,9 +25,7 @@ export function Navbar({ balance }: NavbarProps) {
     >
       <Link href="/dashboard">
         <Flex align="center" gap={3}>
-          <Box bg="black" display="inline-flex" lineHeight={0}>
-            <Image src="/possum.png" alt="" width={90} height={48} priority />
-          </Box>
+          <Image src="/possum.png" alt="" width={90} height={48} priority />
           <Text fontSize="xl" fontWeight="bold" letterSpacing="tight">
             BetPossum
           </Text>

@@ -47,13 +47,7 @@ export default function AdminPage() {
   }
 
   return (
-    <Flex
-      direction="column"
-      h="100vh"
-      data-theme="light"
-      bg="white"
-      color="gray.900"
-    >
+    <Flex direction="column" h="100vh">
       <Navbar />
       <Box as="main" flex="1" overflowY="auto" p={6}>
         <Tabs.Root defaultValue="users" variant="line">
