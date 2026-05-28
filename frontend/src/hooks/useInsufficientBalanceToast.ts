@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { InsufficientBalanceNotification } from "@/generated/events";
-import { toaster } from "@/lib/toaster";
 import { getSocket } from "@/lib/websocket";
 
 export function useInsufficientBalanceToast(token: string | null) {
@@ -15,9 +15,7 @@ export function useInsufficientBalanceToast(token: string | null) {
       const msg = InsufficientBalanceNotification.fromBinary(
         new Uint8Array(raw),
       );
-      toaster.create({
-        type: "error",
-        title: "Insufficient balance",
+      toast.error("Insufficient balance", {
         description: `Stake £${msg.stake.toFixed(2)} exceeds your balance of £${msg.balance.toFixed(2)}.`,
       });
     };

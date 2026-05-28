@@ -4,14 +4,13 @@ import {
   Box,
   Button,
   Card,
-  Field,
   Flex,
-  NumberInput,
-  SegmentGroup,
+  Heading,
+  SegmentedControl,
   Separator,
-  Stack,
   Text,
-} from "@chakra-ui/react";
+  TextField,
+} from "@radix-ui/themes";
 import { LogIn } from "lucide-react";
 import { useState } from "react";
 import { placeBet } from "@/lib/api";
@@ -46,13 +45,11 @@ export function BetSlip({
 
   if (!selection) {
     return (
-      <Card.Root variant="outline">
-        <Card.Body>
-          <Text fontSize="sm" color="fg.muted" textAlign="center">
-            Click any event to build your bet slip.
-          </Text>
-        </Card.Body>
-      </Card.Root>
+      <Card>
+        <Text size="2" color="gray" align="center" as="p">
+          Click any event to build your bet slip.
+        </Text>
+      </Card>
     );
   }
 
@@ -99,97 +96,103 @@ export function BetSlip({
   }
 
   return (
-    <Card.Root>
-      <Card.Header pb={3}>
-        <Card.Title fontSize="md">Bet Slip</Card.Title>
-      </Card.Header>
-      <Card.Body>
-        <Stack gap={4}>
-          <Box>
-            <Text fontSize="sm" fontWeight="medium">
-              {event.homeTeam} vs {event.awayTeam}
-            </Text>
-            <Text fontSize="xs" color="fg.muted" textTransform="capitalize">
-              {choice} @ {odds.toFixed(2)}
-            </Text>
-          </Box>
-          <SegmentGroup.Root
-            size="sm"
-            width="full"
+    <Card>
+      <Flex direction="column" gap="4">
+        <Heading size="3">Bet Slip</Heading>
+        <Box>
+          <Text size="2" weight="medium" as="div">
+            {event.homeTeam} vs {event.awayTeam}
+          </Text>
+          <Text
+            size="1"
+            color="gray"
+            as="div"
+            style={{ textTransform: "capitalize" }}
+          >
+            {choice} @ {odds.toFixed(2)}
+          </Text>
+        </Box>
+        <Box
+          style={loggedIn ? undefined : { opacity: 0.5, pointerEvents: "none" }}
+        >
+          <SegmentedControl.Root
+            size="1"
             value={choice}
-            disabled={!loggedIn}
-            onValueChange={(d) => {
-              if (d.value) {
-                onChoiceChange(d.value as Choice);
+            onValueChange={(value) => {
+              if (loggedIn && value) {
+                onChoiceChange(value as Choice);
               }
             }}
+            style={{ width: "100%", height: "var(--space-8)" }}
           >
-            <SegmentGroup.Indicator />
-            <SegmentGroup.Items
-              items={segments.map((s) => ({
-                value: s.value,
-                label: (
-                  <Stack gap={0.5} align="center">
-                    <Text fontSize="sm" fontWeight="medium">
-                      {s.label}
-                    </Text>
-                    <Text fontSize="xs" fontWeight="bold">
-                      {s.odds.toFixed(2)}
-                    </Text>
-                  </Stack>
-                ),
-              }))}
-              flex="1"
-              height="16"
-              justifyContent="center"
-            />
-          </SegmentGroup.Root>
-          <Field.Root invalid={overBalance}>
-            <Field.Label>Stake (£)</Field.Label>
-            <NumberInput.Root
-              value={stake}
-              onValueChange={(d) => setStake(d.value)}
-              min={0}
-              max={balance ?? undefined}
-              clampValueOnBlur
-              step={1}
-              width="full"
-              disabled={!loggedIn}
-            >
-              <NumberInput.Control />
-              <NumberInput.Input placeholder="0.00" data-testid="stake-input" />
-            </NumberInput.Root>
-            {overBalance && (
-              <Field.ErrorText>
-                Stake exceeds your balance of £{balance?.toFixed(2)}.
-              </Field.ErrorText>
-            )}
-          </Field.Root>
-          <Separator />
-          <Flex justify="space-between" fontSize="sm">
-            <Text color="fg.muted">Potential return</Text>
-            <Text fontWeight="semibold">£{potentialReturn}</Text>
-          </Flex>
-        </Stack>
-      </Card.Body>
-      <Card.Footer>
+            {segments.map((s) => (
+              <SegmentedControl.Item key={s.value} value={s.value}>
+                <Flex direction="column" align="center" gap="1">
+                  <Text size="2" weight="medium">
+                    {s.label}
+                  </Text>
+                  <Text size="1" weight="bold">
+                    {s.odds.toFixed(2)}
+                  </Text>
+                </Flex>
+              </SegmentedControl.Item>
+            ))}
+          </SegmentedControl.Root>
+        </Box>
+        <Box>
+          <Text as="label" size="2" weight="medium" htmlFor="stake-input">
+            Stake (£)
+          </Text>
+          <TextField.Root
+            id="stake-input"
+            data-testid="stake-input"
+            type="number"
+            value={stake}
+            onChange={(e) => setStake(e.target.value)}
+            min={0}
+            max={balance ?? undefined}
+            step={1}
+            placeholder="0.00"
+            disabled={!loggedIn}
+            color={overBalance ? "red" : undefined}
+            mt="1"
+          />
+          {overBalance && (
+            <Text size="1" color="red" as="div" mt="1">
+              Stake exceeds your balance of £{balance?.toFixed(2)}.
+            </Text>
+          )}
+        </Box>
+        <Separator size="4" />
+        <Flex justify="between">
+          <Text size="2" color="gray">
+            Potential return
+          </Text>
+          <Text size="2" weight="medium">
+            £{potentialReturn}
+          </Text>
+        </Flex>
         {loggedIn ? (
           <Button
-            w="full"
             onClick={submit}
             loading={loading}
             disabled={!stakeValid || overBalance}
             data-testid="place-bet-button"
+            style={{ width: "100%" }}
           >
             Place Bet
           </Button>
         ) : (
-          <Button w="full" onClick={onLogin} data-testid="betslip-login-button">
+          <Button
+            onClick={onLogin}
+            data-testid="betslip-login-button"
+            style={{ width: "100%" }}
+          >
             <LogIn size={16} />
             Sign in to Place Bet
           </Button>
         )}
-      </Card.Footer>
-    </Card.Root>
+      </Flex>
+    </Card>
   );
 }

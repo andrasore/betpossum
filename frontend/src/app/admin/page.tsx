@@ -4,16 +4,15 @@ import {
   Badge,
   Box,
   Button,
-  ButtonGroup,
   Flex,
   Heading,
   IconButton,
-  Input,
   Spinner,
   Table,
   Tabs,
   Text,
-} from "@chakra-ui/react";
+  TextField,
+} from "@radix-ui/themes";
 import { Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -47,23 +46,27 @@ export default function AdminPage() {
   }
 
   return (
-    <Flex direction="column" h="100vh">
+    <Flex direction="column" style={{ height: "100vh" }}>
       <Navbar />
-      <Box as="main" flex="1" overflowY="auto" p={6}>
-        <Tabs.Root defaultValue="users" variant="line">
-          <Tabs.List>
-            <Tabs.Trigger value="users">Users</Tabs.Trigger>
-            <Tabs.Trigger value="events" data-testid="admin-events-tab">
-              Events
-            </Tabs.Trigger>
-          </Tabs.List>
-          <Tabs.Content value="users">
-            <UsersPanel />
-          </Tabs.Content>
-          <Tabs.Content value="events">
-            <EventsPanel />
-          </Tabs.Content>
-        </Tabs.Root>
+      <Box asChild flexGrow="1" p="6" style={{ overflowY: "auto" }}>
+        <main>
+          <Tabs.Root defaultValue="users">
+            <Tabs.List>
+              <Tabs.Trigger value="users">Users</Tabs.Trigger>
+              <Tabs.Trigger value="events" data-testid="admin-events-tab">
+                Events
+              </Tabs.Trigger>
+            </Tabs.List>
+            <Box pt="4">
+              <Tabs.Content value="users">
+                <UsersPanel />
+              </Tabs.Content>
+              <Tabs.Content value="events">
+                <EventsPanel />
+              </Tabs.Content>
+            </Box>
+          </Tabs.Root>
+        </main>
       </Box>
     </Flex>
   );
@@ -80,22 +83,24 @@ function UsersPanel() {
 
   return (
     <>
-      <Heading as="h2" size="md" mb={4}>
+      <Heading as="h2" size="4" mb="4">
         Users
       </Heading>
       {isLoading && !users ? (
         <Spinner />
       ) : users && users.length > 0 ? (
-        <Table.Root size="sm" variant="line">
+        <Table.Root size="1" variant="surface">
           <Table.Header>
             <Table.Row>
-              <Table.ColumnHeader>User ID</Table.ColumnHeader>
-              <Table.ColumnHeader>Email</Table.ColumnHeader>
-              <Table.ColumnHeader>Name</Table.ColumnHeader>
-              <Table.ColumnHeader textAlign="end">Bets</Table.ColumnHeader>
-              <Table.ColumnHeader textAlign="end">
+              <Table.ColumnHeaderCell>User ID</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Email</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Name</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell justify="end">
+                Bets
+              </Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell justify="end">
                 Balance (£)
-              </Table.ColumnHeader>
+              </Table.ColumnHeaderCell>
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -105,7 +110,7 @@ function UsersPanel() {
           </Table.Body>
         </Table.Root>
       ) : (
-        <Text fontSize="sm" color="fg.muted">
+        <Text size="2" color="gray">
           No users yet.
         </Text>
       )}
@@ -156,45 +161,52 @@ function UserRow({
   return (
     <Table.Row>
       <Table.Cell>
-        <Text as="span" fontFamily="mono" fontSize="xs" color="fg.muted">
+        <Text
+          as="span"
+          size="1"
+          color="gray"
+          style={{ fontFamily: "var(--code-font-family)" }}
+        >
           {user.id}
         </Text>
       </Table.Cell>
       <Table.Cell>
         {user.email ?? (
-          <Text as="span" color="fg.muted">
+          <Text as="span" color="gray">
             —
           </Text>
         )}
       </Table.Cell>
       <Table.Cell>
         {user.name ?? (
-          <Text as="span" color="fg.muted">
+          <Text as="span" color="gray">
             —
           </Text>
         )}
       </Table.Cell>
-      <Table.Cell textAlign="end">{user.betCount}</Table.Cell>
-      <Table.Cell textAlign="end">
-        <Flex align="center" justify="flex-end" gap={2}>
-          <Input
-            size="xs"
+      <Table.Cell justify="end">{user.betCount}</Table.Cell>
+      <Table.Cell justify="end">
+        <Flex align="center" justify="end" gap="2">
+          <TextField.Root
+            size="1"
             type="number"
             step="0.01"
             min="0"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            width="120px"
-            textAlign="end"
             disabled={saving}
-            borderColor={dirty ? "yellow.500" : undefined}
+            style={{
+              width: "120px",
+              textAlign: "end",
+              ...(dirty ? { boxShadow: "inset 0 0 0 1px var(--amber-9)" } : {}),
+            }}
           />
           {dirty && (
             <>
               <IconButton
                 aria-label="Confirm"
-                size="xs"
-                colorPalette="green"
+                size="1"
+                color="green"
                 onClick={confirm}
                 disabled={!valid || saving}
                 loading={saving}
@@ -203,7 +215,7 @@ function UserRow({
               </IconButton>
               <IconButton
                 aria-label="Discard"
-                size="xs"
+                size="1"
                 variant="ghost"
                 onClick={discard}
                 disabled={saving}
@@ -214,7 +226,7 @@ function UserRow({
           )}
         </Flex>
         {error && (
-          <Text fontSize="xs" color="red.500" mt={1}>
+          <Text size="1" color="red" as="div" mt="1">
             {error}
           </Text>
         )}
@@ -234,19 +246,21 @@ function EventsPanel() {
 
   return (
     <>
-      <Heading as="h2" size="md" mb={4}>
+      <Heading as="h2" size="4" mb="4">
         Events
       </Heading>
       {isLoading && !events ? (
         <Spinner />
       ) : events && events.length > 0 ? (
-        <Table.Root size="sm" variant="line">
+        <Table.Root size="1" variant="surface">
           <Table.Header>
             <Table.Row>
-              <Table.ColumnHeader>Event</Table.ColumnHeader>
-              <Table.ColumnHeader>Sport</Table.ColumnHeader>
-              <Table.ColumnHeader>Status</Table.ColumnHeader>
-              <Table.ColumnHeader textAlign="end">Resolve</Table.ColumnHeader>
+              <Table.ColumnHeaderCell>Event</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Sport</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
+              <Table.ColumnHeaderCell justify="end">
+                Resolve
+              </Table.ColumnHeaderCell>
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -256,7 +270,7 @@ function EventsPanel() {
           </Table.Body>
         </Table.Root>
       ) : (
-        <Text fontSize="sm" color="fg.muted">
+        <Text size="2" color="gray">
           No events yet.
         </Text>
       )}
@@ -298,35 +312,35 @@ function EventRow({
   return (
     <Table.Row data-testid={`admin-event-row-${event.eventId}`}>
       <Table.Cell>
-        <Text fontSize="sm" fontWeight="medium">
+        <Text size="2" weight="medium">
           {event.homeTeam} vs {event.awayTeam}
         </Text>
       </Table.Cell>
       <Table.Cell>
-        <Text fontSize="xs" color="fg.muted">
+        <Text size="1" color="gray">
           {event.sport}
         </Text>
       </Table.Cell>
       <Table.Cell>
         {resolved ? (
           <Badge
-            colorPalette="green"
+            color="green"
             data-testid={`admin-event-status-${event.eventId}`}
           >
             Resolved ({outcomeLabel[resolved]})
           </Badge>
         ) : (
           <Badge
-            colorPalette="yellow"
+            color="yellow"
             data-testid={`admin-event-status-${event.eventId}`}
           >
             Held
           </Badge>
         )}
       </Table.Cell>
-      <Table.Cell textAlign="end">
-        <Flex direction="column" align="flex-end" gap={1}>
-          <ButtonGroup size="xs" attached variant="outline">
+      <Table.Cell justify="end">
+        <Flex direction="column" align="end" gap="1">
+          <Flex gap="1">
             {(
               [
                 "home",
@@ -336,18 +350,20 @@ function EventRow({
             ).map((o) => (
               <Button
                 key={o}
+                size="1"
+                variant="outline"
                 data-testid={`admin-event-resolve-${event.eventId}-${o}`}
                 onClick={() => click(o)}
                 disabled={resolved !== null || busy !== null}
                 loading={busy === o}
-                colorPalette={resolved === o ? "green" : undefined}
+                color={resolved === o ? "green" : undefined}
               >
                 {outcomeLabel[o]}
               </Button>
             ))}
-          </ButtonGroup>
+          </Flex>
           {error && (
-            <Text fontSize="xs" color="red.500">
+            <Text size="1" color="red">
               {error}
             </Text>
           )}

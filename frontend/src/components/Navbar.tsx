@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Flex, Text } from "@chakra-ui/react";
+import { Button, Flex, Text } from "@radix-ui/themes";
 import { LogIn, LogOut, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,58 +15,58 @@ export function Navbar({ balance }: NavbarProps) {
   const isAdmin = isAuthenticated && roles.includes("admin");
   return (
     <Flex
-      as="nav"
+      asChild
       align="center"
-      justify="space-between"
-      px={6}
-      py={3}
-      borderBottomWidth="1px"
-      borderColor="border"
+      justify="between"
+      px="6"
+      py="3"
+      style={{ borderBottom: "1px solid var(--gray-a5)" }}
     >
-      <Link href="/dashboard">
-        <Flex align="center" gap={3}>
-          <Image src="/possum.png" alt="" width={90} height={48} priority />
-          <Text fontSize="xl" fontWeight="bold" letterSpacing="tight">
-            BetPossum
-          </Text>
+      <nav>
+        <Link href="/dashboard">
+          <Flex align="center" gap="3">
+            <Image src="/possum.png" alt="" width={90} height={48} priority />
+            <Text size="5" weight="bold" style={{ letterSpacing: "-0.02em" }}>
+              BetPossum
+            </Text>
+          </Flex>
+        </Link>
+        <Flex align="center" gap="4">
+          {balance != null && (
+            <Text size="2" weight="medium" data-testid="balance">
+              Balance: £{balance.toFixed(2)}
+            </Text>
+          )}
+          {isAdmin && (
+            <Button asChild variant="ghost" size="2" data-testid="admin-link">
+              <Link href="/admin">
+                <Shield size={16} />
+                Admin
+              </Link>
+            </Button>
+          )}
+          {isAuthenticated ? (
+            <Button
+              variant="ghost"
+              size="2"
+              onClick={() => logout()}
+              data-testid="logout-button"
+            >
+              <LogOut size={16} />
+              Sign out
+            </Button>
+          ) : (
+            <Button
+              size="2"
+              onClick={() => login("/dashboard")}
+              data-testid="login-button"
+            >
+              <LogIn size={16} />
+              Sign in
+            </Button>
+          )}
         </Flex>
-      </Link>
-      <Flex align="center" gap={4}>
-        {balance != null && (
-          <Text fontSize="sm" fontWeight="medium" data-testid="balance">
-            Balance: £{balance.toFixed(2)}
-          </Text>
-        )}
-        {isAdmin && (
-          <Button asChild variant="ghost" size="sm" data-testid="admin-link">
-            <Link href="/admin">
-              <Shield size={16} />
-              Admin
-            </Link>
-          </Button>
-        )}
-        {isAuthenticated ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => logout()}
-            data-testid="logout-button"
-          >
-            <LogOut size={16} />
-            Sign out
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => login("/dashboard")}
-            data-testid="login-button"
-          >
-            <LogIn size={16} />
-            Sign in
-          </Button>
-        )}
-      </Flex>
+      </nav>
     </Flex>
   );
 }

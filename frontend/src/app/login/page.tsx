@@ -1,19 +1,17 @@
 "use client";
 
-import { Flex, Text } from "@chakra-ui/react";
+import { Flex, Text } from "@radix-ui/themes";
 import { useEffect } from "react";
-import { useForceTheme } from "@/hooks/useForceTheme";
 import { login } from "@/lib/auth";
 
 export default function LoginPage() {
-  useForceTheme("dark");
   useEffect(() => {
     login("/dashboard");
   }, []);
 
   return (
-    <Flex minH="100vh" align="center" justify="center" bg="bg.muted">
-      <Text fontSize="sm" color="fg.muted">
+    <Flex align="center" justify="center" style={{ minHeight: "100vh" }}>
+      <Text size="2" color="gray">
         Redirecting to sign-in…
       </Text>
     </Flex>

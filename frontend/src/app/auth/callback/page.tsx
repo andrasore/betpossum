@@ -1,6 +1,6 @@
 "use client";
 
-import { Flex, Text } from "@chakra-ui/react";
+import { Button, Flex, Text } from "@radix-ui/themes";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { handleCallback, login } from "@/lib/auth";
@@ -29,23 +29,18 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <Flex minH="100vh" align="center" justify="center" bg="bg.muted">
+    <Flex align="center" justify="center" style={{ minHeight: "100vh" }}>
       {errored ? (
-        <Flex direction="column" align="center" gap={3}>
-          <Text fontSize="sm" color="fg.muted">
+        <Flex direction="column" align="center" gap="3">
+          <Text size="2" color="gray">
             Sign-in failed.
           </Text>
-          <Text
-            as="button"
-            fontSize="sm"
-            textDecoration="underline"
-            onClick={() => login("/dashboard")}
-          >
+          <Button variant="ghost" size="2" onClick={() => login("/dashboard")}>
             Try again
-          </Text>
+          </Button>
         </Flex>
       ) : (
-        <Text fontSize="sm" color="fg.muted">
+        <Text size="2" color="gray">
           Completing sign-in…
         </Text>
       )}

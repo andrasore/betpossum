@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Card, Grid, Skeleton, Stack, Text } from "@chakra-ui/react";
+import { Badge, Card, Flex, Grid, Skeleton, Text } from "@radix-ui/themes";
 import type { OddsEvent } from "@/types";
 
 interface Props {
@@ -13,89 +13,73 @@ const SKELETON_PLACEHOLDER_COUNT = 8;
 
 export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
   return (
-    <Grid
-      templateColumns={{
-        base: "1fr",
-        sm: "repeat(2, 1fr)",
-        md: "repeat(3, 1fr)",
-        lg: "repeat(4, 1fr)",
-      }}
-      gap={3}
-    >
+    <Grid columns="repeat(auto-fill, 200px)" gap="3">
       {events.length === 0 &&
         Array.from({ length: SKELETON_PLACEHOLDER_COUNT }).map((_, i) => (
-          <Card.Root
+          <Card
             // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list
             key={i}
             data-testid="event-card-skeleton"
             aria-busy="true"
             aria-label="Loading live odds"
           >
-            <Card.Body>
-              <Skeleton asChild mb={3} width="14">
-                <Badge
-                  textTransform="uppercase"
-                  letterSpacing="wide"
-                  fontSize="2xs"
-                >
-                  sport
-                </Badge>
-              </Skeleton>
-              <Stack gap={1}>
-                <Skeleton asChild width="70%">
-                  <Text fontSize="sm" fontWeight="medium">
-                    Home team
-                  </Text>
-                </Skeleton>
-                <Text fontSize="xs" color="fg.muted">
-                  vs
+            <Skeleton width="56px" mb="3">
+              <Badge size="1">sport</Badge>
+            </Skeleton>
+            <Flex direction="column" gap="1">
+              <Skeleton width="70%">
+                <Text size="2" weight="medium">
+                  Home team
                 </Text>
-                <Skeleton asChild width="60%">
-                  <Text fontSize="sm" fontWeight="medium">
-                    Away team
-                  </Text>
-                </Skeleton>
-              </Stack>
-            </Card.Body>
-          </Card.Root>
+              </Skeleton>
+              <Text size="1" color="gray">
+                vs
+              </Text>
+              <Skeleton width="60%">
+                <Text size="2" weight="medium">
+                  Away team
+                </Text>
+              </Skeleton>
+            </Flex>
+          </Card>
         ))}
       {events.map((e) => {
         const selected = e.eventId === selectedEventId;
         return (
-          <Card.Root
+          <Card
             key={e.eventId}
             data-testid={`event-card-${e.eventId}`}
-            cursor="pointer"
             onClick={() => onToggle(e)}
-            borderColor={selected ? "blue.500" : undefined}
-            bg={selected ? "bg.subtle" : undefined}
-            _hover={{
-              borderColor: selected ? "blue.500" : "border.emphasized",
+            style={{
+              cursor: "pointer",
+              transition: "outline-color 0.15s, background-color 0.15s",
+              ...(selected
+                ? {
+                    outline: "1px solid var(--accent-9)",
+                    background: "var(--accent-3)",
+                  }
+                : {}),
             }}
-            transition="border-color 0.15s, background-color 0.15s"
           >
-            <Card.Body>
-              <Badge
-                mb={3}
-                textTransform="uppercase"
-                letterSpacing="wide"
-                fontSize="2xs"
-              >
-                {e.sport}
-              </Badge>
-              <Stack gap={1}>
-                <Text fontSize="sm" fontWeight="medium">
-                  {e.homeTeam}
-                </Text>
-                <Text fontSize="xs" color="fg.muted">
-                  vs
-                </Text>
-                <Text fontSize="sm" fontWeight="medium">
-                  {e.awayTeam}
-                </Text>
-              </Stack>
-            </Card.Body>
-          </Card.Root>
+            <Badge
+              size="1"
+              mb="3"
+              style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}
+            >
+              {e.sport}
+            </Badge>
+            <Flex direction="column" gap="1">
+              <Text size="2" weight="medium">
+                {e.homeTeam}
+              </Text>
+              <Text size="1" color="gray">
+                vs
+              </Text>
+              <Text size="2" weight="medium">
+                {e.awayTeam}
+              </Text>
+            </Flex>
+          </Card>
         );
       })}
     </Grid>

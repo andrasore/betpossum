@@ -1,43 +1,26 @@
 "use client";
 
-import {
-  ChakraProvider,
-  Portal,
-  Stack,
-  Toast,
-  Toaster,
-} from "@chakra-ui/react";
-import { ThemeProvider } from "next-themes";
+import { Theme } from "@radix-ui/themes";
+import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
-import { system } from "@/lib/theme";
-import { toaster } from "@/lib/toaster";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <ThemeProvider attribute="class" defaultTheme="dark">
-        <ChakraProvider value={system}>
-          {children}
-          <Portal>
-            <Toaster toaster={toaster}>
-              {(t) => (
-                <Toast.Root width="2xl" p={3} gap={2}>
-                  <Toast.Indicator boxSize={4} />
-                  <Stack gap={1} flex="1" minW={0}>
-                    <Toast.Title fontSize="sm">{t.title}</Toast.Title>
-                    {t.description && (
-                      <Toast.Description fontSize="xs">
-                        {t.description}
-                      </Toast.Description>
-                    )}
-                  </Stack>
-                  <Toast.CloseTrigger />
-                </Toast.Root>
-              )}
-            </Toaster>
-          </Portal>
-        </ChakraProvider>
-      </ThemeProvider>
+      <Theme
+        appearance="dark"
+        accentColor="plum"
+        grayColor="mauve"
+        radius="small"
+        style={{
+          minHeight: "100vh",
+          ["--default-font-family" as string]:
+            "var(--font-sans), system-ui, sans-serif",
+        }}
+      >
+        {children}
+        <Toaster theme="dark" position="bottom-right" richColors />
+      </Theme>
     </AuthProvider>
   );
 }
