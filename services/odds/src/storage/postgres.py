@@ -10,7 +10,7 @@ from typing import ClassVar
 # TODO maybe use sqlalchemy
 import asyncpg
 
-from models import EventResult, OddsEvent
+from odds.models import EventResult, OddsEvent
 from .base import OddsStorage
 
 logger = logging.getLogger(__name__)

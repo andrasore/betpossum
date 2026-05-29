@@ -6,7 +6,7 @@ from typing import Any, AsyncIterator, ClassVar
 
 import aiohttp
 
-from models import OddsEvent
+from odds.models import OddsEvent
 from .base import OddsProvider
 
 logger = logging.getLogger(__name__)

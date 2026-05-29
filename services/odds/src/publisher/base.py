@@ -1,6 +1,6 @@
 import aio_pika
 
-from models import EventResult, OddsEvent, Outcome
+from odds.models import EventResult, OddsEvent, Outcome
 from generated.events_pb2 import (
     EventResolvedEvent,
     NotificationEvent,

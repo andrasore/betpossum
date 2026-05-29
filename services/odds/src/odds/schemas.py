@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from models import OddsEvent, Outcome
+from .models import OddsEvent, Outcome
 
 
 class OddsEventResponse(BaseModel):

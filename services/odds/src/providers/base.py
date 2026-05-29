@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import AsyncIterator, ClassVar
 
-from models import EventResult, OddsEvent
+from odds.models import EventResult, OddsEvent
 
 
 class OddsProvider(ABC):

@@ -12,7 +12,7 @@ import random
 import time
 from typing import AsyncIterator, ClassVar, TypedDict
 
-from models import EventResult, OddsEvent, Outcome
+from odds.models import EventResult, OddsEvent, Outcome
 from .base import OddsProvider
 
 logger = logging.getLogger(__name__)
