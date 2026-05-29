@@ -12,7 +12,7 @@ import random
 import time
 from typing import AsyncIterator, ClassVar, TypedDict
 
-from odds.models import EventResult, OddsEvent, Outcome
+from odds.models import EventResult, OddsEvent
 from .base import OddsProvider
 
 logger = logging.getLogger(__name__)
@@ -88,25 +88,6 @@ def _seed(has_draw: bool) -> dict[str, float]:
 def _drift(value: float, lo: float, hi: float) -> float:
     return round(max(lo, min(hi, value + random.uniform(-0.15, 0.15))), 2)
 
-
-def _sample_outcome(odds: dict[str, float], has_draw: bool) -> Outcome:
-    """Sample an outcome with probability inversely proportional to current odds."""
-    choices: list[tuple[Outcome, float]] = [
-        ("home", 1.0 / odds["home"]),
-        ("away", 1.0 / odds["away"]),
-    ]
-    if has_draw and odds["draw"] > 0:
-        choices.append(("draw", 1.0 / odds["draw"]))
-    total = sum(w for _, w in choices)
-    r = random.uniform(0, total)
-    acc = 0.0
-    for outcome, weight in choices:
-        acc += weight
-        if r <= acc:
-            return outcome
-    return choices[-1][0]
-
-
 class MockProvider(OddsProvider):
     name: ClassVar[str] = "mock"
 
@@ -157,19 +138,6 @@ class MockProvider(OddsProvider):
                 draw_odds=s["draw"],
                 updated_at=int(time.time() * 1000),
             )
-
-            if self._ticks[eid] >= self._resolve_ticks:
-                outcome = _sample_outcome(s, has_draw)
-                self._resolved.add(eid)
-                self._pending_results.append(
-                    EventResult(
-                        event_id=eid,
-                        sport=fixture["sport"],
-                        outcome=outcome,
-                        resolved_at=int(time.time() * 1000),
-                    )
-                )
-                logger.info("Mock fixture %s resolved as %s", eid, outcome)
 
         active = sum(1 for f in self._fixtures if f["event_id"] not in self._resolved)
         logger.info(
