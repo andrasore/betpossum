@@ -88,6 +88,7 @@ def _seed(has_draw: bool) -> dict[str, float]:
 def _drift(value: float, lo: float, hi: float) -> float:
     return round(max(lo, min(hi, value + random.uniform(-0.15, 0.15))), 2)
 
+
 class MockProvider(OddsProvider):
     name: ClassVar[str] = "mock"
 
