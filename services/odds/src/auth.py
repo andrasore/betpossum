@@ -3,13 +3,18 @@
 Mirrors the JWT verification used by the notifications service: validate the
 RS256 signature against the realm's JWKS, then check that `realm_access.roles`
 includes the required role.
+
+Token extraction is delegated to FastAPI's ``OAuth2AuthorizationCodeBearer``
+security scheme, so the missing/malformed-header handling and the OpenAPI
+OAuth2 metadata (used by Swagger UI's "Authorize" flow) come for free.
 """
 
 import os
 from typing import Annotated, Any, cast
 
 import jwt
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2AuthorizationCodeBearer
 
 KEYCLOAK_INTERNAL_URL = os.environ.get("KEYCLOAK_INTERNAL_URL", "http://keycloak:8080")
 KEYCLOAK_REALM = os.environ.get("KEYCLOAK_REALM", "betting")
@@ -22,14 +27,15 @@ JWKS_URL = (
 
 _jwks_client = jwt.PyJWKClient(JWKS_URL)
 
+# The authorize/token URLs are only consumed by the OpenAPI docs, so they use
+# the browser-facing issuer; JWKS verification stays on the internal URL.
+_oauth2_scheme = OAuth2AuthorizationCodeBearer(
+    authorizationUrl=f"{KEYCLOAK_ISSUER_URL}/protocol/openid-connect/auth",
+    tokenUrl=f"{KEYCLOAK_ISSUER_URL}/protocol/openid-connect/token",
+)
 
-def _decode_bearer(request: Request) -> dict[str, Any]:
-    header = request.headers.get("authorization") or request.headers.get(
-        "Authorization"
-    )
-    if not header or not header.lower().startswith("bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    token = header.split(" ", 1)[1].strip()
+
+def _decode_bearer(token: Annotated[str, Depends(_oauth2_scheme)]) -> dict[str, Any]:
     try:
         signing_key = _jwks_client.get_signing_key_from_jwt(token).key
         payload: dict[str, Any] = jwt.decode(
