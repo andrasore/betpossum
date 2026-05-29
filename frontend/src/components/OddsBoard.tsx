@@ -19,7 +19,6 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
           <Card
             // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list
             key={i}
-            data-testid="event-card-skeleton"
             aria-busy="true"
             aria-label="Loading live odds"
           >
