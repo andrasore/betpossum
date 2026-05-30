@@ -5,21 +5,21 @@ import logging
 import aio_pika
 import socketio  # pyright: ignore[reportMissingTypeStubs]
 
-from generated.events_pb2 import NotificationEvent
+from generated.events import NotificationEvent
 
 logger = logging.getLogger(__name__)
 
 EXCHANGE_NAME = "notifications"
 
-# Maps NotificationEvent.body oneof variant → the socket.io event name the
-# frontend listens on. The frontend decodes the binary frame with the
-# matching generated protobuf message type.
+# Maps NotificationEvent.kind → the socket.io event name the frontend listens
+# on. The frontend validates the JSON payload with the matching generated Zod
+# schema.
 SOCKET_EVENT = {
-    "odds_updated": "odds.updated",
-    "bet_held": "bet.held",
-    "bet_settled": "bet.settled",
-    "balance_updated": "balance.updated",
-    "insufficient_balance": "insufficient.balance",
+    "oddsUpdated": "odds.updated",
+    "betHeld": "bet.held",
+    "betSettled": "bet.settled",
+    "balanceUpdated": "balance.updated",
+    "insufficientBalance": "insufficient.balance",
 }
 
 
@@ -38,16 +38,11 @@ async def run(rabbitmq_url: str, sio: socketio.AsyncServer) -> None:
     async with queue.iterator(no_ack=True) as messages:
         async for message in messages:
             try:
-                event = NotificationEvent.FromString(message.body)
-                variant = event.WhichOneof("body")
-                if variant is None:
-                    logger.warning("Notification with empty body, skipping")
-                    continue
-                socket_event = SOCKET_EVENT[variant]
-                body = getattr(event, variant).SerializeToString()
-                if event.user_id:
-                    await sio.emit(socket_event, body, to=event.user_id)  # pyright: ignore[reportUnknownMemberType]
+                event = NotificationEvent.model_validate_json(message.body)
+                socket_event = SOCKET_EVENT[event.kind]
+                if event.userId:
+                    await sio.emit(socket_event, event.payload, to=event.userId)  # pyright: ignore[reportUnknownMemberType]
                 else:
-                    await sio.emit(socket_event, body)  # pyright: ignore[reportUnknownMemberType]
+                    await sio.emit(socket_event, event.payload)  # pyright: ignore[reportUnknownMemberType]
             except Exception as exc:
                 logger.error("Failed to handle notification: %s", exc)

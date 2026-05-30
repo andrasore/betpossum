@@ -1,6 +1,6 @@
 # Combined Dockerfile for all services - this makes sense because we need
 # the Docker context to be the root folder. The build steps need to access
-# /proto and /node_modules
+# /schemas and /node_modules
 
 # Stage 1: Build all JS workspaces (frontend + core).
 FROM node:25-alpine AS builder-node
@@ -10,7 +10,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json ./frontend/
 COPY services/core/package.json ./services/core/
 RUN pnpm install --frozen-lockfile --filter '@betting/frontend...' --filter '@betting/core...'
-COPY proto/ ./proto/
+COPY schemas/ ./schemas/
 COPY services/core/ ./services/core/
 COPY frontend/ ./frontend/
 RUN pnpm --filter '@betting/core' --filter '@betting/frontend' run build

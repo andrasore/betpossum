@@ -15,14 +15,14 @@ pnpm --filter @betting/odds run lint        # ruff check + format --check
 ```
 
 There is **no `build` script** — `pnpm build` only runs TS workspaces. Don't add
-a fake one. `proto:gen` regenerates `src/generated` from `/proto` (run by
-`pnpm proto:gen` at the root).
+a fake one. `schema:gen` regenerates `src/generated` (Pydantic models) from
+`/schemas` (run by `pnpm schema:gen` at the root).
 
 ## What this service does
 
 Ingests odds from an external provider on an asyncio poll loop, normalises them,
 persists current odds to Postgres, and publishes `OddsUpdatedEvent` /
-`EventResolvedEvent` to RabbitMQ. Also serves the public `GET /odds` hydrate
+`EventResolvedEvent` (JSON) to RabbitMQ. Also serves the public `GET /odds` hydrate
 endpoint. It does **not** calculate odds — ingestion + normalisation only.
 
 ## Layout (`src/`)

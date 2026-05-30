@@ -7,7 +7,6 @@ import {
   type StartedPostgreSqlContainer,
 } from "@testcontainers/postgresql";
 import type { Repository } from "typeorm";
-import { EventResolvedEvent, Outcome } from "../generated/events";
 import { MessagingService } from "../messaging/messaging.service";
 import { NotificationsClient } from "../notifications/notifications.client";
 import { User } from "../users/user.entity";
@@ -21,16 +20,14 @@ import { BetsService } from "./bets.service";
 
 const newId = (): string => randomUUID();
 
-const encodeEvent = (eventId: string, outcome: Outcome): Buffer =>
+const encodeEvent = (eventId: string, outcome: string): Buffer =>
   Buffer.from(
-    EventResolvedEvent.toBinary(
-      EventResolvedEvent.create({
-        eventId,
-        sport: "soccer_epl",
-        outcome,
-        resolvedAt: Date.now(),
-      }),
-    ),
+    JSON.stringify({
+      eventId,
+      sport: "soccer_epl",
+      outcome,
+      resolvedAt: Date.now(),
+    }),
   );
 
 describe("BetsService", () => {
@@ -210,7 +207,7 @@ describe("BetsService", () => {
     const loserBet = await bets.place(userB, "evt-win", "away", 2, 5); // doesn't match → loses
     const unrelatedBet = await bets.place(userA, "evt-other", "home", 2, 5);
 
-    await bets.handleEventResolved(encodeEvent("evt-win", Outcome.HOME));
+    await bets.handleEventResolved(encodeEvent("evt-win", "home"));
 
     const winner = await betRepo.findOneByOrFail({ id: winnerBet.id });
     const loser = await betRepo.findOneByOrFail({ id: loserBet.id });
@@ -234,13 +231,13 @@ describe("BetsService", () => {
     const userId = await newFundedUser(10000);
     const bet = await bets.place(userId, "evt-dup", "home", 3, 10);
 
-    await bets.handleEventResolved(encodeEvent("evt-dup", Outcome.HOME));
+    await bets.handleEventResolved(encodeEvent("evt-dup", "home"));
     const balanceAfterFirst = await wallet.getBalanceCents(userId);
 
     // Second delivery finds no 'held' bets for the event (the first delivery
     // moved them to 'won'/'lost'), so settle() is never re-invoked.
     await expect(
-      bets.handleEventResolved(encodeEvent("evt-dup", Outcome.HOME)),
+      bets.handleEventResolved(encodeEvent("evt-dup", "home")),
     ).resolves.toBeUndefined();
 
     expect(await wallet.getBalanceCents(userId)).toBe(balanceAfterFirst);
@@ -248,13 +245,11 @@ describe("BetsService", () => {
     expect(settled.status).toBe("won");
   });
 
-  it("handleEventResolved ignores events with unspecified outcome", async () => {
+  it("handleEventResolved ignores events with an unknown outcome", async () => {
     const userId = await newFundedUser(10000);
     const bet = await bets.place(userId, "evt-unspec", "home", 2, 5);
 
-    await bets.handleEventResolved(
-      encodeEvent("evt-unspec", Outcome.UNSPECIFIED),
-    );
+    await bets.handleEventResolved(encodeEvent("evt-unspec", "unspecified"));
 
     const stored = await betRepo.findOneByOrFail({ id: bet.id });
     expect(stored.status).toBe("held");

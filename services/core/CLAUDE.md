@@ -12,7 +12,7 @@ pnpm start:dev   # nest start --watch (local, outside docker)
 ```
 
 Typecheck, build, and test from the **repo root** (`pnpm typecheck` /
-`pnpm build` / `pnpm test`), never from this workspace — proto bindings and
+`pnpm build` / `pnpm test`), never from this workspace — generated bindings and
 Turbo caching assume the root run. Lint is Biome (`pnpm lint` / `pnpm lint:fix`).
 
 ## What this service owns
@@ -30,8 +30,8 @@ through direct method calls.
 - `notifications/` — `NotificationsClient`, publishes `NotificationEvent`s.
 - `keycloak/` — JWT strategy + service-account lookups for user email/name.
 - `admin/`, `users/`, `common/` — admin endpoints, user records, guards.
-- `generated/` — protobuf output; **do not edit by hand** (`pnpm build`
-  regenerates it from `/proto`).
+- `generated/` — Zod schemas generated from `/schemas`; **do not edit by hand**
+  (`pnpm schema:gen` regenerates it).
 
 ## Non-obvious conventions
 

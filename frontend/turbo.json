@@ -6,8 +6,8 @@
       "inputs": ["src/**"],
       "outputs": [".next/**", "out/**"]
     },
-    "proto:gen": {
-      "inputs": ["../proto/**/*.proto"],
+    "schema:gen": {
+      "inputs": ["../schemas/**/*.json"],
       "outputs": ["src/generated/**"]
     }
   }

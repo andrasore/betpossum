@@ -2,7 +2,7 @@
   "name": "@betting/core",
   "version": "0.1.0",
   "scripts": {
-    "proto:gen": "mkdir -p ./src/generated && protoc --ts_out ./src/generated --ts_opt long_type_number --proto_path ../../proto ../../proto/events.proto",
+    "schema:gen": "mkdir -p ./src/generated && node ../../tools/gen-zod.mjs ./src/generated/events.ts",
     "build": "nest build",
     "start": "node dist/main",
     "start:dev": "nest start --watch",
@@ -19,11 +19,9 @@
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.19",
     "@nestjs/jwt": "^11.0.2",
-    "@nestjs/microservices": "^11.1.19",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.19",
     "@nestjs/typeorm": "^11.0.1",
-    "@protobuf-ts/runtime": "^2.9.4",
     "amqplib": "^0.10.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -36,15 +34,14 @@
     "rxjs": "^7.8.2",
     "tigerbeetle-node": "0.17.3",
     "typeorm": "^0.3.28",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
     "@nestjs/cli": "^11.0.21",
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.1.21",
-    "@protobuf-ts/plugin": "^2.9.4",
-    "@protobuf-ts/protoc": "^2.9.4",
     "@testcontainers/postgresql": "^11.14.0",
     "@types/amqplib": "^0.10.5",
     "@types/express": "^5.0.6",

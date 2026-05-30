@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OddsUpdatedEvent } from "@/generated/events";
+import { OddsUpdatedEventSchema } from "@/generated/events";
 import { fetchOdds } from "@/lib/api";
 import { OddsEventSchema } from "@/lib/schemas";
 import { getSocket } from "@/lib/websocket";
@@ -35,9 +35,11 @@ export function useOdds(loggedIn: boolean) {
     }
 
     const socket = getSocket();
-    socket.on("odds.updated", (raw: ArrayBuffer) => {
-      const event = OddsUpdatedEvent.fromBinary(new Uint8Array(raw));
-      setOdds((prev) => new Map(prev).set(event.eventId, event));
+    socket.on("odds.updated", (data: unknown) => {
+      const result = OddsUpdatedEventSchema.safeParse(data);
+      if (result.success) {
+        setOdds((prev) => new Map(prev).set(result.data.eventId, result.data));
+      }
     });
 
     return () => {

@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://betting.local/schemas/events.schema.json",
+  "$comment": "Single source of truth for all inter-service message contracts. JSON on the wire, camelCase keys. Field descriptions are the spec. See CLAUDE.md.",
+  "$defs": {
+    "OddsUpdatedEvent": {
+      "title": "OddsUpdatedEvent",
+      "description": "Odds Service -> Core API / Notifications.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventId",
+        "sport",
+        "homeTeam",
+        "awayTeam",
+        "homeOdds",
+        "awayOdds",
+        "drawOdds",
+        "updatedAt"
+      ],
+      "properties": {
+        "eventId": { "type": "string" },
+        "sport": { "type": "string" },
+        "homeTeam": { "type": "string" },
+        "awayTeam": { "type": "string" },
+        "homeOdds": { "type": "number" },
+        "awayOdds": { "type": "number" },
+        "drawOdds": {
+          "type": "number",
+          "default": 0,
+          "description": "0 when no draw market (e.g. basketball)."
+        },
+        "updatedAt": {
+          "type": "integer",
+          "description": "Unix ms."
+        }
+      }
+    },
+    "EventResolvedEvent": {
+      "title": "EventResolvedEvent",
+      "description": "Odds Service or Admin -> Core API. Signals that a sports event has concluded with a known outcome. Core consumes this to settle any held bets on the event.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "sport", "outcome", "resolvedAt"],
+      "properties": {
+        "eventId": { "type": "string" },
+        "sport": { "type": "string" },
+        "outcome": {
+          "type": "string",
+          "enum": ["home", "away", "draw"],
+          "description": "Resolved outcome of a sports event."
+        },
+        "resolvedAt": {
+          "type": "integer",
+          "description": "Unix ms."
+        }
+      }
+    },
+    "BetHeldNotification": {
+      "title": "BetHeldNotification",
+      "description": "Core API -> Notifications. Per-user notification: a bet entered the held state.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["betId"],
+      "properties": {
+        "betId": { "type": "string" }
+      }
+    },
+    "BetSettledNotification": {
+      "title": "BetSettledNotification",
+      "description": "Core API -> Notifications. Per-user notification: a bet was settled. `payout` is profit only (matches Bet.payout semantics — see bets.service.ts).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["betId", "won", "payout"],
+      "properties": {
+        "betId": { "type": "string" },
+        "won": { "type": "boolean" },
+        "payout": {
+          "type": "number",
+          "description": "Profit only, not total return."
+        }
+      }
+    },
+    "BalanceUpdatedNotification": {
+      "title": "BalanceUpdatedNotification",
+      "description": "Core API -> Notifications. Per-user notification: wallet balance changed (in dollars, not cents).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["balance"],
+      "properties": {
+        "balance": {
+          "type": "number",
+          "description": "Dollars, not cents."
+        }
+      }
+    },
+    "InsufficientBalanceNotification": {
+      "title": "InsufficientBalanceNotification",
+      "description": "Core API -> Notifications. Per-user notification: a bet placement was rejected because the requested stake exceeded the user's available balance.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stake", "balance"],
+      "properties": {
+        "stake": { "type": "number" },
+        "balance": { "type": "number" }
+      }
+    },
+    "NotificationEvent": {
+      "title": "NotificationEvent",
+      "description": "Any service -> Notifications Service. Fire-and-forget envelope; `userId` empty means broadcast. `payload` is the inner message object matching `kind`.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["userId", "kind", "payload"],
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Empty means broadcast."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "oddsUpdated",
+            "betHeld",
+            "betSettled",
+            "balanceUpdated",
+            "insufficientBalance"
+          ],
+          "description": "Discriminator for the body; maps to a socket.io event name in the notifications relay."
+        },
+        "payload": {
+          "type": "object",
+          "description": "Inner message object matching `kind`; relayed verbatim to the socket.",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

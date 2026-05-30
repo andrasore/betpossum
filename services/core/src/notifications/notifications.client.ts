@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { NotificationEvent, type OddsUpdatedEvent } from "../generated/events";
+import {
+  type NotificationEvent,
+  NotificationEventSchema,
+  type OddsUpdatedEvent,
+} from "../generated/events";
 import { MessagingService } from "../messaging/messaging.service";
 
 const CHANNEL = "notifications";
@@ -9,10 +13,7 @@ export class NotificationsClient {
   constructor(private readonly messaging: MessagingService) {}
 
   betHeld(userId: string, betId: string): Promise<void> {
-    return this.publish({
-      userId,
-      body: { oneofKind: "betHeld", betHeld: { betId } },
-    });
+    return this.publish({ userId, kind: "betHeld", payload: { betId } });
   }
 
   betSettled(
@@ -23,14 +24,16 @@ export class NotificationsClient {
   ): Promise<void> {
     return this.publish({
       userId,
-      body: { oneofKind: "betSettled", betSettled: { betId, won, payout } },
+      kind: "betSettled",
+      payload: { betId, won, payout },
     });
   }
 
   balanceUpdated(userId: string, balance: number): Promise<void> {
     return this.publish({
       userId,
-      body: { oneofKind: "balanceUpdated", balanceUpdated: { balance } },
+      kind: "balanceUpdated",
+      payload: { balance },
     });
   }
 
@@ -41,25 +44,17 @@ export class NotificationsClient {
   ): Promise<void> {
     return this.publish({
       userId,
-      body: {
-        oneofKind: "insufficientBalance",
-        insufficientBalance: { stake, balance },
-      },
+      kind: "insufficientBalance",
+      payload: { stake, balance },
     });
   }
 
   oddsUpdated(event: OddsUpdatedEvent): Promise<void> {
-    return this.publish({
-      userId: "",
-      body: { oneofKind: "oddsUpdated", oddsUpdated: event },
-    });
+    return this.publish({ userId: "", kind: "oddsUpdated", payload: event });
   }
 
   private async publish(message: NotificationEvent): Promise<void> {
-    const msg = NotificationEvent.create(message);
-    await this.messaging.publish(
-      CHANNEL,
-      Buffer.from(NotificationEvent.toBinary(msg)),
-    );
+    const msg = NotificationEventSchema.parse(message);
+    await this.messaging.publish(CHANNEL, Buffer.from(JSON.stringify(msg)));
   }
 }

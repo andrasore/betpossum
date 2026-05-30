@@ -1,7 +1,10 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
-import { EventResolvedEvent, Outcome } from "../generated/events";
+import {
+  type EventResolvedEvent,
+  EventResolvedEventSchema,
+} from "../generated/events";
 import { MessagingService } from "../messaging/messaging.service";
 import { NotificationsClient } from "../notifications/notifications.client";
 import {
@@ -11,13 +14,6 @@ import {
 import { Bet } from "./bet.entity";
 
 type Selection = "home" | "away" | "draw";
-
-const OUTCOME_MAP: Record<Outcome, Selection | null> = {
-  [Outcome.UNSPECIFIED]: null,
-  [Outcome.HOME]: "home",
-  [Outcome.AWAY]: "away",
-  [Outcome.DRAW]: "draw",
-};
 
 @Injectable()
 export class BetsService implements OnModuleInit {
@@ -108,14 +104,16 @@ export class BetsService implements OnModuleInit {
   // settled it moves to 'won'/'lost' and won't be picked up again. On a
   // mid-batch crash, redelivery resumes from the remaining held bets.
   async handleEventResolved(raw: Buffer): Promise<void> {
-    const event = EventResolvedEvent.fromBinary(raw);
-    const outcome = OUTCOME_MAP[event.outcome];
-    if (outcome === null) {
-      this.logger.warn(
-        `Ignoring events.resolved for ${event.eventId} with unspecified outcome`,
-      );
+    let event: EventResolvedEvent;
+    try {
+      event = EventResolvedEventSchema.parse(JSON.parse(raw.toString()));
+    } catch (err) {
+      // Drop (ack) malformed messages rather than letting the durable queue
+      // requeue them forever.
+      this.logger.warn("Ignoring malformed events.resolved message", err);
       return;
     }
+    const outcome: Selection = event.outcome;
 
     const held = await this.repo.find({
       where: { eventId: event.eventId, status: "held" },

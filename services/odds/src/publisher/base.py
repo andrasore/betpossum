@@ -1,22 +1,15 @@
 import aio_pika
 
-from odds.models import EventResult, OddsEvent, Outcome
-from generated.events_pb2 import (
+from odds.models import EventResult, OddsEvent
+from generated.events import (
     EventResolvedEvent,
     NotificationEvent,
     OddsUpdatedEvent,
 )
-from generated import events_pb2
 
 ODDS_EXCHANGE = "odds.updated"
 RESULTS_EXCHANGE = "events.resolved"
 NOTIFICATIONS_EXCHANGE = "notifications"
-
-_OUTCOME_MAP: dict[Outcome, "events_pb2.Outcome.ValueType"] = {
-    "home": events_pb2.OUTCOME_HOME,
-    "away": events_pb2.OUTCOME_AWAY,
-    "draw": events_pb2.OUTCOME_DRAW,
-}
 
 
 class OddsPublisher:
@@ -58,35 +51,43 @@ class OddsPublisher:
 
     async def publish(self, event: OddsEvent) -> None:
         odds_updated = OddsUpdatedEvent(
-            event_id=event.event_id,
+            eventId=event.event_id,
             sport=event.sport,
-            home_team=event.home_team,
-            away_team=event.away_team,
-            home_odds=event.home_odds,
-            away_odds=event.away_odds,
-            draw_odds=event.draw_odds,
-            updated_at=event.updated_at,
+            homeTeam=event.home_team,
+            awayTeam=event.away_team,
+            homeOdds=event.home_odds,
+            awayOdds=event.away_odds,
+            drawOdds=event.draw_odds,
+            updatedAt=event.updated_at,
         )
 
         odds_exchange = await self._ensure_odds_exchange()
         await odds_exchange.publish(
-            aio_pika.Message(body=odds_updated.SerializeToString()), routing_key=""
+            aio_pika.Message(body=odds_updated.model_dump_json().encode()),
+            routing_key="",
         )
 
         notifications_exchange = await self._ensure_notifications_exchange()
-        notification = NotificationEvent(user_id="", odds_updated=odds_updated)
+        notification = NotificationEvent(
+            userId="", kind="oddsUpdated", payload=odds_updated.model_dump()
+        )
         await notifications_exchange.publish(
-            aio_pika.Message(body=notification.SerializeToString()), routing_key=""
+            aio_pika.Message(body=notification.model_dump_json().encode()),
+            routing_key="",
         )
 
     async def publish_result(self, result: EventResult) -> None:
         exchange = await self._ensure_results_exchange()
-        payload = EventResolvedEvent(
-            event_id=result.event_id,
-            sport=result.sport,
-            outcome=_OUTCOME_MAP[result.outcome],
-            resolved_at=result.resolved_at,
-        ).SerializeToString()
+        payload = (
+            EventResolvedEvent(
+                eventId=result.event_id,
+                sport=result.sport,
+                outcome=result.outcome,
+                resolvedAt=result.resolved_at,
+            )
+            .model_dump_json()
+            .encode()
+        )
         await exchange.publish(
             aio_pika.Message(
                 body=payload, delivery_mode=aio_pika.DeliveryMode.PERSISTENT

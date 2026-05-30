@@ -12,13 +12,12 @@ dependencies = [
   "python-socketio==5.16.1",
   "pyjwt[crypto]==2.10.1",
   "aio-pika==9.5.5",
-  "protobuf==6.33.6",
+  "pydantic==2.13.3",
   "pex==2.93.4",
-  "grpcio-tools==1.80.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pyright", "mypy-protobuf", "ruff"]
+dev = ["pyright", "datamodel-code-generator", "ruff"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

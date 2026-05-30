@@ -6,8 +6,8 @@ This is a distributed sports betting application built for demonstration
 purposes. It uses a polyglot service architecture — NestJS for the real-time
 core, FastAPI for the odds ingestion service, Flask + Flask-SocketIO for the
 notifications service, and Next.js for the frontend. Services communicate
-asynchronously via RabbitMQ fanout exchanges using protobuf-serialised
-messages.
+asynchronously via RabbitMQ fanout exchanges using JSON messages validated
+against a shared JSON Schema.
 
 ---
 
@@ -22,7 +22,7 @@ messages.
 | Notifications    | Flask + Flask-SocketIO (Python, eventlet)       |
 | Identity         | Keycloak (OIDC, realm `betting`)                |
 | Messaging        | RabbitMQ (fanout exchanges)                     |
-| Message format   | Protocol Buffers (protobuf)                     |
+| Message format   | JSON (validated against shared JSON Schema)     |
 | Primary DB       | PostgreSQL                                      |
 | Financial ledger | TigerBeetle                                     |
 | External data    | The Odds API / SportsDB (free tier)             |
@@ -87,7 +87,7 @@ The only service the browser holds an open socket to. Responsibilities:
   socket into a room named after its `sub` claim
 - Binds an exclusive auto-delete queue to the `notifications` fanout exchange;
   for each `NotificationEvent` it emits the carried JSON payload to the target
-  user's room (or broadcasts if `user_id` is empty)
+  user's room (or broadcasts if `userId` is empty)
 
 The service is stateless — no DB, no business logic — and exists purely so the
 frontend has a fan-out point that doesn't depend on Core staying up to keep
@@ -112,8 +112,9 @@ provider. Responsibilities:
 
 ## Inter-service Communication
 
-Cross-process traffic flows over RabbitMQ fanout exchanges with **Protocol
-Buffer** payloads — `.proto` schema files serve as the contract. The wallet
+Cross-process traffic flows over RabbitMQ fanout exchanges with **JSON**
+payloads — `schemas/events.schema.json` serves as the contract, from which each
+service generates its bindings (Zod for TS, Pydantic for Python). The wallet
 logic is colocated inside Core as a Nest module; bets call the wallet via
 direct in-process method calls.
 
@@ -136,14 +137,18 @@ messages sent while no subscriber is connected are dropped.
 | `odds.updated`  | Odds Service | Core API      | `OddsUpdatedEvent`  |
 | `notifications` | Core API     | Notifications | `NotificationEvent` |
 
-`NotificationEvent` is a thin envelope: `user_id` (empty = broadcast), `event`
-(socket.io event name), and `payload` (JSON-encoded data the frontend
-consumes verbatim). It is fire-and-forget — Core does not wait for a reply.
+`NotificationEvent` is a flat envelope: `userId` (empty = broadcast), `kind`
+(discriminator mapped to a socket.io event name), and `payload` (the inner
+message object the frontend consumes verbatim). It is fire-and-forget — Core
+does not wait for a reply.
 
-### Why protobuf over JSON?
-- Smaller payload size — important for high-frequency odds updates
-- Schema is a first-class contract; breaking changes are caught at compile time
-- Faster serialisation / deserialisation
+### Why JSON Schema?
+- One schema is the contract for all four services; bindings are generated, so
+  drift is caught by the pre-push guard rather than at runtime
+- Runtime validation on both ends (Zod / Pydantic) — malformed messages are
+  rejected at the boundary instead of corrupting state
+- Human-readable on the wire (RabbitMQ management UI, socket frames), and no
+  binary toolchain to install
 
 ---
 
@@ -196,7 +201,7 @@ Suggested repo structure:
 │   ├── core/          # NestJS — includes wallet/TigerBeetle module
 │   ├── notifications/ # Flask + Flask-SocketIO (browser-facing WS)
 │   └── odds/          # FastAPI
-├── proto/             # Shared .proto schema definitions
+├── schemas/           # Shared JSON Schema message definitions
 ├── docker-compose.yml
 └── ARCHITECTURE.md
 ```

@@ -11,8 +11,8 @@
       "inputs": ["src/**"],
       "outputs": ["dist/**", ".next/**"]
     },
-    "proto:gen": {
-      "inputs": ["../../proto/**/*.proto"],
+    "schema:gen": {
+      "inputs": ["../../schemas/**/*.json"],
       "outputs": ["src/generated/**"]
     },
     "typecheck": {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BalanceUpdatedNotification } from "@/generated/events";
+import { BalanceUpdatedNotificationSchema } from "@/generated/events";
 import { fetchBalance } from "@/lib/api";
 import { getSocket } from "@/lib/websocket";
 
@@ -18,9 +18,11 @@ export function useBalance(token: string | null) {
       .catch(() => {});
 
     const socket = getSocket();
-    socket.on("balance.updated", (raw: ArrayBuffer) => {
-      const msg = BalanceUpdatedNotification.fromBinary(new Uint8Array(raw));
-      setBalance(msg.balance);
+    socket.on("balance.updated", (data: unknown) => {
+      const result = BalanceUpdatedNotificationSchema.safeParse(data);
+      if (result.success) {
+        setBalance(result.data.balance);
+      }
     });
     return () => {
       socket.off("balance.updated");

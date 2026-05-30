@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-bash "$REPO_ROOT/tools/protobuf_guard.sh"
+bash "$REPO_ROOT/tools/schema_guard.sh"
 npm run typecheck
 npm run lint
 npm run test
