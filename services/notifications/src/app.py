@@ -25,6 +25,11 @@ JWKS_URL = (
 )
 jwks_client = jwt.PyJWKClient(JWKS_URL)
 
+# cors_allowed_origins is Engine.IO's own server-side Origin allowlist, not
+# browser CORS. Behind nginx the browser's Origin (the public edge origin)
+# never matches the proxied upstream Host, so Engine.IO's default same-origin
+# policy 403s every handshake. "*" disables that check; the real auth boundary
+# is the JWT verified in connect() below, so opening the Origin is safe here.
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")  # pyright: ignore[reportUnknownMemberType]
 
 
