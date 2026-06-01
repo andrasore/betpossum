@@ -23,6 +23,12 @@ assume the root-level run; module-only checks can pass while the integrated
 build fails. Run the full set every time, even if the change appears to touch
 one module only.
 
+## Git workflow
+
+Commit and push **directly to `main`** — this is a sole-contributor repo, so do
+not create feature branches or open PRs for changes. When asked to commit, commit
+on `main` and push.
+
 ## Folder guides
 
 Most important folders carry their own `CLAUDE.md` with folder-local
