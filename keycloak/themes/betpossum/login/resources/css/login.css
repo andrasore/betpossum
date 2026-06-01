@@ -1,0 +1,158 @@
+/* BetPossum login theme overrides.
+ *
+ * Layered on top of keycloak.v2 (PatternFly v5) + the vendored Radix color
+ * scales (--plum-* / --mauve-*, active because <html> carries `dark`). Recolors
+ * the brand surfaces to match the app: dark mauve canvas, plum accent, Noto
+ * Sans, small radius. Targets stable element ids and PatternFly v5 classes;
+ * uses !important where PatternFly's own rules would otherwise win. */
+
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+  --bp-font: "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bp-radius: 4px; /* Radix Themes radius="small" */
+}
+
+/* ---- Canvas + typography ---------------------------------------------- */
+
+body#keycloak-bg,
+.pf-v5-theme-dark body#keycloak-bg {
+  background: var(--mauve-1) !important;
+  color: var(--mauve-12);
+  font-family: var(--bp-font) !important;
+}
+
+body,
+input,
+button,
+select,
+textarea,
+.pf-v5-c-button,
+.pf-v5-c-form-control {
+  font-family: var(--bp-font) !important;
+}
+
+/* ---- Login card ------------------------------------------------------- */
+
+.pf-v5-c-login__main {
+  background: var(--mauve-2) !important;
+  border: 1px solid var(--mauve-6) !important;
+  border-radius: var(--bp-radius) !important;
+  box-shadow: 0 1px 2px var(--mauve-a3), 0 8px 24px var(--mauve-a2);
+}
+
+/* Brand wordmark (shows realm displayName = "BetPossum"). */
+#kc-header-wrapper {
+  color: var(--plum-11) !important;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+#kc-page-title,
+.pf-v5-c-login__main-header h1 {
+  color: var(--mauve-12) !important;
+}
+
+.pf-v5-c-login__main-body,
+.pf-v5-c-login__main-body p {
+  color: var(--mauve-11);
+}
+
+/* ---- Labels + inputs -------------------------------------------------- */
+
+.pf-v5-c-form__label,
+.pf-v5-c-form__label-text {
+  color: var(--mauve-12) !important;
+}
+
+.pf-v5-c-form-control,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+select {
+  background: var(--mauve-2) !important;
+  color: var(--mauve-12) !important;
+  border: 1px solid var(--mauve-7) !important;
+  border-radius: var(--bp-radius) !important;
+}
+
+.pf-v5-c-form-control::placeholder {
+  color: var(--mauve-10);
+}
+
+/* PatternFly v5 draws the focus state as a bottom border + box-shadow. */
+.pf-v5-c-form-control:focus,
+.pf-v5-c-form-control:focus-within,
+input:focus,
+select:focus {
+  border-color: var(--plum-8) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--plum-a6) !important;
+}
+
+/* ---- Primary button --------------------------------------------------- */
+
+#kc-login,
+.pf-v5-c-button.pf-m-primary {
+  background: var(--plum-9) !important;
+  color: #fff !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--bp-radius) !important;
+  font-weight: 500;
+}
+
+#kc-login:hover,
+.pf-v5-c-button.pf-m-primary:hover {
+  background: var(--plum-10) !important;
+}
+
+#kc-login:active,
+.pf-v5-c-button.pf-m-primary:active {
+  background: var(--plum-8) !important;
+}
+
+/* Secondary / control buttons (e.g. password visibility toggle). */
+.pf-v5-c-button.pf-m-secondary,
+.pf-v5-c-button.pf-m-control {
+  background: var(--mauve-3) !important;
+  color: var(--mauve-12) !important;
+  border: 1px solid var(--mauve-7) !important;
+  border-radius: var(--bp-radius) !important;
+}
+
+.pf-v5-c-button.pf-m-link {
+  color: var(--plum-11) !important;
+}
+
+/* ---- Links ------------------------------------------------------------ */
+
+a {
+  color: var(--plum-11);
+}
+
+a:hover {
+  color: var(--plum-12);
+}
+
+/* ---- Checkbox (remember me) ------------------------------------------- */
+
+.pf-v5-c-check__input,
+input[type="checkbox"] {
+  accent-color: var(--plum-9);
+}
+
+.pf-v5-c-check__label {
+  color: var(--mauve-11);
+}
+
+/* ---- Alerts (error / info pages) -------------------------------------- */
+
+.pf-v5-c-alert {
+  background: var(--mauve-3) !important;
+  border-radius: var(--bp-radius) !important;
+}
+
+.pf-v5-c-alert.pf-m-danger {
+  border-left: 3px solid var(--plum-9);
+}

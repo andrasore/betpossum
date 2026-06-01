@@ -1,6 +1,9 @@
 {
   "realm": "betting",
   "enabled": true,
+  "displayName": "BetPossum",
+  "displayNameHtml": "BetPossum",
+  "loginTheme": "betpossum",
   "registrationAllowed": true,
   "resetPasswordAllowed": true,
   "rememberMe": true,
