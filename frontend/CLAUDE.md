@@ -93,3 +93,13 @@ provides session state under `<AuthProvider>` in `src/app/providers.tsx`.
 Chakra UI v3 with `defaultSystem`. `next-themes` forces dark mode via
 `forcedTheme="dark"` in `src/app/providers.tsx`. No Tailwind, no global
 CSS, no `cn()` — styling is via Chakra props and tokens.
+
+## Conventions
+
+- **No `node:*` imports** — not even in files that are server-only by usage
+  (e.g. the NextAuth config in `src/lib/auth.ts`). Next can pull such files into
+  the client bundle through transitive imports, and `node:*` modules don't
+  bundle for the browser. Narrow types for an invariant with a non-null `!` or a
+  plain `if (!x) throw new Error(...)` (Error is browser-safe), not
+  `node:assert`; reach for Web/standard APIs over `node:buffer`, `node:crypto`,
+  `node:fs`, etc.
