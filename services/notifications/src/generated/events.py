@@ -15,14 +15,10 @@ class OddsUpdatedEvent(BaseModel):
         extra='forbid',
     )
     eventId: str
-    sport: str
-    homeTeam: str
-    awayTeam: str
     homeOdds: float
     awayOdds: float
     drawOdds: float = Field(..., description='0 when no draw market (e.g. basketball).')
     updatedAt: int = Field(..., description='Unix ms.')
-    origin: str
 
 
 class EventResolvedEvent(BaseModel):

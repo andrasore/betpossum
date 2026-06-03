@@ -58,7 +58,7 @@ jobs:
 
       - name: Install deps (cache miss only)
         if: steps.cache-node.outputs.cache-hit != 'true' || steps.cache-venv.outputs.cache-hit != 'true'
-        run: pnpm run init
+        run: pnpm install && pnpm run init
 
       - run: pnpm run typecheck
       - run: pnpm run lint

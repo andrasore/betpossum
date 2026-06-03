@@ -15,6 +15,13 @@ export const OddsEventSchema = z.object({
   outcome: OutcomeSchema.nullable().optional(),
   resolvedAt: z.number().int().positive().nullable().optional(),
   origin: z.string(),
+  // Canonical display names from the odds service's sport/league/team entities;
+  // null/absent when an entity link is unresolved (UI falls back to the raw
+  // sport/homeTeam/awayTeam above). Hydrate-only — live ticks don't carry them.
+  sportName: z.string().nullish(),
+  leagueName: z.string().nullish(),
+  homeTeamName: z.string().nullish(),
+  awayTeamName: z.string().nullish(),
 });
 
 export type OddsEvent = z.infer<typeof OddsEventSchema>;

@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import {
   type NotificationEvent,
   NotificationEventSchema,
-  type OddsUpdatedEvent,
 } from "../generated/events";
 import { MessagingService } from "../messaging/messaging.service";
 
@@ -47,10 +46,6 @@ export class NotificationsClient {
       kind: "insufficientBalance",
       payload: { stake, balance },
     });
-  }
-
-  oddsUpdated(event: OddsUpdatedEvent): Promise<void> {
-    return this.publish({ userId: "", kind: "oddsUpdated", payload: event });
   }
 
   private async publish(message: NotificationEvent): Promise<void> {

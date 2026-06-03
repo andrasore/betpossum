@@ -1,5 +1,6 @@
 import logging
 import os
+from collections.abc import Sequence
 from types import TracebackType
 from typing import Any, ClassVar, cast
 
@@ -207,7 +208,13 @@ def _async_dsn(dsn: str) -> str:
     return dsn
 
 
-def _to_event(row: OddsCurrent) -> CanonicalEvent:
+def _to_event(
+    row: OddsCurrent,
+    sport_title: str | None = None,
+    league_name: str | None = None,
+    home_team_name: str | None = None,
+    away_team_name: str | None = None,
+) -> CanonicalEvent:
     markets = [Market.model_validate(m) for m in row.markets]
     return CanonicalEvent(
         event_id=row.event_id,
@@ -221,6 +228,11 @@ def _to_event(row: OddsCurrent) -> CanonicalEvent:
         updated_at=row.updated_at,
         outcome=cast(Outcome | None, row.outcome),
         resolved_at=row.resolved_at,
+        # Canonical display names from the entity join (None when unlinked).
+        sport_title=sport_title,
+        league_name=league_name,
+        home_team_name=home_team_name,
+        away_team_name=away_team_name,
     )
 
 
@@ -505,6 +517,59 @@ class PostgresStorage(OddsStorage):
         async with self._engine.begin() as conn:
             await conn.execute(stmt)
 
+    async def _hydrate_names(
+        self, session: AsyncSession, rows: Sequence[OddsCurrent]
+    ) -> list[CanonicalEvent]:
+        """Attach canonical sport/league/team display names to odds rows.
+
+        Resolves the entity links via a few set-based lookups against the small
+        reference tables (rather than a multi-entity join, which SQLModel types
+        poorly). A missing link just leaves its name None — the caller falls
+        back to the raw provider label.
+        """
+        sport_slugs = {r.sport_slug for r in rows if r.sport_slug is not None}
+        league_ids = {r.league_id for r in rows if r.league_id is not None}
+        team_ids = {
+            tid
+            for r in rows
+            for tid in (r.home_team_id, r.away_team_id)
+            if tid is not None
+        }
+
+        sport_titles: dict[str, str] = {}
+        if sport_slugs:
+            res = await session.exec(
+                select(Sport).where(col(Sport.slug).in_(sport_slugs))
+            )
+            sport_titles = {s.slug: s.title for s in res.all()}
+
+        league_names: dict[int, str] = {}
+        if league_ids:
+            res = await session.exec(
+                select(League).where(col(League.id).in_(league_ids))
+            )
+            league_names = {lg.id: lg.name for lg in res.all() if lg.id is not None}
+
+        team_names: dict[int, str] = {}
+        if team_ids:
+            res = await session.exec(select(Team).where(col(Team.id).in_(team_ids)))
+            team_names = {t.id: t.name for t in res.all() if t.id is not None}
+
+        return [
+            _to_event(
+                r,
+                sport_title=sport_titles.get(r.sport_slug) if r.sport_slug else None,
+                league_name=league_names.get(r.league_id) if r.league_id else None,
+                home_team_name=(
+                    team_names.get(r.home_team_id) if r.home_team_id else None
+                ),
+                away_team_name=(
+                    team_names.get(r.away_team_id) if r.away_team_id else None
+                ),
+            )
+            for r in rows
+        ]
+
     async def list_current(self, sport: str | None = None) -> list[CanonicalEvent]:
         assert self._session is not None, "list_current called outside async-with"
         stmt = select(OddsCurrent).order_by(col(OddsCurrent.updated_at).desc())
@@ -512,11 +577,14 @@ class PostgresStorage(OddsStorage):
             stmt = stmt.where(col(OddsCurrent.sport) == sport)
         async with self._session() as session:
             rows = (await session.exec(stmt)).all()
-        return [_to_event(r) for r in rows]
+            return await self._hydrate_names(session, rows)
 
     async def get_current(self, event_id: str) -> CanonicalEvent | None:
         assert self._session is not None, "get_current called outside async-with"
         stmt = select(OddsCurrent).where(col(OddsCurrent.event_id) == event_id)
         async with self._session() as session:
             row = (await session.exec(stmt)).first()
-        return _to_event(row) if row is not None else None
+            if row is None:
+                return None
+            events = await self._hydrate_names(session, [row])
+        return events[0]

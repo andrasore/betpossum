@@ -15,8 +15,8 @@
     "schema:gen": "turbo run schema:gen",
     "e2e": "pnpm --filter=@betting/e2e run e2e",
     "hooks:setup": "git config core.hooksPath .githooks",
-    "compose:dev": "docker compose -f ./docker-compose.yml -f ./docker-compose.dev.yml",
-    "init": "pnpm install && turbo run init"
+    "compose:dev": "docker compose --env-file ./.env.dev -f ./docker-compose.yml -f ./docker-compose.dev.yml",
+    "init": "turbo run init"
   },
   "devDependencies": {
     "json-schema-to-zod": "^2.6.1",

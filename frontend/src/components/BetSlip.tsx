@@ -54,6 +54,8 @@ export function BetSlip({
   }
 
   const { event, choice } = selection;
+  const homeLabel = event.homeTeamName ?? event.homeTeam;
+  const awayLabel = event.awayTeamName ?? event.awayTeam;
   const odds =
     choice === "home"
       ? event.homeOdds
@@ -66,11 +68,11 @@ export function BetSlip({
   const potentialReturn = stakeValid ? (stakeNum * odds).toFixed(2) : "—";
 
   const segments: { value: Choice; label: string; odds: number }[] = [
-    { value: "home", label: event.homeTeam, odds: event.homeOdds },
+    { value: "home", label: homeLabel, odds: event.homeOdds },
     ...(event.drawOdds > 0
       ? [{ value: "draw" as Choice, label: "Draw", odds: event.drawOdds }]
       : []),
-    { value: "away", label: event.awayTeam, odds: event.awayOdds },
+    { value: "away", label: awayLabel, odds: event.awayOdds },
   ];
 
   async function submit() {
@@ -101,7 +103,7 @@ export function BetSlip({
         <Heading size="3">Bet Slip</Heading>
         <Box>
           <Text size="2" weight="medium" as="div">
-            {event.homeTeam} vs {event.awayTeam}
+            {homeLabel} vs {awayLabel}
           </Text>
           <Text
             size="1"

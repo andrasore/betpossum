@@ -169,6 +169,67 @@ async def test_missing_league_leaves_link_null_but_resolves_sport(
     assert await _scalar(storage, "SELECT sport_slug FROM odds_current") == "soccer"
 
 
+async def test_list_current_surfaces_canonical_names(
+    storage: PostgresStorage,
+) -> None:
+    # API-Football seen first fixes the first-seen canonical names...
+    await storage.record(
+        _event(
+            origin="apifootball",
+            source_id="42",
+            league_key="39",
+            league_name="Premier League",
+            home_team="Manchester City",
+            away_team="Chelsea",
+            home_team_key="50",
+            away_team_key="49",
+        )
+    )
+    # ...then the short-name Odds API event merges onto them.
+    await storage.record(
+        _event(
+            origin="theoddsapi",
+            source_id="x1",
+            league_name="EPL",
+            country=None,
+            home_team="Man City",
+            away_team="Chelsea",
+        )
+    )
+
+    events = {e.event_id: e for e in await storage.list_current()}
+
+    # Both events read back the same merged canonical display names via the join,
+    # regardless of the raw provider labels each carried.
+    for event_id in ("apifootball:42", "theoddsapi:x1"):
+        event = events[event_id]
+        assert event.sport_title == "Soccer"
+        assert event.league_name == "Premier League"
+        assert event.home_team_name == "Manchester City"
+        assert event.away_team_name == "Chelsea"
+
+
+async def test_list_current_leaves_names_none_when_unlinked(
+    storage: PostgresStorage,
+) -> None:
+    # No league hints -> league link stays null; the read join must yield None
+    # for the league name (not drop the row), while sport/teams still resolve.
+    await storage.record(
+        _event(
+            origin="mock",
+            source_id="z",
+            league_key=None,
+            league_name=None,
+            country=None,
+        )
+    )
+    (event,) = await storage.list_current()
+    assert event.league_name is None
+    assert event.sport_title == "Soccer"
+    assert event.home_team_name == "Arsenal"
+    assert event.away_team_name == "Chelsea"
+
+
 async def test_americanfootball_sport_slug_normalized(
     storage: PostgresStorage,
 ) -> None:

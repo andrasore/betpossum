@@ -60,22 +60,28 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
                 : {}),
             }}
           >
-            <Badge
-              size="1"
-              mb="3"
-              style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}
-            >
-              {e.sport}
-            </Badge>
+            <Flex direction="column" align="start" gap="1" mb="3">
+              <Badge
+                size="1"
+                style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}
+              >
+                {e.sportName ?? e.sport}
+              </Badge>
+              {e.leagueName && (
+                <Badge size="1" color="gray" variant="soft">
+                  {e.leagueName}
+                </Badge>
+              )}
+            </Flex>
             <Flex direction="column" gap="1">
               <Text size="2" weight="medium">
-                {e.homeTeam}
+                {e.homeTeamName ?? e.homeTeam}
               </Text>
               <Text size="1" color="gray">
                 vs
               </Text>
               <Text size="2" weight="medium">
-                {e.awayTeam}
+                {e.awayTeamName ?? e.awayTeam}
               </Text>
             </Flex>
           </Card>

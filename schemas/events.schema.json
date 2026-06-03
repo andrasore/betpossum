@@ -5,25 +5,18 @@
   "$defs": {
     "OddsUpdatedEvent": {
       "title": "OddsUpdatedEvent",
-      "description": "Odds Service -> Core API / Notifications.",
+      "description": "Odds Service -> Notifications. A live odds tick: the delta for one event, correlated by `eventId`. Static identity (sport, teams, origin) and canonical display names live on the GET /odds hydrate, not here — the frontend merges this onto the already-hydrated event.",
       "type": "object",
       "additionalProperties": false,
       "required": [
         "eventId",
-        "sport",
-        "homeTeam",
-        "awayTeam",
         "homeOdds",
         "awayOdds",
         "drawOdds",
-        "updatedAt",
-        "origin"
+        "updatedAt"
       ],
       "properties": {
         "eventId": { "type": "string" },
-        "sport": { "type": "string" },
-        "homeTeam": { "type": "string" },
-        "awayTeam": { "type": "string" },
         "homeOdds": { "type": "number" },
         "awayOdds": { "type": "number" },
         "drawOdds": {
@@ -34,8 +27,7 @@
         "updatedAt": {
           "type": "integer",
           "description": "Unix ms."
-        },
-        "origin": { "type": "string" }
+        }
       }
     },
     "EventResolvedEvent": {

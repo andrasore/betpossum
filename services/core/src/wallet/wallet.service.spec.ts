@@ -61,7 +61,6 @@ describe("WalletService", () => {
             betHeld: jest.fn(),
             betSettled: jest.fn(),
             balanceUpdated: jest.fn(),
-            oddsUpdated: jest.fn(),
           },
         },
       ],

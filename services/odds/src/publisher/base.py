@@ -61,16 +61,15 @@ class OddsPublisher:
             logger.info("Skipping wire publish for %s (no h2h market)", event.event_id)
             return
         home_odds, away_odds, draw_odds = projected
+        # The wire event is a delta: just the changing odds, keyed by event id.
+        # Static identity and canonical names ride the GET /odds hydrate; the
+        # frontend merges this tick onto the already-hydrated event.
         odds_updated = OddsUpdatedEvent(
             eventId=event.event_id,
-            sport=event.sport,
-            homeTeam=event.home_team,
-            awayTeam=event.away_team,
             homeOdds=home_odds,
             awayOdds=away_odds,
             drawOdds=draw_odds,
             updatedAt=event.updated_at,
-            origin=event.origin,
         )
 
         odds_exchange = await self._ensure_odds_exchange()

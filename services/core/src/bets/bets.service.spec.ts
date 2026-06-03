@@ -41,7 +41,6 @@ describe("BetsService", () => {
     betHeld: jest.fn(),
     betSettled: jest.fn(),
     balanceUpdated: jest.fn(),
-    oddsUpdated: jest.fn(),
   };
   const messaging = { publish: jest.fn(), subscribe: jest.fn() };
 

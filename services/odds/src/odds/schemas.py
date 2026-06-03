@@ -17,6 +17,13 @@ class OddsEventResponse(BaseModel):
     updated_at: int = Field(serialization_alias="updatedAt")
     outcome: Outcome | None = None
     resolved_at: int | None = Field(default=None, serialization_alias="resolvedAt")
+    # Canonical display names from the entity join; None when the event's
+    # sport/league/team link is unresolved (the frontend falls back to the raw
+    # sport/home_team/away_team above).
+    sport_name: str | None = Field(default=None, serialization_alias="sportName")
+    league_name: str | None = Field(default=None, serialization_alias="leagueName")
+    home_team_name: str | None = Field(default=None, serialization_alias="homeTeamName")
+    away_team_name: str | None = Field(default=None, serialization_alias="awayTeamName")
 
     @classmethod
     def from_event(cls, event: CanonicalEvent) -> "OddsEventResponse":
@@ -36,6 +43,10 @@ class OddsEventResponse(BaseModel):
             updated_at=event.updated_at,
             outcome=event.outcome,
             resolved_at=event.resolved_at,
+            sport_name=event.sport_title,
+            league_name=event.league_name,
+            home_team_name=event.home_team_name,
+            away_team_name=event.away_team_name,
         )
 
 

@@ -63,6 +63,14 @@ class CanonicalEvent(BaseModel):
     home_team_key: str | None = None
     away_team_key: str | None = None
 
+    # Canonical display names, populated on the read path (GET /odds) by joining
+    # the linked sport/league/team rows. None when an entity link is unresolved;
+    # callers fall back to the raw `sport`/`home_team`/`away_team`. `league_name`
+    # above doubles as the canonical league name on reads. Not persisted here.
+    sport_title: str | None = None
+    home_team_name: str | None = None
+    away_team_name: str | None = None
+
     def market(self, key: str) -> Market | None:
         return next((m for m in self.markets if m.key == key), None)
 
