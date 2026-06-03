@@ -24,6 +24,7 @@ class OddsUpdatedEvent(BaseModel):
     awayOdds: float
     drawOdds: float = Field(..., description='0 when no draw market (e.g. basketball).')
     updatedAt: int = Field(..., description='Unix ms.')
+    origin: str
 
 
 class EventResolvedEvent(BaseModel):

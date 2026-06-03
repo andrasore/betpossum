@@ -124,7 +124,7 @@ class ApiFootballProvider(OddsProvider):
             sport = f"soccer_{league}"
             fixtures = await self._get(
                 "/fixtures",
-                {"league": league, "season": self._season, "next": str(self._upcoming)},
+                {"date": "2026-06-03"},
             )
             for fx in fixtures:
                 event = await self._fetch_fixture_odds(fx, sport)

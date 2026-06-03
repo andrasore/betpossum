@@ -70,6 +70,7 @@ class OddsPublisher:
             awayOdds=away_odds,
             drawOdds=draw_odds,
             updatedAt=event.updated_at,
+            origin=event.origin,
         )
 
         odds_exchange = await self._ensure_odds_exchange()

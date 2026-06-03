@@ -16,7 +16,8 @@
         "homeOdds",
         "awayOdds",
         "drawOdds",
-        "updatedAt"
+        "updatedAt",
+        "origin"
       ],
       "properties": {
         "eventId": { "type": "string" },
@@ -33,7 +34,8 @@
         "updatedAt": {
           "type": "integer",
           "description": "Unix ms."
-        }
+        },
+        "origin": { "type": "string" }
       }
     },
     "EventResolvedEvent": {

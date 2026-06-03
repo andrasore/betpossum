@@ -130,7 +130,7 @@ services:
       # Real providers (disabled in dev by default; add to ODDS_PROVIDERS to enable):
       THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-demo}
       APIFOOTBALL_API_KEY: ${APIFOOTBALL_API_KEY:-}
-      APIFOOTBALL_LEAGUES: ${APIFOOTBALL_LEAGUES:-39}
+      APIFOOTBALL_LEAGUES: ${APIFOOTBALL_LEAGUES:-421}
       APIFOOTBALL_SEASON: ${APIFOOTBALL_SEASON:-2023}
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       KEYCLOAK_ISSUER_URL: http://localhost:8090/realms/betting

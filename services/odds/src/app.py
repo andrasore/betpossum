@@ -21,24 +21,18 @@ POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "30"))
 # Multiple providers may be enabled at once; each runs its own concurrent poll
 # loop. Falls back to the legacy single ODDS_PROVIDER var, then to mock.
 try:
-    ODDS_PROVIDERS = os.environ.get("ODDS_PROVIDERS")
-except KeyError:
+    ODDS_PROVIDERS = os.environ.get("ODDS_PROVIDERS", "mock")
+except KeyError as e:
     logger.error("ODDS_PROVIDERS not defined, exiting")
-    raise;
+    raise e
 
-PROVIDER_NAMES = [
-    name.strip()
-    for name in ODDS_PROVIDERS.split(",")
-    if name.strip()
-]
+PROVIDER_NAMES = [name.strip() for name in ODDS_PROVIDERS.split(",") if name.strip()]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     providers = get_providers(PROVIDER_NAMES)
-    logger.info(
-        "Enabled odds providers: %s", ", ".join(p.name for p in providers)
-    )
+    logger.info("Enabled odds providers: %s", ", ".join(p.name for p in providers))
     storage = await open_storage()
     publisher = open_publisher()
     workers = [

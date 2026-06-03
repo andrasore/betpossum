@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 # ── Table models ───────────────────────────────────────────────────────────
 
+
 class OddsCurrent(SQLModel, table=True):
     # SQLAlchemy types __tablename__ as declared_attr; a plain str is correct
     # at runtime but pyright flags the assignment.
