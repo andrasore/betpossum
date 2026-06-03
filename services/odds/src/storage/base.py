@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
-from odds.models import CanonicalEvent, EventResult
+if TYPE_CHECKING:
+    # Only needed for the abstract signatures below; importing at runtime would
+    # create a storage -> odds -> routes -> storage.dependencies import cycle.
+    from odds.models import CanonicalEvent, EventResult
 
 
 class OddsStorage(ABC):

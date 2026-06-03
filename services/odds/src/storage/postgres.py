@@ -1,159 +1,129 @@
-# pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
-# asyncpg ships no type stubs; rather than peppering every call site with
-# per-line ignores, silence the unknown-types family for this file only.
-
-import json
 import logging
 import os
 from types import TracebackType
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
-# TODO maybe use sqlalchemy
-import asyncpg
+from sqlalchemy import BigInteger, Double, Index, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlmodel import Column, Field, SQLModel, col, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from odds.models import CanonicalEvent, EventResult, Market, h2h_odds
+from odds.models import CanonicalEvent, EventResult, Market, Outcome, h2h_odds
+
 from .base import OddsStorage
 
 logger = logging.getLogger(__name__)
 
-_SCHEMA_STATEMENTS = [
-    """
-    CREATE TABLE IF NOT EXISTS odds_current (
-      event_id      TEXT PRIMARY KEY,
-      origin        TEXT NOT NULL DEFAULT '',
-      sport         TEXT NOT NULL,
-      home_team     TEXT NOT NULL,
-      away_team     TEXT NOT NULL,
-      home_odds     DOUBLE PRECISION NOT NULL,
-      away_odds     DOUBLE PRECISION NOT NULL,
-      draw_odds     DOUBLE PRECISION NOT NULL DEFAULT 0,
-      markets       JSONB NOT NULL DEFAULT '[]',
-      commence_time BIGINT,
-      updated_at    BIGINT NOT NULL,
-      outcome       TEXT,
-      resolved_at   BIGINT
+
+# ── Table models ───────────────────────────────────────────────────────────
+# These mirror the previous raw-SQL schema exactly: TEXT/DOUBLE PRECISION/BIGINT
+# and JSONB for the flexible `markets` blob. SQLAlchemy de/serialises JSONB to
+# plain Python lists, so callers never touch json.dumps/loads.
+
+
+class OddsCurrent(SQLModel, table=True):
+    # SQLAlchemy types __tablename__ as declared_attr; a plain str is correct
+    # at runtime but pyright flags the assignment.
+    __tablename__ = "odds_current"  # pyright: ignore[reportAssignmentType]
+
+    event_id: str = Field(sa_column=Column(Text, primary_key=True))
+    origin: str = Field(
+        default="", sa_column=Column(Text, nullable=False, server_default="")
     )
-    """,
-    # Backfill columns for installs created before these fields existed.
-    "ALTER TABLE odds_current ADD COLUMN IF NOT EXISTS outcome TEXT",
-    "ALTER TABLE odds_current ADD COLUMN IF NOT EXISTS resolved_at BIGINT",
-    "ALTER TABLE odds_current ADD COLUMN IF NOT EXISTS origin TEXT NOT NULL DEFAULT ''",
-    "ALTER TABLE odds_current ADD COLUMN IF NOT EXISTS markets JSONB NOT NULL DEFAULT '[]'",
-    "ALTER TABLE odds_current ADD COLUMN IF NOT EXISTS commence_time BIGINT",
-    """
-    CREATE TABLE IF NOT EXISTS odds_history (
-      id         BIGSERIAL PRIMARY KEY,
-      event_id   TEXT NOT NULL,
-      sport      TEXT NOT NULL,
-      home_team  TEXT NOT NULL,
-      away_team  TEXT NOT NULL,
-      home_odds  DOUBLE PRECISION NOT NULL,
-      away_odds  DOUBLE PRECISION NOT NULL,
-      draw_odds  DOUBLE PRECISION NOT NULL DEFAULT 0,
-      markets    JSONB NOT NULL DEFAULT '[]',
-      updated_at BIGINT NOT NULL
+    sport: str = Field(sa_column=Column(Text, nullable=False))
+    home_team: str = Field(sa_column=Column(Text, nullable=False))
+    away_team: str = Field(sa_column=Column(Text, nullable=False))
+    home_odds: float = Field(sa_column=Column(Double, nullable=False))
+    away_odds: float = Field(sa_column=Column(Double, nullable=False))
+    draw_odds: float = Field(
+        default=0.0, sa_column=Column(Double, nullable=False, server_default=text("0"))
     )
-    """,
-    "ALTER TABLE odds_history ADD COLUMN IF NOT EXISTS markets JSONB NOT NULL DEFAULT '[]'",
-    """
-    CREATE INDEX IF NOT EXISTS idx_history_event_time
-      ON odds_history (event_id, updated_at DESC)
-    """,
-    # Maps our canonical event ids back to each provider's original ids.
-    """
-    CREATE TABLE IF NOT EXISTS event_source_map (
-      provider           TEXT NOT NULL,
-      source_event_id    TEXT NOT NULL,
-      canonical_event_id TEXT NOT NULL,
-      source_sport       TEXT,
-      updated_at         BIGINT NOT NULL,
-      PRIMARY KEY (provider, source_event_id)
+    markets: list[dict[str, Any]] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB, nullable=False, server_default=text("'[]'")),
     )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_source_map_canonical
-      ON event_source_map (canonical_event_id)
-    """,
+    commence_time: int | None = Field(default=None, sa_column=Column(BigInteger))
+    updated_at: int = Field(sa_column=Column(BigInteger, nullable=False))
+    outcome: str | None = Field(default=None, sa_column=Column(Text))
+    resolved_at: int | None = Field(default=None, sa_column=Column(BigInteger))
+
+
+class OddsHistory(SQLModel, table=True):
+    __tablename__ = "odds_history"  # pyright: ignore[reportAssignmentType]
+    __table_args__ = (
+        Index("idx_history_event_time", "event_id", text("updated_at DESC")),
+    )
+
+    id: int | None = Field(
+        default=None,
+        sa_column=Column(BigInteger, primary_key=True, autoincrement=True),
+    )
+    event_id: str = Field(sa_column=Column(Text, nullable=False))
+    sport: str = Field(sa_column=Column(Text, nullable=False))
+    home_team: str = Field(sa_column=Column(Text, nullable=False))
+    away_team: str = Field(sa_column=Column(Text, nullable=False))
+    home_odds: float = Field(sa_column=Column(Double, nullable=False))
+    away_odds: float = Field(sa_column=Column(Double, nullable=False))
+    draw_odds: float = Field(
+        default=0.0, sa_column=Column(Double, nullable=False, server_default=text("0"))
+    )
+    markets: list[dict[str, Any]] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB, nullable=False, server_default=text("'[]'")),
+    )
+    updated_at: int = Field(sa_column=Column(BigInteger, nullable=False))
+
+
+class EventSourceMap(SQLModel, table=True):
+    __tablename__ = "event_source_map"  # pyright: ignore[reportAssignmentType]
+    __table_args__ = (Index("idx_source_map_canonical", "canonical_event_id"),)
+
+    provider: str = Field(sa_column=Column(Text, primary_key=True))
+    source_event_id: str = Field(sa_column=Column(Text, primary_key=True))
+    canonical_event_id: str = Field(sa_column=Column(Text, nullable=False))
+    source_sport: str | None = Field(default=None, sa_column=Column(Text))
+    updated_at: int = Field(sa_column=Column(BigInteger, nullable=False))
+
+
+# Columns refreshed on an odds_current conflict (everything but the PK).
+_CURRENT_UPDATE_COLS = [
+    "origin",
+    "sport",
+    "home_team",
+    "away_team",
+    "home_odds",
+    "away_odds",
+    "draw_odds",
+    "markets",
+    "commence_time",
+    "updated_at",
 ]
 
-_INSERT_HISTORY = """
-INSERT INTO odds_history
-  (event_id, sport, home_team, away_team, home_odds, away_odds, draw_odds,
-   markets, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-"""
 
-_UPSERT_CURRENT = """
-INSERT INTO odds_current
-  (event_id, origin, sport, home_team, away_team, home_odds, away_odds,
-   draw_odds, markets, commence_time, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-ON CONFLICT (event_id) DO UPDATE SET
-  origin        = EXCLUDED.origin,
-  sport         = EXCLUDED.sport,
-  home_team     = EXCLUDED.home_team,
-  away_team     = EXCLUDED.away_team,
-  home_odds     = EXCLUDED.home_odds,
-  away_odds     = EXCLUDED.away_odds,
-  draw_odds     = EXCLUDED.draw_odds,
-  markets       = EXCLUDED.markets,
-  commence_time = EXCLUDED.commence_time,
-  updated_at    = EXCLUDED.updated_at
-"""
-
-_UPSERT_SOURCE_MAP = """
-INSERT INTO event_source_map
-  (provider, source_event_id, canonical_event_id, source_sport, updated_at)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (provider, source_event_id) DO UPDATE SET
-  canonical_event_id = EXCLUDED.canonical_event_id,
-  source_sport       = EXCLUDED.source_sport,
-  updated_at         = EXCLUDED.updated_at
-"""
-
-_SELECT_COLS = (
-    "event_id, origin, sport, home_team, away_team, markets, commence_time, "
-    "updated_at, outcome, resolved_at"
-)
-
-_SELECT_ALL = f"SELECT {_SELECT_COLS} FROM odds_current ORDER BY updated_at DESC"
-_SELECT_BY_SPORT = (
-    f"SELECT {_SELECT_COLS} FROM odds_current WHERE sport = $1 ORDER BY updated_at DESC"
-)
-_SELECT_BY_EVENT = f"SELECT {_SELECT_COLS} FROM odds_current WHERE event_id = $1"
-
-# An admin-driven resolution can only target a mock-origin event that already
-# exists (the route enforces both), but keep the upsert defensive: a bare row
-# can only originate from mock.
-_UPSERT_RESULT = """
-INSERT INTO odds_current
-  (event_id, origin, sport, home_team, away_team, home_odds, away_odds,
-   draw_odds, markets, updated_at, outcome, resolved_at)
-VALUES ($1, 'mock', $2, '', '', 0, 0, 0, '[]', 0, $3, $4)
-ON CONFLICT (event_id) DO UPDATE SET
-  outcome     = EXCLUDED.outcome,
-  resolved_at = EXCLUDED.resolved_at
-"""
+def _async_dsn(dsn: str) -> str:
+    """Point SQLAlchemy at the asyncpg driver regardless of the URL scheme."""
+    for scheme in ("postgresql+asyncpg://", "postgresql://", "postgres://"):
+        if dsn.startswith(scheme):
+            return "postgresql+asyncpg://" + dsn[len(scheme) :]
+    return dsn
 
 
-def _row_to_event(row: Any) -> CanonicalEvent:
-    raw_markets = row["markets"]
-    market_dicts = (
-        json.loads(raw_markets) if isinstance(raw_markets, str) else raw_markets
-    )
-    markets = [Market.model_validate(m) for m in market_dicts]
+def _to_event(row: OddsCurrent) -> CanonicalEvent:
+    markets = [Market.model_validate(m) for m in row.markets]
     return CanonicalEvent(
-        event_id=row["event_id"],
-        origin=row["origin"],
-        source_event_id=row["event_id"].split(":", 1)[-1],
-        sport=row["sport"],
-        home_team=row["home_team"],
-        away_team=row["away_team"],
-        commence_time=row["commence_time"],
+        event_id=row.event_id,
+        origin=row.origin,
+        source_event_id=row.event_id.split(":", 1)[-1],
+        sport=row.sport,
+        home_team=row.home_team,
+        away_team=row.away_team,
+        commence_time=row.commence_time,
         markets=markets,
-        updated_at=row["updated_at"],
-        outcome=row["outcome"],
-        resolved_at=row["resolved_at"],
+        updated_at=row.updated_at,
+        outcome=cast(Outcome | None, row.outcome),
+        resolved_at=row.resolved_at,
     )
 
 
@@ -161,8 +131,9 @@ class PostgresStorage(OddsStorage):
     name: ClassVar[str] = "postgres"
 
     def __init__(self, dsn: str):
-        self._dsn = dsn
-        self._pool: asyncpg.Pool | None = None
+        self._dsn = _async_dsn(dsn)
+        self._engine: AsyncEngine | None = None
+        self._session: async_sessionmaker[AsyncSession] | None = None
 
     @classmethod
     def from_env(cls) -> "PostgresStorage":
@@ -172,10 +143,9 @@ class PostgresStorage(OddsStorage):
         return cls(dsn=dsn)
 
     async def __aenter__(self) -> "PostgresStorage":
-        self._pool = await asyncpg.create_pool(
-            dsn=self._dsn,
-            min_size=1,
-            max_size=4,
+        self._engine = create_async_engine(self._dsn, pool_size=4, max_overflow=0)
+        self._session = async_sessionmaker(
+            self._engine, class_=AsyncSession, expire_on_commit=False
         )
         return self
 
@@ -185,83 +155,119 @@ class PostgresStorage(OddsStorage):
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        if self._pool is not None:
-            await self._pool.close()
-            self._pool = None
+        if self._engine is not None:
+            await self._engine.dispose()
+            self._engine = self._session = None
 
     async def init_schema(self) -> None:
-        assert self._pool is not None, "init_schema called outside async-with"
-        async with self._pool.acquire() as conn:
-            for stmt in _SCHEMA_STATEMENTS:
-                await conn.execute(stmt)
+        assert self._engine is not None, "init_schema called outside async-with"
+        async with self._engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
         logger.info("Postgres odds schema ready")
 
     async def record(self, event: CanonicalEvent) -> None:
-        assert self._pool is not None, "record called outside async-with"
+        assert self._engine is not None, "record called outside async-with"
         projected = h2h_odds(event)
         home_odds, away_odds, draw_odds = (
             projected if projected is not None else (0.0, 0.0, 0.0)
         )
-        markets_json = json.dumps([m.model_dump() for m in event.markets])
-        current_args = (
-            event.event_id,
-            event.origin,
-            event.sport,
-            event.home_team,
-            event.away_team,
-            home_odds,
-            away_odds,
-            draw_odds,
-            markets_json,
-            event.commence_time,
-            event.updated_at,
+        markets = [m.model_dump() for m in event.markets]
+
+        history = pg_insert(OddsHistory).values(
+            event_id=event.event_id,
+            sport=event.sport,
+            home_team=event.home_team,
+            away_team=event.away_team,
+            home_odds=home_odds,
+            away_odds=away_odds,
+            draw_odds=draw_odds,
+            markets=markets,
+            updated_at=event.updated_at,
         )
-        history_args = (
-            event.event_id,
-            event.sport,
-            event.home_team,
-            event.away_team,
-            home_odds,
-            away_odds,
-            draw_odds,
-            markets_json,
-            event.updated_at,
+
+        current = pg_insert(OddsCurrent).values(
+            event_id=event.event_id,
+            origin=event.origin,
+            sport=event.sport,
+            home_team=event.home_team,
+            away_team=event.away_team,
+            home_odds=home_odds,
+            away_odds=away_odds,
+            draw_odds=draw_odds,
+            markets=markets,
+            commence_time=event.commence_time,
+            updated_at=event.updated_at,
         )
-        async with self._pool.acquire() as conn:
-            async with conn.transaction():
-                await conn.execute(_INSERT_HISTORY, *history_args)
-                await conn.execute(_UPSERT_CURRENT, *current_args)
-                await conn.execute(
-                    _UPSERT_SOURCE_MAP,
-                    event.origin,
-                    event.source_event_id,
-                    event.event_id,
-                    event.sport,
-                    event.updated_at,
-                )
+        current = current.on_conflict_do_update(
+            index_elements=["event_id"],
+            set_={c: current.excluded[c] for c in _CURRENT_UPDATE_COLS},
+        )
+
+        source_map = pg_insert(EventSourceMap).values(
+            provider=event.origin,
+            source_event_id=event.source_event_id,
+            canonical_event_id=event.event_id,
+            source_sport=event.sport,
+            updated_at=event.updated_at,
+        )
+        source_map = source_map.on_conflict_do_update(
+            index_elements=["provider", "source_event_id"],
+            set_={
+                "canonical_event_id": source_map.excluded["canonical_event_id"],
+                "source_sport": source_map.excluded["source_sport"],
+                "updated_at": source_map.excluded["updated_at"],
+            },
+        )
+
+        # One transaction for the history append + both upserts. ON CONFLICT is a
+        # Core construct, so these run on the connection rather than via the
+        # ORM session (whose async `execute` SQLModel deprecates).
+        async with self._engine.begin() as conn:
+            await conn.execute(history)
+            await conn.execute(current)
+            await conn.execute(source_map)
 
     async def record_result(self, result: EventResult) -> None:
-        assert self._pool is not None, "record_result called outside async-with"
-        async with self._pool.acquire() as conn:
-            await conn.execute(
-                _UPSERT_RESULT,
-                result.event_id,
-                result.sport,
-                result.outcome,
-                result.resolved_at,
-            )
+        assert self._engine is not None, "record_result called outside async-with"
+        # An admin-driven resolution can only target a mock-origin event that
+        # already exists (the route enforces both), but keep the upsert
+        # defensive: a bare row can only originate from mock.
+        stmt = pg_insert(OddsCurrent).values(
+            event_id=result.event_id,
+            origin="mock",
+            sport=result.sport,
+            home_team="",
+            away_team="",
+            home_odds=0.0,
+            away_odds=0.0,
+            draw_odds=0.0,
+            markets=[],
+            updated_at=0,
+            outcome=result.outcome,
+            resolved_at=result.resolved_at,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["event_id"],
+            set_={
+                "outcome": stmt.excluded["outcome"],
+                "resolved_at": stmt.excluded["resolved_at"],
+            },
+        )
+        async with self._engine.begin() as conn:
+            await conn.execute(stmt)
 
     async def list_current(self, sport: str | None = None) -> list[CanonicalEvent]:
-        assert self._pool is not None, "list_current called outside async-with"
-        async with self._pool.acquire() as conn:
-            if sport is not None:
-                rows = await conn.fetch(_SELECT_BY_SPORT, sport)
-            else:
-                rows = await conn.fetch(_SELECT_ALL)
-        return [_row_to_event(r) for r in rows]
+        assert self._session is not None, "list_current called outside async-with"
+        stmt = select(OddsCurrent).order_by(col(OddsCurrent.updated_at).desc())
+        if sport is not None:
+            stmt = stmt.where(col(OddsCurrent.sport) == sport)
+        async with self._session() as session:
+            rows = (await session.exec(stmt)).all()
+        return [_to_event(r) for r in rows]
 
     async def get_current(self, event_id: str) -> CanonicalEvent | None:
-        assert self._pool is not None, "get_current called outside async-with"
-        async with self._pool.acquire() as conn:
-            row = await conn.fetchrow(_SELECT_BY_EVENT, event_id)
-        return _row_to_event(row) if row is not None else None
+        assert self._session is not None, "get_current called outside async-with"
+        stmt = select(OddsCurrent).where(col(OddsCurrent.event_id) == event_id)
+        async with self._session() as session:
+            row = (await session.exec(stmt)).first()
+        return _to_event(row) if row is not None else None
