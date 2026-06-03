@@ -141,7 +141,7 @@ class ApiFootballProvider(OddsProvider):
             away = fixture["teams"]["away"]["name"]
             ts = fixture["fixture"].get("timestamp")
             commence_time = int(ts) * 1000 if ts is not None else None
-        except (KeyError, TypeError):
+        except KeyError, TypeError:
             return None
 
         # API-Football carries stable numeric league/team ids and the league's

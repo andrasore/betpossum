@@ -37,7 +37,7 @@ USER appuser
 CMD ["node", "./dist/main.js"]
 
 # Stage 4: Odds service.
-FROM python:3.13-alpine AS odds
+FROM python:3.14-alpine AS odds
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 COPY services/odds/pyproject.toml .
@@ -47,7 +47,7 @@ USER appuser
 CMD ["/app/.venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
 
 # Stage 5: Notifications service runtime — FastAPI + python-socketio (ASGI).
-FROM python:3.13-alpine AS notifications
+FROM python:3.14-alpine AS notifications
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 COPY services/notifications/pyproject.toml .

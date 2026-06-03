@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "odds-service"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
   "fastapi==0.121.2",
   "uvicorn[standard]==0.40.0",
@@ -14,7 +14,7 @@ dependencies = [
   "sqlalchemy==2.0.50",
   # asyncpg is the runtime driver for the postgresql+asyncpg:// engine; it is no
   # longer imported directly but SQLAlchemy loads it by name, so keep it pinned.
-  "asyncpg==0.30.0",
+  "asyncpg==0.31.0",
   "aio-pika==9.5.5",
   "pydantic==2.13.3",
   "pydantic-core==2.46.3",
@@ -32,7 +32,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.14"
 include = ["src"]
 strict = ["src"]
 exclude = ["src/generated"]

@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Cache node_modules
         id: cache-node
@@ -44,7 +44,7 @@ jobs:
           path: |
             services/odds/.venv
             services/notifications/.venv
-          key: venv-${{ runner.os }}-py3.12-${{ hashFiles('services/*/pyproject.toml', 'services/*/requirements.txt') }}
+          key: venv-${{ runner.os }}-py3.14-${{ hashFiles('services/*/pyproject.toml', 'services/*/requirements.txt') }}
 
       - name: Cache turbo
         uses: actions/cache@v4

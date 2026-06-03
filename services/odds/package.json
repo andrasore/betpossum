@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "scripts": {
     "init": "python -m venv .venv && .venv/bin/pip install -e '.[dev]'",
-    "schema:gen": "mkdir -p ./src/generated && .venv/bin/datamodel-codegen --input ../../schemas/events.schema.json --input-file-type jsonschema --output src/generated/events.py --output-model-type pydantic_v2.BaseModel --target-python-version 3.12 --enum-field-as-literal all --disable-timestamp",
+    "schema:gen": "mkdir -p ./src/generated && .venv/bin/datamodel-codegen --input ../../schemas/events.schema.json --input-file-type jsonschema --output src/generated/events.py --output-model-type pydantic_v2.BaseModel --target-python-version 3.14 --enum-field-as-literal all --disable-timestamp",
     "typecheck": ".venv/bin/pyright src/",
     "lint": ".venv/bin/ruff check && .venv/bin/ruff format --check",
     "lint:fix": ".venv/bin/ruff format",

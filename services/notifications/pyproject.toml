@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "notifications-service"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
   "fastapi==0.121.2",
   "uvicorn[standard]==0.40.0",
@@ -26,7 +26,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.14"
 include = ["src"]
 strict = ["src"]
 exclude = ["src/generated"]

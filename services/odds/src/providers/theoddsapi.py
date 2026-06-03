@@ -86,7 +86,7 @@ def _normalise(raw_event: dict[str, Any], sport: str) -> CanonicalEvent | None:
             league_key=raw_event.get("sport_key", sport),
             league_name=raw_event.get("sport_title"),
         )
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         return None
 
 
