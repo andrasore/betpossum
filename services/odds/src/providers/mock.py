@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 class Fixture(TypedDict):
     event_id: str
     sport: str
+    league: str
+    country: str
     home_team: str
     away_team: str
 
@@ -31,42 +33,56 @@ FIXTURES: list[Fixture] = [
     {
         "event_id": "epl-001",
         "sport": "soccer_epl",
+        "league": "Premier League",
+        "country": "England",
         "home_team": "Arsenal",
         "away_team": "Chelsea",
     },
     {
         "event_id": "epl-002",
         "sport": "soccer_epl",
+        "league": "Premier League",
+        "country": "England",
         "home_team": "Liverpool",
         "away_team": "Manchester City",
     },
     {
         "event_id": "epl-003",
         "sport": "soccer_epl",
+        "league": "Premier League",
+        "country": "England",
         "home_team": "Tottenham",
         "away_team": "Manchester United",
     },
     {
         "event_id": "nba-001",
         "sport": "basketball_nba",
+        "league": "NBA",
+        "country": "USA",
         "home_team": "LA Lakers",
         "away_team": "Golden State Warriors",
     },
     {
         "event_id": "nba-002",
         "sport": "basketball_nba",
+        "league": "NBA",
+        "country": "USA",
         "home_team": "Boston Celtics",
         "away_team": "Miami Heat",
     },
     {
         "event_id": "nfl-001",
         "sport": "americanfootball_nfl",
+        "league": "NFL",
+        "country": "USA",
         "home_team": "Kansas City Chiefs",
         "away_team": "San Francisco 49ers",
     },
     {
         "event_id": "nfl-002",
         "sport": "americanfootball_nfl",
+        "league": "NFL",
+        "country": "USA",
         "home_team": "Dallas Cowboys",
         "away_team": "New York Giants",
     },
@@ -174,6 +190,9 @@ class MockProvider(OddsProvider):
                 away_team=fixture["away_team"],
                 markets=self._markets(fixture["sport"], s),
                 updated_at=int(time.time() * 1000),
+                league_key=fixture["sport"],
+                league_name=fixture["league"],
+                country=fixture["country"],
             )
 
         active = sum(1 for f in self._fixtures if f["event_id"] not in self._resolved)

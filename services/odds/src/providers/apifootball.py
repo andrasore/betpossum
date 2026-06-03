@@ -144,6 +144,13 @@ class ApiFootballProvider(OddsProvider):
         except (KeyError, TypeError):
             return None
 
+        # API-Football carries stable numeric league/team ids and the league's
+        # country in the fixture payload — feed them to the entity resolver.
+        league: dict[str, Any] = fixture.get("league", {})
+        league_id = league.get("id")
+        home_id = fixture["teams"]["home"].get("id")
+        away_id = fixture["teams"]["away"].get("id")
+
         odds = await self._get("/odds", {"fixture": fixture_id})
         if not odds:
             return None
@@ -164,4 +171,10 @@ class ApiFootballProvider(OddsProvider):
             commence_time=commence_time,
             markets=markets,
             updated_at=int(time.time() * 1000),
+            sport_group="soccer",  # API-Football is the soccer product
+            league_key=str(league_id) if league_id is not None else None,
+            league_name=league.get("name"),
+            country=league.get("country"),
+            home_team_key=str(home_id) if home_id is not None else None,
+            away_team_key=str(away_id) if away_id is not None else None,
         )

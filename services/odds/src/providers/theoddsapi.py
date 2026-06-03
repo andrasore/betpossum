@@ -70,6 +70,10 @@ def _normalise(raw_event: dict[str, Any], sport: str) -> CanonicalEvent | None:
             return None
 
         source_id: str = raw_event["id"]
+        # The Odds API's `sport_key` conflates sport and competition
+        # ("soccer_epl"); it stands in as the league source key, and
+        # `sport_title` ("EPL") as the league name. There are no team or league
+        # ids — the resolver matches teams by normalized name.
         return CanonicalEvent(
             event_id=f"theoddsapi:{source_id}",
             origin="theoddsapi",
@@ -79,6 +83,8 @@ def _normalise(raw_event: dict[str, Any], sport: str) -> CanonicalEvent | None:
             away_team=away,
             markets=markets,
             updated_at=int(time.time() * 1000),
+            league_key=raw_event.get("sport_key", sport),
+            league_name=raw_event.get("sport_title"),
         )
     except (KeyError, ValueError):
         return None

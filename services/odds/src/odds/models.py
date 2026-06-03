@@ -52,6 +52,17 @@ class CanonicalEvent(BaseModel):
     outcome: Outcome | None = None
     resolved_at: int | None = None  # Unix ms
 
+    # Source-side identity hints the storage entity resolver (`storage.postgres`)
+    # uses to link this event to canonical sport/league/team rows. Providers
+    # populate what they expose; absent ones fall back to name-based matching.
+    # These are not persisted on the event row itself.
+    sport_group: str | None = None
+    league_key: str | None = None
+    league_name: str | None = None
+    country: str | None = None
+    home_team_key: str | None = None
+    away_team_key: str | None = None
+
     def market(self, key: str) -> Market | None:
         return next((m for m in self.markets if m.key == key), None)
 
