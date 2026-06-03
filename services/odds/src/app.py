@@ -15,15 +15,20 @@ from storage.dependencies import STORAGE_NAME, close_storage, open_storage
 
 logging.basicConfig(level=logging.INFO)
 http_logger = logging.getLogger("odds.http")
+logger = logging.getLogger("odds")
 
 POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "30"))
 # Multiple providers may be enabled at once; each runs its own concurrent poll
 # loop. Falls back to the legacy single ODDS_PROVIDER var, then to mock.
+try:
+    ODDS_PROVIDERS = os.environ.get("ODDS_PROVIDERS")
+except KeyError:
+    logger.error("ODDS_PROVIDERS not defined, exiting")
+    raise;
+
 PROVIDER_NAMES = [
     name.strip()
-    for name in os.environ.get(
-        "ODDS_PROVIDERS", os.environ.get("ODDS_PROVIDER", "mock")
-    ).split(",")
+    for name in ODDS_PROVIDERS.split(",")
     if name.strip()
 ]
 
@@ -31,6 +36,9 @@ PROVIDER_NAMES = [
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     providers = get_providers(PROVIDER_NAMES)
+    logger.info(
+        "Enabled odds providers: %s", ", ".join(p.name for p in providers)
+    )
     storage = await open_storage()
     publisher = open_publisher()
     workers = [

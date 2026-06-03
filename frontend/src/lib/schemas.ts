@@ -14,6 +14,7 @@ export const OddsEventSchema = z.object({
   updatedAt: z.number().int().positive(),
   outcome: OutcomeSchema.nullable().optional(),
   resolvedAt: z.number().int().positive().nullable().optional(),
+  origin: z.string(),
 });
 
 export type OddsEvent = z.infer<typeof OddsEventSchema>;

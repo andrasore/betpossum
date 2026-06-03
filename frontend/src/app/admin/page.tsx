@@ -354,7 +354,7 @@ function EventRow({
                 variant="outline"
                 data-testid={`admin-event-resolve-${event.eventId}-${o}`}
                 onClick={() => click(o)}
-                disabled={resolved !== null || busy !== null}
+                disabled={resolved !== null || busy !== null || event.origin !== "mock"}
                 loading={busy === o}
                 color={resolved === o ? "green" : undefined}
               >

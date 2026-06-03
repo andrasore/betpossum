@@ -18,10 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 # ── Table models ───────────────────────────────────────────────────────────
-# These mirror the previous raw-SQL schema exactly: TEXT/DOUBLE PRECISION/BIGINT
-# and JSONB for the flexible `markets` blob. SQLAlchemy de/serialises JSONB to
-# plain Python lists, so callers never touch json.dumps/loads.
-
 
 class OddsCurrent(SQLModel, table=True):
     # SQLAlchemy types __tablename__ as declared_attr; a plain str is correct
