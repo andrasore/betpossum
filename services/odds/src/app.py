@@ -8,7 +8,7 @@ from typing import AsyncGenerator, Awaitable, Callable
 from fastapi import FastAPI, Request, Response
 
 from odds import router as odds_router
-from providers import get_provider
+from providers import get_providers
 from publisher.dependencies import close_publisher, open_publisher
 from runner import run
 from storage.dependencies import STORAGE_NAME, close_storage, open_storage
@@ -17,22 +17,34 @@ logging.basicConfig(level=logging.INFO)
 http_logger = logging.getLogger("odds.http")
 
 POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "30"))
-PROVIDER_NAME = os.environ.get("ODDS_PROVIDER", "mock")
+# Multiple providers may be enabled at once; each runs its own concurrent poll
+# loop. Falls back to the legacy single ODDS_PROVIDER var, then to mock.
+PROVIDER_NAMES = [
+    name.strip()
+    for name in os.environ.get(
+        "ODDS_PROVIDERS", os.environ.get("ODDS_PROVIDER", "mock")
+    ).split(",")
+    if name.strip()
+]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    provider = get_provider(PROVIDER_NAME)
+    providers = get_providers(PROVIDER_NAMES)
     storage = await open_storage()
     publisher = open_publisher()
-    worker = asyncio.create_task(
-        run(provider, storage, publisher, POLL_INTERVAL_SECONDS),
-        name=f"odds-worker-{PROVIDER_NAME}-{STORAGE_NAME}",
-    )
+    workers = [
+        asyncio.create_task(
+            run(provider, storage, publisher, POLL_INTERVAL_SECONDS),
+            name=f"odds-worker-{provider.name}-{STORAGE_NAME}",
+        )
+        for provider in providers
+    ]
     try:
         yield
     finally:
-        worker.cancel()
+        for worker in workers:
+            worker.cancel()
         await close_publisher()
         await close_storage()
 
@@ -75,5 +87,5 @@ app.include_router(odds_router)
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "provider": PROVIDER_NAME, "storage": STORAGE_NAME}
+def health() -> dict[str, object]:
+    return {"status": "ok", "providers": PROVIDER_NAMES, "storage": STORAGE_NAME}

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import AsyncIterator, ClassVar
 
-from odds.models import EventResult, OddsEvent
+from odds.models import CanonicalEvent, EventResult
 
 
 class OddsProvider(ABC):
@@ -23,8 +23,16 @@ class OddsProvider(ABC):
     ) -> None:
         return None
 
+    def canonical_id(self, source_event_id: str) -> str:
+        """Stable canonical id for an event from this provider.
+
+        Events are kept separate per provider, so the canonical id is simply
+        the provider name namespacing the provider's own id.
+        """
+        return f"{self.name}:{source_event_id}"
+
     @abstractmethod
-    def fetch_tick(self) -> AsyncIterator[OddsEvent]: ...
+    def fetch_tick(self) -> AsyncIterator[CanonicalEvent]: ...
 
     async def fetch_results(self) -> AsyncIterator[EventResult]:
         """Emit any newly-resolved events since the last call.

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from types import TracebackType
 from typing import ClassVar
 
-from odds.models import EventResult, OddsEvent
+from odds.models import CanonicalEvent, EventResult
 
 
 class OddsStorage(ABC):
@@ -27,13 +27,13 @@ class OddsStorage(ABC):
         return None
 
     @abstractmethod
-    async def record(self, event: OddsEvent) -> None: ...
+    async def record(self, event: CanonicalEvent) -> None: ...
 
     @abstractmethod
     async def record_result(self, result: EventResult) -> None: ...
 
     @abstractmethod
-    async def list_current(self, sport: str | None = None) -> list[OddsEvent]: ...
+    async def list_current(self, sport: str | None = None) -> list[CanonicalEvent]: ...
 
     @abstractmethod
-    async def get_current(self, event_id: str) -> OddsEvent | None: ...
+    async def get_current(self, event_id: str) -> CanonicalEvent | None: ...

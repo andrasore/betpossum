@@ -124,9 +124,14 @@ services:
     environment:
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
-      ODDS_PROVIDER: mock
+      ODDS_PROVIDERS: mock
       ODDS_STORAGE: postgres
       POLL_INTERVAL_SECONDS: 30
+      # Real providers (disabled in dev by default; add to ODDS_PROVIDERS to enable):
+      THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-demo}
+      APIFOOTBALL_API_KEY: ${APIFOOTBALL_API_KEY:-}
+      APIFOOTBALL_LEAGUES: ${APIFOOTBALL_LEAGUES:-39}
+      APIFOOTBALL_SEASON: ${APIFOOTBALL_SEASON:-2023}
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       KEYCLOAK_ISSUER_URL: http://localhost:8090/realms/betting
       KEYCLOAK_REALM: betting

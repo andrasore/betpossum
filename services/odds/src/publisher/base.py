@@ -1,11 +1,15 @@
+import logging
+
 import aio_pika
 
-from odds.models import EventResult, OddsEvent
+from odds.models import CanonicalEvent, EventResult, h2h_odds
 from generated.events import (
     EventResolvedEvent,
     NotificationEvent,
     OddsUpdatedEvent,
 )
+
+logger = logging.getLogger(__name__)
 
 ODDS_EXCHANGE = "odds.updated"
 RESULTS_EXCHANGE = "events.resolved"
@@ -49,15 +53,22 @@ class OddsPublisher:
             )
         return self._notifications_exchange
 
-    async def publish(self, event: OddsEvent) -> None:
+    async def publish(self, event: CanonicalEvent) -> None:
+        # The wire contract is 3-way (home/away/draw); project the h2h market
+        # onto it. Events without an h2h market are persisted but not emitted.
+        projected = h2h_odds(event)
+        if projected is None:
+            logger.info("Skipping wire publish for %s (no h2h market)", event.event_id)
+            return
+        home_odds, away_odds, draw_odds = projected
         odds_updated = OddsUpdatedEvent(
             eventId=event.event_id,
             sport=event.sport,
             homeTeam=event.home_team,
             awayTeam=event.away_team,
-            homeOdds=event.home_odds,
-            awayOdds=event.away_odds,
-            drawOdds=event.draw_odds,
+            homeOdds=home_odds,
+            awayOdds=away_odds,
+            drawOdds=draw_odds,
             updatedAt=event.updated_at,
         )
 

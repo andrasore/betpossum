@@ -12,6 +12,7 @@ possible:
 pnpm --filter @betting/odds run init      # create .venv, pip install -e .[dev]
 pnpm --filter @betting/odds run typecheck  # pyright (strict)
 pnpm --filter @betting/odds run lint        # ruff check + format --check
+pnpm --filter @betting/odds run test        # pytest (test/ dir; asyncio auto-mode)
 ```
 
 There is **no `build` script** — `pnpm build` only runs TS workspaces. Don't add
@@ -20,18 +21,39 @@ a fake one. `schema:gen` regenerates `src/generated` (Pydantic models) from
 
 ## What this service does
 
-Ingests odds from an external provider on an asyncio poll loop, normalises them,
-persists current odds to Postgres, and publishes `OddsUpdatedEvent` /
-`EventResolvedEvent` (JSON) to RabbitMQ. Also serves the public `GET /odds` hydrate
-endpoint. It does **not** calculate odds — ingestion + normalisation only.
+Ingests odds from one or more external providers (each on its own asyncio poll
+loop), normalises them into a provider-agnostic common model, persists current
+odds to Postgres, and publishes `OddsUpdatedEvent` / `EventResolvedEvent` (JSON)
+to RabbitMQ. Also serves the public `GET /odds` hydrate endpoint. It does **not**
+calculate odds — ingestion + normalisation only.
+
+### Common model & multi-provider
+
+- `ODDS_PROVIDERS` is a comma-separated list (legacy singular `ODDS_PROVIDER`
+  still honoured). Every enabled provider runs concurrently; events are kept
+  **separate per provider**, never merged.
+- Providers transform their payloads into a `CanonicalEvent` (`odds/models.py`):
+  an event carries N `Market`s, each with N `Selection`s (`key`, `name`, `odds`,
+  optional `point`). This represents many sports/bet types (h2h, totals, …)
+  flexibly. Only the `h2h` market projects onto the 3-way wire contract via
+  `h2h_odds()`; events without h2h are persisted but not emitted.
+- Canonical id is `f"{origin}:{source_event_id}"`. `odds_current.origin` records
+  the producing provider; the `event_source_map` table links the canonical id
+  back to each provider's original ids.
+- **Manual resolution is mock-only.** `POST /odds/{id}/result` returns 409 unless
+  the event's `origin == "mock"` (404 if unknown). Real-provider events are never
+  auto-resolved — this keeps settlement single-sourced.
+- The wire schema (`OddsUpdatedEvent`/`EventResolvedEvent`) stays 3-way and
+  **unchanged**; the flexible model lives entirely inside this service.
 
 ## Layout (`src/`)
 
 - `app.py` — FastAPI app + `lifespan`: opens storage/publisher and spawns the
   background `run()` worker; HTTP request-logging middleware; `/health`.
 - `runner.py` — the poll loop: `fetch_tick` → `storage.record` → `publish`.
-- `providers/` — pluggable `OddsProvider` (`base.py`, `mock.py`,
-  `theoddsapi.py`); selected by `ODDS_PROVIDER` env.
+- `providers/` — pluggable `OddsProvider` (`base.py`, `mock.py`, `theoddsapi.py`,
+  `apifootball.py`; `common.py` holds shared transform helpers); the enabled set
+  is chosen by `ODDS_PROVIDERS`. Each yields `CanonicalEvent`s.
 - `storage/` — pluggable `OddsStorage` (`postgres.py`); selected by
   `ODDS_STORAGE`.
 - `publisher/` — RabbitMQ `OddsPublisher`.

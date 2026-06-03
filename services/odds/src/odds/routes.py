@@ -42,10 +42,18 @@ async def resolve_event(
     publisher: PublisherDep,
 ) -> dict[str, object]:
     current = await storage.get_current(event_id)
-    sport = current.sport if current is not None else ""
+    if current is None:
+        raise HTTPException(status_code=404, detail="event not found")
+    # Manual resolution is restricted to mock-origin events so we never have to
+    # reconcile a real provider's own settlement against ours.
+    if current.origin != "mock":
+        raise HTTPException(
+            status_code=409,
+            detail="manual resolution is only allowed for mock-origin events",
+        )
     result = EventResult(
         event_id=event_id,
-        sport=sport,
+        sport=current.sport,
         outcome=body.outcome,
         resolved_at=int(time.time() * 1000),
     )

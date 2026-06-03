@@ -6,38 +6,81 @@ from typing import Any, AsyncIterator, ClassVar
 
 import aiohttp
 
-from odds.models import OddsEvent
+from odds.models import CanonicalEvent, Market, Selection
 from .base import OddsProvider
+from .common import outcome_for
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_SPORTS = ["soccer_epl", "basketball_nba", "americanfootball_nfl"]
 
 
-def _normalise(raw_event: dict[str, Any], sport: str) -> OddsEvent | None:
+def _h2h_market(outcomes: list[dict[str, Any]], home: str, away: str) -> Market | None:
+    selections: list[Selection] = []
+    for o in outcomes:
+        key = outcome_for(o["name"], home, away)
+        if key is None:
+            continue
+        selections.append(Selection(key=key, name=o["name"], odds=float(o["price"])))
+    if not selections:
+        return None
+    return Market(key="h2h", selections=selections)
+
+
+def _totals_market(outcomes: list[dict[str, Any]]) -> Market | None:
+    selections: list[Selection] = []
+    for o in outcomes:
+        key = o["name"].strip().lower()
+        if key not in ("over", "under"):
+            continue
+        selections.append(
+            Selection(
+                key=key,
+                name=o["name"],
+                odds=float(o["price"]),
+                point=float(o["point"]) if o.get("point") is not None else None,
+            )
+        )
+    if not selections:
+        return None
+    return Market(key="totals", selections=selections)
+
+
+def _normalise(raw_event: dict[str, Any], sport: str) -> CanonicalEvent | None:
     try:
         bookmakers: list[dict[str, Any]] = raw_event.get("bookmakers", [])
         if not bookmakers:
             return None
-        markets: list[dict[str, Any]] = bookmakers[0].get("markets", [])
-        market = next((m for m in markets if m["key"] == "h2h"), None)
-        if market is None:
-            return None
-
-        outcomes: dict[str, float] = {o["name"]: o["price"] for o in market["outcomes"]}
         home: str = raw_event["home_team"]
         away: str = raw_event["away_team"]
-        return OddsEvent(
-            event_id=raw_event["id"],
+        # Take the first bookmaker's markets as representative.
+        raw_markets: list[dict[str, Any]] = bookmakers[0].get("markets", [])
+        markets: list[Market] = []
+        for m in raw_markets:
+            outcomes = m.get("outcomes", [])
+            if m["key"] == "h2h":
+                market = _h2h_market(outcomes, home, away)
+            elif m["key"] == "totals":
+                market = _totals_market(outcomes)
+            else:
+                market = None
+            if market is not None:
+                markets.append(market)
+        if not markets:
+            return None
+
+        source_id: str = raw_event["id"]
+        return CanonicalEvent(
+            event_id=f"theoddsapi:{source_id}",
+            origin="theoddsapi",
+            source_event_id=source_id,
             sport=sport,
             home_team=home,
             away_team=away,
-            home_odds=outcomes.get(home, 0.0),
-            away_odds=outcomes.get(away, 0.0),
-            draw_odds=outcomes.get("Draw", 0.0),
+            markets=markets,
             updated_at=int(time.time() * 1000),
         )
-    except (KeyError, StopIteration):
+    except (KeyError, ValueError):
         return None
 
 
@@ -72,12 +115,13 @@ class TheOddsApiProvider(OddsProvider):
             await self._session.close()
             self._session = None
 
-    async def fetch_tick(self) -> AsyncIterator[OddsEvent]:
+    async def fetch_tick(self) -> AsyncIterator[CanonicalEvent]:
         assert self._session is not None, "fetch_tick called outside async-with"
         for sport in self._sports:
             url = (
                 f"https://api.the-odds-api.com/v4/sports/{sport}/odds/"
-                f"?apiKey={self._api_key}&regions=eu&markets=h2h&oddsFormat=decimal"
+                f"?apiKey={self._api_key}&regions=eu&markets=h2h,totals"
+                f"&oddsFormat=decimal"
             )
             try:
                 async with self._session.get(

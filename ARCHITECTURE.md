@@ -25,7 +25,7 @@ against a shared JSON Schema.
 | Message format   | JSON (validated against shared JSON Schema)     |
 | Primary DB       | PostgreSQL                                      |
 | Financial ledger | TigerBeetle                                     |
-| External data    | The Odds API / SportsDB (free tier)             |
+| External data    | The Odds API + API-Football (pluggable providers)|
 
 ---
 
@@ -94,12 +94,16 @@ frontend has a fan-out point that doesn't depend on Core staying up to keep
 sockets healthy.
 
 ### FastAPI — Odds Service
-Lightweight async service responsible for ingesting odds from an external
-provider. Responsibilities:
-- Runs an `asyncio` polling loop (using `aiohttp`) against the external sports
-  data API
-- Normalises the incoming odds payload into a consistent internal schema
-- Persists current odds to Postgres
+Lightweight async service responsible for ingesting odds from one or more
+external providers. Responsibilities:
+- Runs a concurrent `asyncio` polling loop (using `aiohttp`) per enabled
+  provider (`ODDS_PROVIDERS`); providers run side by side
+- Normalises each provider's payload into a provider-agnostic **common model**
+  (`CanonicalEvent` → `Market`s → `Selection`s) that represents many sports and
+  bet types; events are kept separate per provider, stamped with an `origin`,
+  and linked back to source ids via an `event_source_map` table
+- Persists current odds to Postgres (the flexible model as JSONB, plus the
+  projected 3-way columns the wire/HTTP contract reads)
 - Publishes `OddsUpdatedEvent` messages to the `odds.updated` fanout exchange
 - Serves the public `GET /odds` HTTP endpoint used by the frontend to
   hydrate the live markets board on first paint (live updates after that
@@ -179,9 +183,10 @@ Shared infrastructure, used as the inter-service event bus (see
 
 ## External Dependencies
 
-| Dependency              | Used by      | Purpose                                            |
-|-------------------------|--------------|----------------------------------------------------|
-| The Odds API / SportsDB | Odds Service | Source of truth for all sports odds and event data |
+| Dependency                  | Used by      | Purpose                                            |
+|-----------------------------|--------------|----------------------------------------------------|
+| The Odds API                | Odds Service | Multi-sport odds (h2h, totals) — provider `theoddsapi` |
+| API-Football (api-sports.io)| Odds Service | Football fixtures + rich bet types — provider `apifootball` |
 
 ---
 

@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field
 
-from .models import OddsEvent, Outcome
+from .models import CanonicalEvent, Outcome, h2h_odds
 
 
 class OddsEventResponse(BaseModel):
     model_config = {"populate_by_name": True}
 
     event_id: str = Field(serialization_alias="eventId")
+    origin: str
     sport: str
     home_team: str = Field(serialization_alias="homeTeam")
     away_team: str = Field(serialization_alias="awayTeam")
@@ -18,15 +19,20 @@ class OddsEventResponse(BaseModel):
     resolved_at: int | None = Field(default=None, serialization_alias="resolvedAt")
 
     @classmethod
-    def from_event(cls, event: OddsEvent) -> "OddsEventResponse":
+    def from_event(cls, event: CanonicalEvent) -> "OddsEventResponse":
+        projected = h2h_odds(event)
+        home_odds, away_odds, draw_odds = (
+            projected if projected is not None else (0.0, 0.0, 0.0)
+        )
         return cls(
             event_id=event.event_id,
+            origin=event.origin,
             sport=event.sport,
             home_team=event.home_team,
             away_team=event.away_team,
-            home_odds=event.home_odds,
-            away_odds=event.away_odds,
-            draw_odds=event.draw_odds,
+            home_odds=home_odds,
+            away_odds=away_odds,
+            draw_odds=draw_odds,
             updated_at=event.updated_at,
             outcome=event.outcome,
             resolved_at=event.resolved_at,
