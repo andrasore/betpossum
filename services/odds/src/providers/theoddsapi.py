@@ -4,7 +4,7 @@ import time
 from types import TracebackType
 from typing import Any, AsyncIterator, ClassVar
 
-import aiohttp
+import httpx
 
 from odds.models import CanonicalEvent, Market, Selection
 from .base import OddsProvider
@@ -90,7 +90,7 @@ class TheOddsApiProvider(OddsProvider):
     def __init__(self, api_key: str, sports: list[str]):
         self._api_key = api_key
         self._sports = sports
-        self._session: aiohttp.ClientSession | None = None
+        self._client: httpx.AsyncClient | None = None
 
     @classmethod
     def from_env(cls) -> "TheOddsApiProvider":
@@ -102,7 +102,7 @@ class TheOddsApiProvider(OddsProvider):
         return cls(api_key=api_key, sports=sports)
 
     async def __aenter__(self) -> "TheOddsApiProvider":
-        self._session = aiohttp.ClientSession()
+        self._client = httpx.AsyncClient(timeout=10)
         return self
 
     async def __aexit__(
@@ -111,12 +111,12 @@ class TheOddsApiProvider(OddsProvider):
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        if self._session is not None:
-            await self._session.close()
-            self._session = None
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     async def fetch_tick(self) -> AsyncIterator[CanonicalEvent]:
-        assert self._session is not None, "fetch_tick called outside async-with"
+        assert self._client is not None, "fetch_tick called outside async-with"
         for sport in self._sports:
             url = (
                 f"https://api.the-odds-api.com/v4/sports/{sport}/odds/"
@@ -124,19 +124,17 @@ class TheOddsApiProvider(OddsProvider):
                 f"&oddsFormat=decimal"
             )
             try:
-                async with self._session.get(
-                    url, timeout=aiohttp.ClientTimeout(total=10)
-                ) as resp:
-                    if resp.status != 200:
-                        logger.warning(
-                            "Odds API returned %s for %s", resp.status, sport
-                        )
-                        continue
-                    events: list[dict[str, Any]] = await resp.json()
-                    for raw in events:
-                        event = _normalise(raw, sport)
-                        if event:
-                            yield event
+                resp = await self._client.get(url)
+                if resp.status_code != 200:
+                    logger.warning(
+                        "Odds API returned %s for %s", resp.status_code, sport
+                    )
+                    continue
+                events: list[dict[str, Any]] = resp.json()
+                for raw in events:
+                    event = _normalise(raw, sport)
+                    if event:
+                        yield event
                 logger.info("Polled %d events for %s", len(events), sport)
             except Exception as exc:
                 logger.error("Poll failed for %s: %s", sport, exc)

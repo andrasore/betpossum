@@ -14,7 +14,7 @@ import time
 from types import TracebackType
 from typing import Any, AsyncIterator, ClassVar
 
-import aiohttp
+import httpx
 
 from odds.models import CanonicalEvent, Market, Selection
 from .base import OddsProvider
@@ -79,7 +79,7 @@ class ApiFootballProvider(OddsProvider):
         self._leagues = leagues
         self._season = season
         self._upcoming = upcoming
-        self._session: aiohttp.ClientSession | None = None
+        self._client: httpx.AsyncClient | None = None
 
     @classmethod
     def from_env(cls) -> "ApiFootballProvider":
@@ -95,8 +95,8 @@ class ApiFootballProvider(OddsProvider):
         return cls(api_key=api_key, leagues=leagues, season=season, upcoming=upcoming)
 
     async def __aenter__(self) -> "ApiFootballProvider":
-        self._session = aiohttp.ClientSession(
-            headers={"x-apisports-key": self._api_key}
+        self._client = httpx.AsyncClient(
+            headers={"x-apisports-key": self._api_key}, timeout=10
         )
         return self
 
@@ -106,22 +106,18 @@ class ApiFootballProvider(OddsProvider):
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        if self._session is not None:
-            await self._session.close()
-            self._session = None
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     async def _get(self, path: str, params: dict[str, str]) -> list[dict[str, Any]]:
-        assert self._session is not None, "_get called outside async-with"
-        async with self._session.get(
-            f"{BASE_URL}{path}",
-            params=params,
-            timeout=aiohttp.ClientTimeout(total=10),
-        ) as resp:
-            if resp.status != 200:
-                logger.warning("API-Football %s returned %s", path, resp.status)
-                return []
-            body: dict[str, Any] = await resp.json()
-            return body.get("response", [])
+        assert self._client is not None, "_get called outside async-with"
+        resp = await self._client.get(f"{BASE_URL}{path}", params=params)
+        if resp.status_code != 200:
+            logger.warning("API-Football %s returned %s", path, resp.status_code)
+            return []
+        body: dict[str, Any] = resp.json()
+        return body.get("response", [])
 
     async def fetch_tick(self) -> AsyncIterator[CanonicalEvent]:
         for league in self._leagues:
