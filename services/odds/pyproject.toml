@@ -12,6 +12,8 @@ dependencies = [
   "aiohttp==3.13.5",
   "sqlmodel==0.0.38",
   "sqlalchemy==2.0.50",
+  # asyncpg is the runtime driver for the postgresql+asyncpg:// engine; it is no
+  # longer imported directly but SQLAlchemy loads it by name, so keep it pinned.
   "asyncpg==0.30.0",
   "aio-pika==9.5.5",
   "pydantic==2.13.3",
