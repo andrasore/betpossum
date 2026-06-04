@@ -90,6 +90,21 @@ FIXTURES: list[Fixture] = [
 
 DEFAULT_RESOLVE_TICKS = 3
 
+# Minutes-from-startup kickoff offset per fixture, giving the mock board a
+# spread of commence times (a couple live-soon, the rest over the coming days)
+# so the frontend cards show varied dates. Anchored to provider start so the
+# times are always in the near future regardless of when dev is run.
+COMMENCE_OFFSET_MINUTES = {
+    "epl-001": 180,
+    "epl-002": 1560,
+    "epl-003": 2940,
+    "nba-001": 300,
+    "nba-002": 1680,
+    "nfl-001": 3060,
+    "nfl-002": 4440,
+}
+DEFAULT_COMMENCE_OFFSET_MINUTES = 120
+
 # Total-line per sport for the over/under market.
 TOTAL_POINTS = {
     "soccer_epl": 2.5,
@@ -127,6 +142,7 @@ class MockProvider(OddsProvider):
     ):
         self._fixtures = fixtures
         self._resolve_ticks = resolve_ticks
+        self._started_at = int(time.time() * 1000)
         self._state: dict[str, dict[str, float]] = {}
         self._ticks: dict[str, int] = {}
         self._resolved: set[str] = set()
@@ -138,6 +154,10 @@ class MockProvider(OddsProvider):
             os.environ.get("MOCK_RESOLVE_TICKS", str(DEFAULT_RESOLVE_TICKS))
         )
         return cls(resolve_ticks=resolve_ticks)
+
+    def _commence_time(self, event_id: str) -> int:
+        offset = COMMENCE_OFFSET_MINUTES.get(event_id, DEFAULT_COMMENCE_OFFSET_MINUTES)
+        return self._started_at + offset * 60_000
 
     def _markets(self, sport: str, state: dict[str, float]) -> list[Market]:
         has_draw = _has_draw(sport)
@@ -190,6 +210,7 @@ class MockProvider(OddsProvider):
                 away_team=fixture["away_team"],
                 markets=self._markets(fixture["sport"], s),
                 updated_at=int(time.time() * 1000),
+                commence_time=self._commence_time(sid),
                 league_key=fixture["sport"],
                 league_name=fixture["league"],
                 country=fixture["country"],

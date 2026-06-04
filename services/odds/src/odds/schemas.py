@@ -15,6 +15,7 @@ class OddsEventResponse(BaseModel):
     away_odds: float = Field(serialization_alias="awayOdds")
     draw_odds: float = Field(serialization_alias="drawOdds")
     updated_at: int = Field(serialization_alias="updatedAt")
+    commence_time: int | None = Field(default=None, serialization_alias="commenceTime")
     outcome: Outcome | None = None
     resolved_at: int | None = Field(default=None, serialization_alias="resolvedAt")
     # Canonical display names from the entity join; None when the event's
@@ -41,6 +42,7 @@ class OddsEventResponse(BaseModel):
             away_odds=away_odds,
             draw_odds=draw_odds,
             updated_at=event.updated_at,
+            commence_time=event.commence_time,
             outcome=event.outcome,
             resolved_at=event.resolved_at,
             sport_name=event.sport_title,

@@ -12,6 +12,9 @@ export const OddsEventSchema = z.object({
   awayOdds: z.number().positive(),
   drawOdds: z.number().nonnegative().default(0),
   updatedAt: z.number().int().positive(),
+  // Scheduled kickoff (Unix ms); null/absent when the provider doesn't supply
+  // one. Hydrate-only — live ticks don't carry it.
+  commenceTime: z.number().int().positive().nullish(),
   outcome: OutcomeSchema.nullable().optional(),
   resolvedAt: z.number().int().positive().nullable().optional(),
   origin: z.string(),

@@ -11,6 +11,18 @@ interface Props {
 
 const SKELETON_PLACEHOLDER_COUNT = 8;
 
+const commenceFormatter = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+function formatCommenceTime(ms: number): string {
+  return commenceFormatter.format(new Date(ms));
+}
+
 export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
   return (
     <Grid columns="repeat(auto-fill, 200px)" gap="3">
@@ -40,6 +52,9 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
                 </Text>
               </Skeleton>
             </Flex>
+            <Skeleton width="50%" mt="3">
+              <Text size="1">Kickoff time</Text>
+            </Skeleton>
           </Card>
         ))}
       {events.map((e) => {
@@ -73,17 +88,24 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
                 </Badge>
               )}
             </Flex>
-            <Flex direction="column" gap="1">
-              <Text size="2" weight="medium">
-                {e.homeTeamName ?? e.homeTeam}
+            <Card>
+              <Flex direction="column" gap="1">
+                <Text size="2" weight="medium" align="left">
+                  {e.homeTeamName ?? e.homeTeam}
+                </Text>
+                <Text size="1" color="gray" align="center">
+                  vs
+                </Text>
+                <Text size="2" weight="medium" align="right">
+                  {e.awayTeamName ?? e.awayTeam}
+                </Text>
+              </Flex>
+            </Card>
+            {e.commenceTime != null && (
+              <Text as="div" size="1" color="gray" mt="4">
+                {formatCommenceTime(e.commenceTime)}
               </Text>
-              <Text size="1" color="gray">
-                vs
-              </Text>
-              <Text size="2" weight="medium">
-                {e.awayTeamName ?? e.awayTeam}
-              </Text>
-            </Flex>
+            )}
           </Card>
         );
       })}
