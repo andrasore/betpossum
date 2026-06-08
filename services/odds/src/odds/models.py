@@ -75,6 +75,17 @@ class CanonicalEvent(BaseModel):
         return next((m for m in self.markets if m.key == key), None)
 
 
+class CanonicalSport(BaseModel):
+    """A canonical sport: its stable slug and human-readable title.
+
+    `slug` is what GET /odds filters on (`?sport=<slug>`, matched against
+    `odds_current.sport_slug`); `title` is the display label.
+    """
+
+    slug: str
+    title: str
+
+
 class EventResult(BaseModel):
     event_id: str
     sport: str

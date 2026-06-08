@@ -28,3 +28,12 @@ export const OddsEventSchema = z.object({
 });
 
 export type OddsEvent = z.infer<typeof OddsEventSchema>;
+
+// A canonical sport for the dashboard filter bar: `slug` is what GET /odds
+// filters on (`?sport=<slug>`); `name` is the chip label.
+export const SportSchema = z.object({
+  slug: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export type Sport = z.infer<typeof SportSchema>;

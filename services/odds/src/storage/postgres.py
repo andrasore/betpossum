@@ -12,7 +12,14 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import Column, Field, SQLModel, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from odds.models import CanonicalEvent, EventResult, Market, Outcome, h2h_odds
+from odds.models import (
+    CanonicalEvent,
+    CanonicalSport,
+    EventResult,
+    Market,
+    Outcome,
+    h2h_odds,
+)
 from odds.normalize import (
     league_match_key,
     slugify_sport,
@@ -574,7 +581,9 @@ class PostgresStorage(OddsStorage):
         assert self._session is not None, "list_current called outside async-with"
         stmt = select(OddsCurrent).order_by(col(OddsCurrent.updated_at).desc())
         if sport is not None:
-            stmt = stmt.where(col(OddsCurrent.sport) == sport)
+            # Filter on the canonical sport slug (what GET /odds/sports exposes),
+            # not the raw provider label, so one chip spans every provider league.
+            stmt = stmt.where(col(OddsCurrent.sport_slug) == sport)
         async with self._session() as session:
             rows = (await session.exec(stmt)).all()
             return await self._hydrate_names(session, rows)
@@ -588,3 +597,13 @@ class PostgresStorage(OddsStorage):
                 return None
             events = await self._hydrate_names(session, [row])
         return events[0]
+
+    async def list_sports(self) -> list[CanonicalSport]:
+        assert self._session is not None, "list_sports called outside async-with"
+        # The canonical `sport` table is already de-duplicated across providers,
+        # so it's the right source for the filter chips (it also lists sports
+        # that have no current events).
+        stmt = select(Sport).order_by(col(Sport.title))
+        async with self._session() as session:
+            rows = (await session.exec(stmt)).all()
+        return [CanonicalSport(slug=s.slug, title=s.title) for s in rows]

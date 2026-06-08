@@ -5,10 +5,12 @@ import { useState } from "react";
 import { BetSlip } from "@/components/BetSlip";
 import { Navbar } from "@/components/Navbar";
 import { OddsBoard } from "@/components/OddsBoard";
+import { SportFilterBar } from "@/components/SportFilterBar";
 import { useBalance } from "@/hooks/useBalance";
 import { useBets } from "@/hooks/useBets";
 import { useInsufficientBalanceToast } from "@/hooks/useInsufficientBalanceToast";
 import { useOdds } from "@/hooks/useOdds";
+import { useSports } from "@/hooks/useSports";
 import { useAuth } from "@/lib/auth-context";
 import type { Bet, OddsEvent } from "@/types";
 
@@ -26,9 +28,11 @@ const statusColor: Record<Bet["status"], "green" | "red" | "gray" | "yellow"> =
 export default function DashboardPage() {
   const { isAuthenticated, accessToken, login } = useAuth();
   const [selection, setSelection] = useState<Selection>(null);
+  const [selectedSport, setSelectedSport] = useState<string | null>(null);
 
   const sessionKey = accessToken;
-  const odds = useOdds(isAuthenticated);
+  const sports = useSports();
+  const odds = useOdds(isAuthenticated, selectedSport ?? undefined);
   const { data: bets, mutate } = useBets(sessionKey);
   const balance = useBalance(sessionKey);
   useInsufficientBalanceToast(sessionKey);
@@ -42,6 +46,11 @@ export default function DashboardPage() {
             <Heading as="h2" size="4" mb="4">
               Live Markets
             </Heading>
+            <SportFilterBar
+              sports={sports}
+              selected={selectedSport}
+              onSelect={setSelectedSport}
+            />
             <OddsBoard
               events={odds}
               selectedEventId={selection?.event.eventId ?? null}

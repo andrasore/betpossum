@@ -5,9 +5,8 @@
   },
   "linter": {
     "rules": {
-      // This breaks nestjs' import system
       "style": {
-        "useImportType": "off",
+        "useImportType": "off", // This breaks nestjs' import system
         "useBlockStatements": "error"
       }
     }

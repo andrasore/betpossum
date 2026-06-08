@@ -7,7 +7,12 @@ from publisher.dependencies import PublisherDep
 from storage.dependencies import StorageDep
 
 from .models import EventResult
-from .schemas import OddsEventResponse, ResolveEventRequest, ResolveEventResponse
+from .schemas import (
+    OddsEventResponse,
+    ResolveEventRequest,
+    ResolveEventResponse,
+    SportResponse,
+)
 
 router = APIRouter(prefix="/odds", tags=["odds"])
 
@@ -18,6 +23,13 @@ async def list_odds(
 ) -> list[dict[str, object]]:
     events = await storage.list_current(sport)
     return [OddsEventResponse.from_event(e).model_dump(by_alias=True) for e in events]
+
+
+# Declared before `/{event_id}` so "sports" isn't captured as an event id.
+@router.get("/sports")
+async def list_sports(storage: StorageDep) -> list[dict[str, object]]:
+    sports = await storage.list_sports()
+    return [SportResponse.from_sport(s).model_dump(by_alias=True) for s in sports]
 
 
 @router.get("/{event_id}")

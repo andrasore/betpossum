@@ -1,6 +1,6 @@
 import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
 import { getAccessToken, refresh } from "./auth";
-import type { Outcome } from "./schemas";
+import type { Outcome, Sport } from "./schemas";
 
 async function authedFetch(url: string, init?: RequestInit): Promise<Response> {
   const token = getAccessToken();
@@ -46,10 +46,19 @@ export async function fetchBets(): Promise<Bet[]> {
   return res.json();
 }
 
-export async function fetchOdds(): Promise<OddsEvent[]> {
-  const res = await fetch("/odds");
+export async function fetchOdds(sport?: string): Promise<OddsEvent[]> {
+  const query = sport ? `?sport=${encodeURIComponent(sport)}` : "";
+  const res = await fetch(`/odds${query}`);
   if (!res.ok) {
     throw new Error("Failed to fetch odds");
+  }
+  return res.json();
+}
+
+export async function fetchSports(): Promise<Sport[]> {
+  const res = await fetch("/odds/sports");
+  if (!res.ok) {
+    throw new Error("Failed to fetch sports");
   }
   return res.json();
 }

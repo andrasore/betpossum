@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from .models import CanonicalEvent, Outcome, h2h_odds
+from .models import CanonicalEvent, CanonicalSport, Outcome, h2h_odds
 
 
 class OddsEventResponse(BaseModel):
@@ -50,6 +50,17 @@ class OddsEventResponse(BaseModel):
             home_team_name=event.home_team_name,
             away_team_name=event.away_team_name,
         )
+
+
+class SportResponse(BaseModel):
+    model_config = {"populate_by_name": True}
+
+    slug: str
+    name: str
+
+    @classmethod
+    def from_sport(cls, sport: CanonicalSport) -> "SportResponse":
+        return cls(slug=sport.slug, name=sport.title)
 
 
 class ResolveEventRequest(BaseModel):

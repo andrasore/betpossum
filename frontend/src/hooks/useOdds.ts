@@ -8,14 +8,15 @@ import { getSocket } from "@/lib/websocket";
 import type { OddsEvent } from "@/types";
 
 // REST hydrate is public; the live-update socket still requires a session,
-// so we only subscribe when logged in.
-export function useOdds(loggedIn: boolean) {
+// so we only subscribe when logged in. `sport` is the canonical slug to filter
+// by (undefined = all sports); changing it re-hydrates from the server.
+export function useOdds(loggedIn: boolean, sport?: string) {
   const [odds, setOdds] = useState<Map<string, OddsEvent>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
 
-    fetchOdds()
+    fetchOdds(sport)
       .then((events) => {
         if (cancelled) {
           return;
@@ -60,7 +61,7 @@ export function useOdds(loggedIn: boolean) {
       cancelled = true;
       socket.off("odds.updated");
     };
-  }, [loggedIn]);
+  }, [loggedIn, sport]);
 
   return Array.from(odds.values());
 }

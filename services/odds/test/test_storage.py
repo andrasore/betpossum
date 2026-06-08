@@ -122,9 +122,26 @@ async def test_list_current_orders_by_updated_desc_and_filters_sport(
         "mock:c",
         "mock:a",
     ]
-    assert [e.event_id for e in await storage.list_current("soccer_epl")] == [
+    # Filtering is by canonical sport slug (soccer_epl -> "soccer"), so both
+    # soccer events match while the basketball one is excluded.
+    assert [e.event_id for e in await storage.list_current("soccer")] == [
         "mock:b",
         "mock:a",
+    ]
+
+
+async def test_list_sports_returns_deduped_canonical_sports(
+    storage: PostgresStorage,
+) -> None:
+    await storage.record(_event("mock:a", sport="soccer_epl", updated_at=100))
+    await storage.record(_event("mock:b", sport="soccer_laliga", updated_at=200))
+    await storage.record(_event("mock:c", sport="basketball_nba", updated_at=300))
+
+    sports = await storage.list_sports()
+    # Both soccer leagues collapse onto one canonical "soccer"; ordered by title.
+    assert [(s.slug, s.title) for s in sports] == [
+        ("basketball", "Basketball"),
+        ("soccer", "Soccer"),
     ]
 
 
