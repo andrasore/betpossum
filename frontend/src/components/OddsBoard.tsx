@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge, Card, Flex, Grid, Skeleton, Text } from "@radix-ui/themes";
+import { sportColor } from "@/lib/sportColor";
 import type { OddsEvent } from "@/types";
 
 interface Props {
@@ -78,12 +79,13 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
             <Flex direction="column" align="start" gap="1" mb="3">
               <Badge
                 size="1"
+                color={sportColor(e.sport)}
                 style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}
               >
                 {e.sportName ?? e.sport}
               </Badge>
               {e.leagueName && (
-                <Badge size="1" color="gray" variant="soft">
+                <Badge size="1" color={sportColor(e.sport)} variant="soft">
                   {e.leagueName}
                 </Badge>
               )}

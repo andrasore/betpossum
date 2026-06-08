@@ -2,6 +2,7 @@
 
 import { Button, Flex } from "@radix-ui/themes";
 import type { Sport } from "@/lib/schemas";
+import { type AccentColor, sportColor } from "@/lib/sportColor";
 
 type SportFilterBarProps = {
   sports: Sport[];
@@ -36,6 +37,7 @@ export function SportFilterBar({
           label={sport.name}
           active={selected === sport.slug}
           onClick={() => onSelect(sport.slug)}
+          color={sportColor(sport.slug)}
           testId={`sport-chip-${sport.slug}`}
         />
       ))}
@@ -47,17 +49,20 @@ type ChipProps = {
   label: string;
   active: boolean;
   onClick: () => void;
+  // The sport's stable color, tinted when inactive and filled when active.
+  // Omitted for the neutral "All" chip, which falls back to gray.
+  color?: AccentColor;
   testId: string;
 };
 
-function Chip({ label, active, onClick, testId }: ChipProps) {
+function Chip({ label, active, onClick, color, testId }: ChipProps) {
   return (
     <Button
       type="button"
       size="1"
       radius="full"
       variant={active ? "solid" : "soft"}
-      color={active ? undefined : "gray"}
+      color={color ?? "gray"}
       onClick={onClick}
       aria-pressed={active}
       data-testid={testId}

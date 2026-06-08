@@ -26,7 +26,14 @@ export function Navbar({ balance }: NavbarProps) {
         <Link href="/dashboard">
           <Flex align="center" gap="3">
             <Image src="/possum.png" alt="" width={90} height={48} priority />
-            <Text size="5" weight="bold" style={{ letterSpacing: "-0.02em" }}>
+            <Text
+              size="7"
+              weight="bold"
+              style={{
+                fontFamily: "var(--font-display), system-ui, sans-serif",
+                letterSpacing: "-0.02em",
+              }}
+            >
               BetPossum
             </Text>
           </Flex>
