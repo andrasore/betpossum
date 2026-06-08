@@ -3,12 +3,14 @@
 import { Badge, Box, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import { useState } from "react";
 import { BetSlip } from "@/components/BetSlip";
+import { LeagueFilterBar } from "@/components/LeagueFilterBar";
 import { Navbar } from "@/components/Navbar";
 import { OddsBoard } from "@/components/OddsBoard";
 import { SportFilterBar } from "@/components/SportFilterBar";
 import { useBalance } from "@/hooks/useBalance";
 import { useBets } from "@/hooks/useBets";
 import { useInsufficientBalanceToast } from "@/hooks/useInsufficientBalanceToast";
+import { useLeagues } from "@/hooks/useLeagues";
 import { useOdds } from "@/hooks/useOdds";
 import { useSports } from "@/hooks/useSports";
 import { useAuth } from "@/lib/auth-context";
@@ -29,10 +31,16 @@ export default function DashboardPage() {
   const { isAuthenticated, accessToken, login } = useAuth();
   const [selection, setSelection] = useState<Selection>(null);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [selectedLeague, setSelectedLeague] = useState<number | null>(null);
 
   const sessionKey = accessToken;
   const sports = useSports();
-  const odds = useOdds(isAuthenticated, selectedSport ?? undefined);
+  const leagues = useLeagues(selectedSport ?? undefined);
+  const odds = useOdds(
+    isAuthenticated,
+    selectedSport ?? undefined,
+    selectedLeague ?? undefined,
+  );
   const { data: bets, mutate } = useBets(sessionKey);
   const balance = useBalance(sessionKey);
   useInsufficientBalanceToast(sessionKey);
@@ -49,7 +57,27 @@ export default function DashboardPage() {
             <SportFilterBar
               sports={sports}
               selected={selectedSport}
-              onSelect={setSelectedSport}
+              onSelect={(slug) => {
+                // Changing the sport clears the league: the prior league
+                // belongs to a different sport, so it can't stay selected.
+                setSelectedSport(slug);
+                setSelectedLeague(null);
+              }}
+            />
+            <LeagueFilterBar
+              leagues={leagues}
+              selected={selectedLeague}
+              onSelect={(league) => {
+                if (league === null) {
+                  setSelectedLeague(null);
+                  return;
+                }
+                // A league belongs to exactly one sport — auto-select its
+                // parent sport so the two bars stay consistent (the league bar
+                // then re-scopes to that sport with this chip still active).
+                setSelectedLeague(league.id);
+                setSelectedSport(league.sportSlug);
+              }}
             />
             <OddsBoard
               events={odds}

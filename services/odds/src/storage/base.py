@@ -7,7 +7,12 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     # Only needed for the abstract signatures below; importing at runtime would
     # create a storage -> odds -> routes -> storage.dependencies import cycle.
-    from odds.models import CanonicalEvent, CanonicalSport, EventResult
+    from odds.models import (
+        CanonicalEvent,
+        CanonicalLeague,
+        CanonicalSport,
+        EventResult,
+    )
 
 
 class OddsStorage(ABC):
@@ -38,10 +43,15 @@ class OddsStorage(ABC):
     async def record_result(self, result: EventResult) -> None: ...
 
     @abstractmethod
-    async def list_current(self, sport: str | None = None) -> list[CanonicalEvent]: ...
+    async def list_current(
+        self, sport: str | None = None, league: int | None = None
+    ) -> list[CanonicalEvent]: ...
 
     @abstractmethod
     async def get_current(self, event_id: str) -> CanonicalEvent | None: ...
 
     @abstractmethod
     async def list_sports(self) -> list[CanonicalSport]: ...
+
+    @abstractmethod
+    async def list_leagues(self, sport: str | None = None) -> list[CanonicalLeague]: ...

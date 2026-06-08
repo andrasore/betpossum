@@ -14,6 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from odds.models import (
     CanonicalEvent,
+    CanonicalLeague,
     CanonicalSport,
     EventResult,
     Market,
@@ -237,6 +238,7 @@ def _to_event(
         resolved_at=row.resolved_at,
         # Canonical display names from the entity join (None when unlinked).
         sport_title=sport_title,
+        league_id=row.league_id,
         league_name=league_name,
         home_team_name=home_team_name,
         away_team_name=away_team_name,
@@ -577,13 +579,20 @@ class PostgresStorage(OddsStorage):
             for r in rows
         ]
 
-    async def list_current(self, sport: str | None = None) -> list[CanonicalEvent]:
+    async def list_current(
+        self, sport: str | None = None, league: int | None = None
+    ) -> list[CanonicalEvent]:
         assert self._session is not None, "list_current called outside async-with"
         stmt = select(OddsCurrent).order_by(col(OddsCurrent.updated_at).desc())
         if sport is not None:
             # Filter on the canonical sport slug (what GET /odds/sports exposes),
             # not the raw provider label, so one chip spans every provider league.
             stmt = stmt.where(col(OddsCurrent.sport_slug) == sport)
+        if league is not None:
+            # The canonical league id (GET /odds/leagues) is globally unique, so
+            # it pins the league on its own — the sport filter above is redundant
+            # but kept (the UI sends both since a league implies its sport).
+            stmt = stmt.where(col(OddsCurrent.league_id) == league)
         async with self._session() as session:
             rows = (await session.exec(stmt)).all()
             return await self._hydrate_names(session, rows)
@@ -607,3 +616,19 @@ class PostgresStorage(OddsStorage):
         async with self._session() as session:
             rows = (await session.exec(stmt)).all()
         return [CanonicalSport(slug=s.slug, title=s.title) for s in rows]
+
+    async def list_leagues(self, sport: str | None = None) -> list[CanonicalLeague]:
+        assert self._session is not None, "list_leagues called outside async-with"
+        # The canonical `league` table is de-duplicated across providers, like
+        # `sport`. Optionally scoped to one sport (the league bar shows the
+        # selected sport's leagues; unscoped lists every sport's leagues).
+        stmt = select(League).order_by(col(League.name))
+        if sport is not None:
+            stmt = stmt.where(col(League.sport_slug) == sport)
+        async with self._session() as session:
+            rows = (await session.exec(stmt)).all()
+        return [
+            CanonicalLeague(id=lg.id, name=lg.name, sport_slug=lg.sport_slug)
+            for lg in rows
+            if lg.id is not None
+        ]

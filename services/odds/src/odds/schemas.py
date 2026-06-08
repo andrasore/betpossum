@@ -1,6 +1,12 @@
 from pydantic import BaseModel, Field
 
-from .models import CanonicalEvent, CanonicalSport, Outcome, h2h_odds
+from .models import (
+    CanonicalEvent,
+    CanonicalLeague,
+    CanonicalSport,
+    Outcome,
+    h2h_odds,
+)
 
 
 class OddsEventResponse(BaseModel):
@@ -22,6 +28,7 @@ class OddsEventResponse(BaseModel):
     # sport/league/team link is unresolved (the frontend falls back to the raw
     # sport/home_team/away_team above).
     sport_name: str | None = Field(default=None, serialization_alias="sportName")
+    league_id: int | None = Field(default=None, serialization_alias="leagueId")
     league_name: str | None = Field(default=None, serialization_alias="leagueName")
     home_team_name: str | None = Field(default=None, serialization_alias="homeTeamName")
     away_team_name: str | None = Field(default=None, serialization_alias="awayTeamName")
@@ -46,6 +53,7 @@ class OddsEventResponse(BaseModel):
             outcome=event.outcome,
             resolved_at=event.resolved_at,
             sport_name=event.sport_title,
+            league_id=event.league_id,
             league_name=event.league_name,
             home_team_name=event.home_team_name,
             away_team_name=event.away_team_name,
@@ -61,6 +69,18 @@ class SportResponse(BaseModel):
     @classmethod
     def from_sport(cls, sport: CanonicalSport) -> "SportResponse":
         return cls(slug=sport.slug, name=sport.title)
+
+
+class LeagueResponse(BaseModel):
+    model_config = {"populate_by_name": True}
+
+    id: int
+    name: str
+    sport_slug: str = Field(serialization_alias="sportSlug")
+
+    @classmethod
+    def from_league(cls, league: CanonicalLeague) -> "LeagueResponse":
+        return cls(id=league.id, name=league.name, sport_slug=league.sport_slug)
 
 
 class ResolveEventRequest(BaseModel):

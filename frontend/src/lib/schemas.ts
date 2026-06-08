@@ -22,6 +22,9 @@ export const OddsEventSchema = z.object({
   // null/absent when an entity link is unresolved (UI falls back to the raw
   // sport/homeTeam/awayTeam above). Hydrate-only — live ticks don't carry them.
   sportName: z.string().nullish(),
+  // Canonical league id (what GET /odds filters on, `?league=<id>`); null/absent
+  // when the league link is unresolved.
+  leagueId: z.number().int().positive().nullish(),
   leagueName: z.string().nullish(),
   homeTeamName: z.string().nullish(),
   awayTeamName: z.string().nullish(),
@@ -37,3 +40,15 @@ export const SportSchema = z.object({
 });
 
 export type Sport = z.infer<typeof SportSchema>;
+
+// A canonical league for the dashboard's league filter bar: `id` is what GET
+// /odds filters on (`?league=<id>`); `name` is the chip label. `sportSlug` ties
+// the league to its parent sport (a league belongs to exactly one sport), which
+// the dashboard uses to auto-select the sport chip when a league is picked.
+export const LeagueSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().min(1),
+  sportSlug: z.string().min(1),
+});
+
+export type League = z.infer<typeof LeagueSchema>;
