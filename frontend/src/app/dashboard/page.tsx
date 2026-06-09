@@ -5,9 +5,9 @@ import { useState } from "react";
 import { BetSlipDrawer } from "@/components/BetSlipDrawer";
 import { Leaderboard } from "@/components/Leaderboard";
 import { LeagueFilterBar } from "@/components/LeagueFilterBar";
-import { MyBets } from "@/components/MyBets";
 import { Navbar } from "@/components/Navbar";
 import { OddsBoard } from "@/components/OddsBoard";
+import { RecentBets } from "@/components/RecentBets";
 import { SportFilterBar } from "@/components/SportFilterBar";
 import { useBalance } from "@/hooks/useBalance";
 import { useBets } from "@/hooks/useBets";
@@ -100,7 +100,7 @@ export default function DashboardPage() {
           <aside>
             <Flex direction="column" gap="6">
               <Leaderboard />
-              {isAuthenticated && bets && <MyBets bets={bets} />}
+              {isAuthenticated && bets && <RecentBets bets={bets} />}
             </Flex>
           </aside>
         </Box>

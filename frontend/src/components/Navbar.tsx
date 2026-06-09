@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Flex, Text } from "@radix-ui/themes";
-import { LogIn, LogOut, Shield } from "lucide-react";
+import { ListChecks, LogIn, LogOut, Shield } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -44,6 +44,14 @@ export function Navbar({ balance }: NavbarProps) {
               Balance: £{balance.toFixed(2)}
             </Text>
           )}
+          {isAuthenticated && (
+            <Button asChild variant="ghost" size="2" data-testid="my-bets-link">
+              <Link href="/my-bets">
+                <ListChecks size={16} />
+                My Bets
+              </Link>
+            </Button>
+          )}
           {isAdmin && (
             <Button asChild variant="ghost" size="2" data-testid="admin-link">
               <Link href="/admin">
@@ -64,6 +72,7 @@ export function Navbar({ balance }: NavbarProps) {
             </Button>
           ) : (
             <Button
+              variant="ghost"
               size="2"
               onClick={() => login("/dashboard")}
               data-testid="login-button"
