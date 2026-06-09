@@ -33,10 +33,14 @@ services:
 
   tigerbeetle:
     image: ghcr.io/tigerbeetle/tigerbeetle:0.17.3
+    # Enable the builtin init script "tini" bc SIGTERM handling is not implemented in TigerBeetle
+    # Required for graceful shutdown
+    # https://github.com/tigerbeetle/tigerbeetle/issues/136
+    init: true
     entrypoint: ["/bin/sh", "-c"]
     command: >
       "/tigerbeetle format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle 2>/dev/null || true &&
-       /tigerbeetle start --addresses=0.0.0.0:6000 /data/0_0.tigerbeetle"
+       exec /tigerbeetle start --addresses=0.0.0.0:6000 /data/0_0.tigerbeetle"
     volumes:
       - tigerbeetle_data:/data
     ports:
