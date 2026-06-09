@@ -77,6 +77,11 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
             }}
           >
             <Flex direction="column" align="start" gap="1" mb="3">
+              {e.leagueName && (
+                <Badge size="3" color={sportColor(e.sport)} variant="soft">
+                  {e.leagueName}
+                </Badge>
+              )}
               <Badge
                 size="1"
                 color={sportColor(e.sport)}
@@ -84,11 +89,6 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
               >
                 {e.sportName ?? e.sport}
               </Badge>
-              {e.leagueName && (
-                <Badge size="1" color={sportColor(e.sport)} variant="soft">
-                  {e.leagueName}
-                </Badge>
-              )}
             </Flex>
             <Card>
               <Flex direction="column" gap="1">

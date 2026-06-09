@@ -2,7 +2,7 @@
 
 import { Badge, Box, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import { useState } from "react";
-import { BetSlip } from "@/components/BetSlip";
+import { BetSlipDrawer } from "@/components/BetSlipDrawer";
 import { LeagueFilterBar } from "@/components/LeagueFilterBar";
 import { Navbar } from "@/components/Navbar";
 import { OddsBoard } from "@/components/OddsBoard";
@@ -124,33 +124,22 @@ export default function DashboardPage() {
             )}
           </main>
         </Box>
-
-        <Box
-          asChild
-          width="600px"
-          p="4"
-          style={{
-            borderLeft: "1px solid var(--gray-a5)",
-            overflowY: "auto",
-          }}
-        >
-          <aside>
-            <BetSlip
-              selection={selection}
-              loggedIn={isAuthenticated}
-              balance={balance}
-              onChoiceChange={(choice) =>
-                setSelection((s) => (s ? { ...s, choice } : s))
-              }
-              onPlaced={() => {
-                setSelection(null);
-                mutate();
-              }}
-              onLogin={() => login("/dashboard")}
-            />
-          </aside>
-        </Box>
       </Flex>
+
+      <BetSlipDrawer
+        selection={selection}
+        loggedIn={isAuthenticated}
+        balance={balance}
+        onChoiceChange={(choice) =>
+          setSelection((s) => (s ? { ...s, choice } : s))
+        }
+        onPlaced={() => {
+          setSelection(null);
+          mutate();
+        }}
+        onLogin={() => login("/dashboard")}
+        onClose={() => setSelection(null)}
+      />
     </Flex>
   );
 }
