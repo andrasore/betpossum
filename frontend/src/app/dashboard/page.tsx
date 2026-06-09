@@ -11,6 +11,7 @@ import { RecentBets } from "@/components/RecentBets";
 import { SportFilterBar } from "@/components/SportFilterBar";
 import { useBalance } from "@/hooks/useBalance";
 import { useBets } from "@/hooks/useBets";
+import { useDashboardFilters } from "@/hooks/useDashboardFilters";
 import { useInsufficientBalanceToast } from "@/hooks/useInsufficientBalanceToast";
 import { useLeagues } from "@/hooks/useLeagues";
 import { useOdds } from "@/hooks/useOdds";
@@ -24,8 +25,8 @@ type Selection = { event: OddsEvent; choice: Choice } | null;
 export default function DashboardPage() {
   const { isAuthenticated, accessToken, login } = useAuth();
   const [selection, setSelection] = useState<Selection>(null);
-  const [selectedSport, setSelectedSport] = useState<string | null>(null);
-  const [selectedLeague, setSelectedLeague] = useState<number | null>(null);
+  const { selectedSport, selectedLeague, selectSport, selectLeague } =
+    useDashboardFilters();
 
   const sessionKey = accessToken;
   const sports = useSports();
@@ -51,27 +52,12 @@ export default function DashboardPage() {
             <SportFilterBar
               sports={sports}
               selected={selectedSport}
-              onSelect={(slug) => {
-                // Changing the sport clears the league: the prior league
-                // belongs to a different sport, so it can't stay selected.
-                setSelectedSport(slug);
-                setSelectedLeague(null);
-              }}
+              onSelect={selectSport}
             />
             <LeagueFilterBar
               leagues={leagues}
               selected={selectedLeague}
-              onSelect={(league) => {
-                if (league === null) {
-                  setSelectedLeague(null);
-                  return;
-                }
-                // A league belongs to exactly one sport — auto-select its
-                // parent sport so the two bars stay consistent (the league bar
-                // then re-scopes to that sport with this chip still active).
-                setSelectedLeague(league.id);
-                setSelectedSport(league.sportSlug);
-              }}
+              onSelect={selectLeague}
             />
             <OddsBoard
               events={odds}

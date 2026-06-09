@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 // The dashboard league filter bar, driven anonymously (public — no auth, no
-// socket). It sits under the sport bar. Selecting a league re-hydrates GET
-// /odds?sport=<slug>&league=<id> server-side, and — because a league belongs to
-// exactly one sport — also auto-selects that league's parent sport chip.
+// socket). It sits under the sport bar. This spec covers the integration
+// boundary: selecting a league re-hydrates GET /odds?sport=<slug>&league=<id>
+// server-side, and switching the sport re-scopes the league bar to that sport's
+// leagues (a server fetch). The pure client auto-sync of the chips' pressed
+// state is covered by useDashboardFilters.test.ts.
 //
 // League ids are autoincrement (not deterministic), so we locate league chips
 // by their visible text. The mock provider seeds three canonical leagues:
@@ -27,11 +29,7 @@ test("anonymous visitor filters by league and the sport bar auto-syncs", async (
     timeout: 15_000,
   });
 
-  // "All" sports initially: every seeded league has a chip, and "All" is pressed.
-  await expect(page.getByTestId("league-chip-all")).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  // "All" sports initially: every seeded league has a chip.
   const nbaChip = page.getByRole("button", { name: "NBA", exact: true });
   await expect(nbaChip).toBeVisible();
   await expect(
@@ -48,24 +46,10 @@ test("anonymous visitor filters by league and the sport bar auto-syncs", async (
   await expect(page.locator(soccerCards)).toHaveCount(0);
   await expect(page.locator(footballCards)).toHaveCount(0);
 
-  // Auto-sync: picking the NBA league lights up the Basketball sport chip and
-  // clears the league "All" chip.
-  await expect(page.getByTestId("sport-chip-basketball")).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(page.getByTestId("league-chip-all")).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
-
-  // Changing the sport resets the league back to "All", and the league bar
-  // re-scopes to the new sport's leagues (Premier League for soccer).
+  // Changing the sport re-scopes the league bar to the new sport's leagues
+  // (Premier League for soccer) — a server-side fetch — and re-hydrates the
+  // board to soccer fixtures.
   await page.getByTestId("sport-chip-soccer").click();
-  await expect(page.getByTestId("league-chip-all")).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
   await expect(
     page.getByRole("button", { name: "Premier League", exact: true }),
   ).toBeVisible();

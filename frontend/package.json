@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "schema:gen": "mkdir -p ./src/generated && node ../tools/gen-zod.mjs ./src/generated/events.ts",
     "lint": "pnpx @biomejs/biome check",
     "lint:fix": "pnpx @biomejs/biome check --write --unsafe"
@@ -26,9 +28,15 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^6.0.3"
+    "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "^29.1.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }

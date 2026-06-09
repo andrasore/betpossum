@@ -22,11 +22,17 @@ test("anonymous /my-bets is gated behind sign-in, not broken", async ({
   await ctx.close();
 });
 
-// Bob is both an admin and the bettor here: he funds himself, places the bets,
+// Bob is both an admin and the bettor here: he funds himself, places the bet,
 // and resolves the event. Using bob (whom no other spec places bets for) keeps
 // this test independent of leftover state — alice carries a settled bet from the
 // happy-path spec, so her bet counts aren't deterministic across the run.
-test("recent bets caps at 5, deep-links into the enriched My Bets table, and settles", async ({
+//
+// This spec covers the cross-service integration: a placed bet shows in the
+// dashboard's Recent Bets, deep-links into the My Bets page, and settles to
+// "Won" via the settlement socket. The pure rendering — the 5-row Recent Bets
+// cap, the uncapped table, and the odds-join enrichment — is covered by
+// RecentBets.test.tsx and BetsTable.test.tsx.
+test("a placed bet deep-links from Recent Bets into My Bets and settles to Won", async ({
   browser,
 }) => {
   const ctx = await browser.newContext();
@@ -34,7 +40,7 @@ test("recent bets caps at 5, deep-links into the enriched My Bets table, and set
   await loginAs(page, "bob");
   await page.waitForURL("**/dashboard");
 
-  // Fund bob with enough for six £10 bets (the balance is set absolutely).
+  // Fund bob enough for a £10 bet (the balance is set absolutely).
   await page.getByTestId("admin-link").click();
   await page.waitForURL("**/admin");
   const bobRow = page.locator("tr", { hasText: "admin@example.com" });
@@ -62,53 +68,36 @@ test("recent bets caps at 5, deep-links into the enriched My Bets table, and set
   }
   expect(eventId).toBeTruthy();
 
-  // Back to the dashboard (client-side nav keeps the in-memory session) and bet
-  // six times on that event — every card click defaults to the 'home' selection.
+  // Back to the dashboard (client-side nav keeps the in-memory session) and
+  // place one bet on that event — a card click defaults to the 'home' selection.
   await page.locator('nav a[href="/dashboard"]').click();
   await page.waitForURL("**/dashboard");
   await expect(page.getByTestId("balance")).toHaveText("Balance: £100.00");
 
   const eventCard = page.getByTestId(`event-card-${eventId}`);
   await expect(eventCard).toBeVisible();
-  for (let i = 0; i < 6; i++) {
-    await eventCard.click();
-    await page.getByTestId("stake-input").fill("10");
-    await page.getByTestId("place-bet-button").click();
-    // Each held bet drops the available balance by £10 — a reliable per-bet sync
-    // (the bet slip stays mounted off-screen, so it can't signal completion).
-    const remaining = (100 - 10 * (i + 1)).toFixed(2);
-    await expect(page.getByTestId("balance")).toHaveText(
-      `Balance: £${remaining}`,
-    );
-  }
+  await eventCard.click();
+  await page.getByTestId("stake-input").fill("10");
+  await page.getByTestId("place-bet-button").click();
+  // The held bet drops the available balance by £10 — a reliable completion sync
+  // (the bet slip stays mounted off-screen, so it can't signal completion).
+  await expect(page.getByTestId("balance")).toHaveText("Balance: £90.00");
 
-  // The sidebar section is "Recent Bets" and caps at the 5 most recent, even
-  // though bob now has 6 bets.
+  // The bet shows in the dashboard's Recent Bets sidebar; deep-link through it.
   await expect(
     page.getByRole("heading", { name: "Recent Bets" }),
   ).toBeVisible();
-  await expect(page.locator('[data-testid^="bet-row-"]')).toHaveCount(5);
-
-  // Grab the top (most recent) recent-bet row and click through to deep-link.
-  const topRow = page.locator('[data-testid^="bet-row-"]').first();
-  const topTestId = await topRow.getAttribute("data-testid");
-  const betId = topTestId?.replace(/^bet-row-/, "");
+  const recentRow = page.locator('[data-testid^="bet-row-"]').first();
+  const recentTestId = await recentRow.getAttribute("data-testid");
+  const betId = recentTestId?.replace(/^bet-row-/, "");
   expect(betId).toBeTruthy();
-  await topRow.click();
+  await recentRow.click();
   await page.waitForURL("**/my-bets**");
 
-  // The page is uncapped: a 6th row exists (nth is 0-based), unlike the sidebar.
-  await expect(page.locator('[data-testid^="bet-row-"]').nth(5)).toBeVisible();
+  // The deep-linked row landed on the My Bets page.
+  await expect(page.getByTestId(`bet-row-${betId}`)).toBeVisible();
 
-  // The deep-linked row is present and ENRICHED from the odds feed: its Teams
-  // cell shows a real "home vs away" pairing, not the raw eventId fallback. That
-  // join is the whole point — proving it succeeded is the real assertion.
-  const tableRow = page.getByTestId(`bet-row-${betId}`);
-  await expect(tableRow).toBeVisible();
-  await expect(tableRow).toContainText(/\bvs\b/);
-  await expect(tableRow).not.toContainText(eventId as string);
-
-  // Resolve the event in bob's favour (home); the held bets settle to "Won".
+  // Resolve the event in bob's favour (home); the held bet settles to "Won".
   await page.getByTestId("admin-link").click();
   await page.waitForURL("**/admin");
   await page.getByTestId("admin-events-tab").click();
@@ -120,13 +109,12 @@ test("recent bets caps at 5, deep-links into the enriched My Bets table, and set
     { timeout: 10_000 },
   );
 
-  // Back on the My Bets page the row reads "Won" and, since the resolved event
-  // stays in the odds store, is still joined for team names.
+  // Back on the My Bets page the row reads "Won" via the settlement socket.
   await page.getByTestId("my-bets-link").click();
   await page.waitForURL("**/my-bets");
-  const settledRow = page.getByTestId(`bet-row-${betId}`);
-  await expect(settledRow).toContainText(/won/i, { timeout: 20_000 });
-  await expect(settledRow).toContainText(/\bvs\b/);
+  await expect(page.getByTestId(`bet-row-${betId}`)).toContainText(/won/i, {
+    timeout: 20_000,
+  });
 
   await ctx.close();
 });

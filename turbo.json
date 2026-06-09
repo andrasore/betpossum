@@ -40,7 +40,13 @@
     },
     "test": {
       "dependsOn": ["build"],
-      "inputs": ["src/**", "test/**", "jest.config.js", "tsconfig.json"],
+      "inputs": [
+        "src/**",
+        "test/**",
+        "jest.config.js",
+        "vitest.config.ts",
+        "tsconfig.json"
+      ],
       "outputs": []
     },
     "format": {

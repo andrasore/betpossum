@@ -13,13 +13,9 @@ test("anonymous visitor sees odds on /dashboard without being redirected", async
     page.locator('[data-testid^="event-card-"]').first(),
   ).toBeVisible({ timeout: 15_000 });
   // Navbar shows the sign-in button, confirming we're not logged in.
+  // (The bet slip's logged-out affordances — disabled stake, sign-in button in
+  // place of Place Bet — are covered by BetSlip.test.tsx in the frontend.)
   await expect(page.getByTestId("login-button")).toBeVisible();
-  // Selecting an event surfaces the bet slip with its own sign-in button
-  // in place of the Place Bet action, and the stake input disabled.
-  await page.locator('[data-testid^="event-card-"]').first().click();
-  await expect(page.getByTestId("betslip-login-button")).toBeVisible();
-  await expect(page.getByTestId("place-bet-button")).toHaveCount(0);
-  await expect(page.getByTestId("stake-input")).toBeDisabled();
   await ctx.close();
 });
 
