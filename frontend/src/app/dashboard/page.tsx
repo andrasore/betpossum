@@ -1,9 +1,11 @@
 "use client";
 
-import { Badge, Box, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Box, Flex, Heading } from "@radix-ui/themes";
 import { useState } from "react";
 import { BetSlipDrawer } from "@/components/BetSlipDrawer";
+import { Leaderboard } from "@/components/Leaderboard";
 import { LeagueFilterBar } from "@/components/LeagueFilterBar";
+import { MyBets } from "@/components/MyBets";
 import { Navbar } from "@/components/Navbar";
 import { OddsBoard } from "@/components/OddsBoard";
 import { SportFilterBar } from "@/components/SportFilterBar";
@@ -14,18 +16,10 @@ import { useLeagues } from "@/hooks/useLeagues";
 import { useOdds } from "@/hooks/useOdds";
 import { useSports } from "@/hooks/useSports";
 import { useAuth } from "@/lib/auth-context";
-import type { Bet, OddsEvent } from "@/types";
+import type { OddsEvent } from "@/types";
 
 type Choice = "home" | "away" | "draw";
 type Selection = { event: OddsEvent; choice: Choice } | null;
-
-const statusColor: Record<Bet["status"], "green" | "red" | "gray" | "yellow"> =
-  {
-    won: "green",
-    lost: "red",
-    pending: "gray",
-    held: "yellow",
-  };
 
 export default function DashboardPage() {
   const { isAuthenticated, accessToken, login } = useAuth();
@@ -90,39 +84,25 @@ export default function DashboardPage() {
                 )
               }
             />
-
-            {isAuthenticated && bets && bets.length > 0 && (
-              <Box mt="6">
-                <Heading as="h2" size="4" mb="3">
-                  My Bets
-                </Heading>
-                <Flex direction="column" gap="2">
-                  {bets.map((bet) => (
-                    <Card key={bet.id} data-testid={`bet-row-${bet.id}`}>
-                      <Flex align="center" justify="between" gap="4">
-                        <Text
-                          size="2"
-                          weight="medium"
-                          style={{ textTransform: "capitalize" }}
-                        >
-                          {bet.selection} @ {Number(bet.odds).toFixed(2)}
-                        </Text>
-                        <Text size="2" color="gray">
-                          £{Number(bet.stake).toFixed(2)}
-                        </Text>
-                        <Badge
-                          color={statusColor[bet.status]}
-                          style={{ textTransform: "capitalize" }}
-                        >
-                          {bet.status}
-                        </Badge>
-                      </Flex>
-                    </Card>
-                  ))}
-                </Flex>
-              </Box>
-            )}
           </main>
+        </Box>
+
+        <Box
+          asChild
+          width="320px"
+          flexShrink="0"
+          p="6"
+          style={{
+            borderLeft: "1px solid var(--gray-a5)",
+            overflowY: "auto",
+          }}
+        >
+          <aside>
+            <Flex direction="column" gap="6">
+              <Leaderboard />
+              {isAuthenticated && bets && <MyBets bets={bets} />}
+            </Flex>
+          </aside>
         </Box>
       </Flex>
 
