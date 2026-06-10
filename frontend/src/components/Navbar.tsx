@@ -1,9 +1,8 @@
 "use client";
 
-import { Button, Flex, Text } from "@radix-ui/themes";
+import { Button, Flex, Link, Text } from "@radix-ui/themes";
 import { ListChecks, LogIn, LogOut, Shield } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
 interface NavbarProps {
@@ -23,7 +22,7 @@ export function Navbar({ balance }: NavbarProps) {
       style={{ borderBottom: "1px solid var(--gray-a5)" }}
     >
       <nav>
-        <Link href="/dashboard">
+        <Link href="/dashboard" underline="hover">
           <Flex align="center" gap="3">
             <Image src="/possum.png" alt="" width={90} height={48} priority />
             <Text
