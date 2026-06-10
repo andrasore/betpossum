@@ -77,15 +77,18 @@ services:
       KC_DB_PASSWORD: keycloak_dev
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      KC_HOSTNAME: http://localhost:8090
+      # Browser-facing base URL is the single nginx origin, with Keycloak under
+      # the /kc path prefix. KC_HOSTNAME must include that path so generated
+      # links (issuer, login-action form posts) carry /kc; KC_HTTP_RELATIVE_PATH
+      # makes the server actually serve there. No published port of its own —
+      # it is reached only through nginx now.
+      KC_HOSTNAME: http://localhost:8080/kc
+      KC_HTTP_RELATIVE_PATH: /kc
       KC_HOSTNAME_STRICT: "false"
-      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HTTP_ENABLED: "true"
       KC_PROXY_HEADERS: xforwarded
     volumes:
       - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
-    ports:
-      - "8090:8080"
     depends_on:
       keycloak_postgres:
         condition: service_healthy
@@ -102,8 +105,8 @@ services:
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       TIGERBEETLE_ADDRESS: tigerbeetle:6000
       TIGERBEETLE_CLUSTER_ID: "0"
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
-      KEYCLOAK_ISSUER_URL: http://localhost:8090/realms/betting
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
+      KEYCLOAK_ISSUER_URL: http://localhost:8080/kc/realms/betting
       KEYCLOAK_REALM: betting
       KEYCLOAK_ADMIN_CLIENT_ID: betting-core
       KEYCLOAK_ADMIN_CLIENT_SECRET: betting-core-secret
@@ -136,8 +139,8 @@ services:
       APIFOOTBALL_API_KEY: ${APIFOOTBALL_API_KEY:-}
       APIFOOTBALL_LEAGUES: ${APIFOOTBALL_LEAGUES:-421}
       APIFOOTBALL_SEASON: ${APIFOOTBALL_SEASON:-2023}
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
-      KEYCLOAK_ISSUER_URL: http://localhost:8090/realms/betting
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
+      KEYCLOAK_ISSUER_URL: http://localhost:8080/kc/realms/betting
       KEYCLOAK_REALM: betting
     ports:
       - "8000:8000"
@@ -153,8 +156,8 @@ services:
       target: notifications
     environment:
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
-      KEYCLOAK_ISSUER_URL: http://localhost:8090/realms/betting
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
+      KEYCLOAK_ISSUER_URL: http://localhost:8080/kc/realms/betting
       KEYCLOAK_REALM: betting
     depends_on:
       rabbitmq:
@@ -166,15 +169,13 @@ services:
     build:
       context: .
       target: frontend
-    environment:
-      KEYCLOAK_ISSUER: http://localhost:8090/realms/betting
-      KEYCLOAK_CLIENT_ID: betting-frontend
     ports:
       - "8080:80"
     depends_on:
       - core
       - notifications
       - odds
+      - keycloak
 
 volumes:
   postgres_data:

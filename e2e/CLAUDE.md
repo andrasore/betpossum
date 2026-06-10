@@ -27,9 +27,10 @@ pnpm --filter @betting/e2e run e2e:headed   # headed
 - **Never pre-`down` before running e2e.** `global-teardown` already does
   `compose down --volumes`; don't prefix the command with a manual clean — it
   races setup and wastes time.
-- **The e2e stack uses the 18xxx ports** (frontend 18080, Keycloak 18090) so it
-  doesn't collide with a running dev stack (8080/8090). Same images, different
-  rendered `config.js`.
+- **The e2e stack uses the 18xxx ports** (nginx origin on 18080) so it doesn't
+  collide with a running dev stack (8080). Keycloak has no port of its own — it
+  is reached through nginx under `/kc`. The image is identical to dev; the SPA
+  derives its issuer from the origin, so nothing per-environment is baked in.
 - Tests hit the single nginx origin, exactly like a browser — no service is
   addressed directly.
 - If a run fails, the docker logs under `test-results/docker-logs` are the first

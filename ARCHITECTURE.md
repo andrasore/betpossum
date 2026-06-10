@@ -44,22 +44,30 @@ Path routing:
 |----------------|-----------------------------------|---------------------------|
 | `/socket.io/*` | Notifications                     | WebSocket upgrade         |
 | `/odds`        | Odds Service                      | Public, unauthenticated   |
+| `/kc/*`        | Keycloak                          | OIDC login + token/JWKS   |
 | `/` (default)  | Frontend (Next.js)                | Includes HMR WebSocket    |
 
 Responsibilities:
 - Path-based routing as above
 - WebSocket connection upgrade for the live event feed (`/socket.io/`)
-- Serves the SPA's static export at `/` and the runtime config script at
-  `/config.js` (rendered from env at container start so the same image runs
-  on dev/8080 and e2e/18080)
+- Serves the SPA's static export at `/` (origin-agnostic: the SPA derives its
+  Keycloak issuer from the current origin, so the same image runs on dev/8080
+  and e2e/18080 with no per-environment config)
+- Reverse-proxies Keycloak under `/kc` so the IdP is same-origin too
 
 Explicitly **not** responsibilities of the proxy:
 - **Authentication / authorisation** — each service verifies its own JWTs.
 - **Rate limiting** — handled per-service if at all.
 
-Keycloak is *not* behind nginx — it has its own port (`8090` dev / `18090`
-e2e). The browser → Keycloak hop is just a login redirect, no CORS
-implications, so the split is harmless.
+Keycloak sits behind nginx too, under the `/kc` path prefix
+(`KC_HTTP_RELATIVE_PATH=/kc`), so the browser only ever sees the single nginx
+origin. The login/refresh/logout hops are top-level redirects that need no CORS
+regardless, but the SPA's PKCE code→token exchange is a `fetch` — routing
+Keycloak through the same origin removes its dependence on the client's
+Keycloak `webOrigins` CORS allow-list. Service-to-Keycloak backchannel traffic
+(JWKS, admin API) stays
+in-cluster via `KEYCLOAK_INTERNAL_URL` (`http://keycloak:8080/kc`) and does not
+traverse nginx.
 
 ### Keycloak — Identity provider
 Keycloak owns all authentication. The realm `betting` defines two roles —

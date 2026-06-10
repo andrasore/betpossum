@@ -30,10 +30,11 @@ returns 401), `refresh()` does a top-level navigation to Keycloak with
 cookie if the user is still signed in there. Auth logic is in
 `src/lib/auth.ts`; the React layer is in `src/lib/auth-context.tsx`.
 
-Runtime config (`KEYCLOAK_ISSUER`, `KEYCLOAK_CLIENT_ID`) is rendered into
-`/config.js` by the nginx container's entrypoint and loaded via a blocking
-`<script>` in `src/app/layout.tsx`. One image runs dev (8080 / 8090) and
-e2e (18080 / 18090).
+There is no runtime config injection. Keycloak is fronted by nginx same-origin
+under `/kc`, and the realm/client id are identical in every environment, so
+`src/lib/auth.ts` derives the issuer as `${window.location.origin}/kc/realms/betting`.
+The static export is origin-agnostic — one image runs dev (8080) and e2e (18080)
+with no `/config.js` step.
 
 ## Architecture
 

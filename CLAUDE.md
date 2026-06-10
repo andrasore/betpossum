@@ -77,6 +77,6 @@ the system overview.
 | [`services/odds/`](services/odds/CLAUDE.md) | FastAPI ingestion: pluggable provider/storage/publisher, co-located deps |
 | [`services/notifications/`](services/notifications/CLAUDE.md) | Stateless socket.io relay; JSON-on-the-wire |
 | [`schemas/`](schemas/CLAUDE.md) | Shared JSON Schema message contracts; regenerate-from-root workflow |
-| [`nginx/`](nginx/CLAUDE.md) | Single-origin edge proxy; runtime `config.js` |
+| [`nginx/`](nginx/CLAUDE.md) | Single-origin edge proxy (fronts the SPA, APIs, and Keycloak under `/kc`) |
 | [`e2e/`](e2e/CLAUDE.md) | Playwright full-stack tests; boot/teardown |
 | [`keycloak/`](keycloak/CLAUDE.md) | Realm definitions, roles, clients |

@@ -19,24 +19,23 @@ services:
     ports: !reset []
   core:
     environment:
-      KEYCLOAK_ISSUER_URL: http://localhost:18090/realms/betting
+      KEYCLOAK_ISSUER_URL: http://localhost:18080/kc/realms/betting
     ports: !reset []
   odds:
     environment:
-      KEYCLOAK_ISSUER_URL: http://localhost:18090/realms/betting
+      KEYCLOAK_ISSUER_URL: http://localhost:18080/kc/realms/betting
     ports: !reset []
   notifications:
     environment:
-      KEYCLOAK_ISSUER_URL: http://localhost:18090/realms/betting
+      KEYCLOAK_ISSUER_URL: http://localhost:18080/kc/realms/betting
   keycloak:
     environment:
-      KC_HOSTNAME: http://localhost:18090
+      # Reached only through the nginx origin (18080) under /kc; relative path
+      # is inherited from the base compose. No published port of its own.
+      KC_HOSTNAME: http://localhost:18080/kc
     volumes: !override
       - ./keycloak/realm.e2e.json:/opt/keycloak/data/import/realm.json:ro
-    ports: !override
-      - "18090:8080"
+    ports: !reset []
   nginx:
-    environment:
-      KEYCLOAK_ISSUER: http://localhost:18090/realms/betting
     ports: !override
       - "18080:80"

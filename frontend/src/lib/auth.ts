@@ -25,11 +25,11 @@ interface AppConfig {
   clientId: string;
 }
 
-declare global {
-  interface Window {
-    __APP_CONFIG__?: AppConfig;
-  }
-}
+// Keycloak is fronted by nginx same-origin under /kc, and the realm/client are
+// the same in every environment, so the whole config is derivable from the
+// current origin — no runtime /config.js injection needed.
+const KEYCLOAK_REALM = "betting";
+const KEYCLOAK_CLIENT_ID = "betting-frontend";
 
 let session: Session | null = null;
 let refreshing = false;
@@ -55,11 +55,10 @@ export function getAccessToken(): string | null {
 }
 
 function config(): AppConfig {
-  const cfg = window.__APP_CONFIG__;
-  if (!cfg) {
-    throw new Error("window.__APP_CONFIG__ not loaded");
-  }
-  return cfg;
+  return {
+    keycloakIssuer: `${window.location.origin}/kc/realms/${KEYCLOAK_REALM}`,
+    clientId: KEYCLOAK_CLIENT_ID,
+  };
 }
 
 function redirectUri(): string {

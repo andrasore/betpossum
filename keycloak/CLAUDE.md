@@ -42,5 +42,8 @@ at container start. Keycloak owns **all** authentication.
 - Keep `realm.json` and `realm.e2e.json` in step when adding roles, clients, or
   mappers — the e2e variant differs only in environment-specific URLs/ports.
 - Services verify JWTs against this realm's JWKS (RS256) and check
-  `realm_access.roles`. Keycloak is **not** behind nginx — it's reached
-  directly on its own port for the login redirect.
+  `realm_access.roles`. Keycloak is fronted by nginx under the `/kc` path
+  prefix (`KC_HTTP_RELATIVE_PATH=/kc`) so the browser stays single-origin;
+  services reach it backchannel via `KEYCLOAK_INTERNAL_URL`
+  (`http://keycloak:8080/kc`). The browser-facing issuer is
+  `http://localhost:8080/kc/realms/betting` (dev).

@@ -17,15 +17,13 @@ RUN pnpm --filter '@betting/core' --filter '@betting/frontend' run build
 # pnpm deploy is used to generate a copiable directory for core
 RUN pnpm --filter '@betting/core' deploy --prod services/core/pruned
 
-# Stage 2: Next.js static export packaged into nginx. Same image is served on
-# dev (8080 / 8090) and e2e (18080 / 18090); runtime Keycloak URL is injected
-# via /config.js generated at container start by docker-entrypoint.d.
+# Stage 2: Next.js static export packaged into nginx. The same image is served
+# on dev (8080) and e2e (18080) with no per-environment config: Keycloak is
+# fronted by nginx under /kc, so the SPA derives its issuer from the current
+# origin at runtime — no /config.js injection step.
 FROM nginx:1.27-alpine AS frontend
 COPY --from=builder-node /app/frontend/out/ /usr/share/nginx/html/
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
-COPY nginx/config.js.template /etc/nginx/templates/config.js.template
-COPY nginx/docker-entrypoint.d/30-render-config.sh /docker-entrypoint.d/30-render-config.sh
-RUN chmod +x /docker-entrypoint.d/30-render-config.sh
 
 # Stage 3: Core Node.js service.
 FROM node:25-alpine AS core

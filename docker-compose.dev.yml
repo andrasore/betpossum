@@ -1,8 +1,7 @@
 services:
   nginx:
     # Override the baked-in static config: proxy `/` to the host's
-    # `pnpm dev` (mapped via frontend:host-gateway) so HMR works. The
-    # runtime /config.js is still rendered by the container's entrypoint.
+    # `pnpm dev` (mapped via frontend:host-gateway) so HMR works.
     volumes:
       - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
     extra_hosts:
