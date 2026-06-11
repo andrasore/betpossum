@@ -10,7 +10,7 @@ import {
 } from "oidc-client-ts";
 import { z } from "zod";
 
-const PREVIOUS_AUTH_EXISTS = "auth:previously-authed";
+const HAS_PREVIOUS_AUTH = "auth:previously-authed";
 
 // Keycloak is fronted by nginx same-origin under /kc, and the realm/client are
 // the same in every environment, so the whole config is derivable from the
@@ -117,7 +117,7 @@ function wireEvents(m: UserManager): void {
   m.events.addUserLoaded((user) => {
     session = toSession(user);
     if (session) {
-      localStorage.setItem(PREVIOUS_AUTH_EXISTS, "1");
+      localStorage.setItem(HAS_PREVIOUS_AUTH, "1");
     }
     notify();
   });
@@ -133,7 +133,7 @@ function wireEvents(m: UserManager): void {
   });
   m.events.addUserSignedOut(() => {
     session = null;
-    localStorage.removeItem(PREVIOUS_AUTH_EXISTS);
+    localStorage.removeItem(HAS_PREVIOUS_AUTH);
     notify();
   });
 }
@@ -164,7 +164,7 @@ export async function refresh(): Promise<void> {
   try {
     await mgr().signinSilent();
   } catch {
-    localStorage.removeItem(PREVIOUS_AUTH_EXISTS);
+    localStorage.removeItem(HAS_PREVIOUS_AUTH);
     session = null;
     notify();
   } finally {
@@ -188,7 +188,7 @@ export async function handleCallback(): Promise<CallbackResult> {
   } catch (e) {
     const message = e instanceof Error ? e.message : "invalid_callback";
     if (/login_required/i.test(message)) {
-      localStorage.removeItem(PREVIOUS_AUTH_EXISTS);
+      localStorage.removeItem(HAS_PREVIOUS_AUTH);
       return { returnTo: "/", error: "login_required" };
     }
     return { returnTo: "/", error: message };
@@ -202,7 +202,7 @@ export async function silentCallback(): Promise<void> {
 }
 
 export function logout(): void {
-  localStorage.removeItem(PREVIOUS_AUTH_EXISTS);
+  localStorage.removeItem(HAS_PREVIOUS_AUTH);
   session = null;
   notify();
   void mgr().signoutRedirect();
@@ -211,5 +211,5 @@ export function logout(): void {
 // True if the browser previously held a successful session — used by the
 // AuthProvider to attempt a silent refresh on bootstrap.
 export function hasPreviousAuth(): boolean {
-  return localStorage.getItem(PREVIOUS_AUTH_EXISTS) === "1";
+  return localStorage.getItem(HAS_PREVIOUS_AUTH) === "1";
 }
