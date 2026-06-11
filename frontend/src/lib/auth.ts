@@ -1,16 +1,22 @@
 "use client";
 
 import { decodeJwt } from "jose";
+import {
+  InMemoryWebStorage,
+  type User,
+  UserManager,
+  type UserManagerSettings,
+  WebStorageStateStore,
+} from "oidc-client-ts";
 import { z } from "zod";
 
-const PENDING_KEY = "auth:pending";
-const PREVIOUS_AUTH_KEY = "auth:previously-authed";
+const PREVIOUS_AUTH_EXISTS = "auth:previously-authed";
 
-interface PendingAuth {
-  verifier: string;
-  state: string;
-  returnTo: string;
-}
+// Keycloak is fronted by nginx same-origin under /kc, and the realm/client are
+// the same in every environment, so the whole config is derivable from the
+// current origin — no runtime /config.js injection needed.
+const KEYCLOAK_REALM = "betting";
+const KEYCLOAK_CLIENT_ID = "betting-frontend";
 
 interface Session {
   accessToken: string;
@@ -20,18 +26,12 @@ interface Session {
   roles: string[];
 }
 
-interface AppConfig {
-  keycloakIssuer: string;
-  clientId: string;
-}
-
-// Keycloak is fronted by nginx same-origin under /kc, and the realm/client are
-// the same in every environment, so the whole config is derivable from the
-// current origin — no runtime /config.js injection needed.
-const KEYCLOAK_REALM = "betting";
-const KEYCLOAK_CLIENT_ID = "betting-frontend";
-
+// Public-facing view of the current auth state, kept as a synchronous snapshot
+// so getAccessToken()/getSession() can be read during render and from the
+// non-async fetch/socket paths. It mirrors the oidc-client-ts User, updated via
+// UserManager events (see wireEvents).
 let session: Session | null = null;
+let manager: UserManager | null = null;
 let refreshing = false;
 const listeners = new Set<() => void>();
 
@@ -54,101 +54,122 @@ export function getAccessToken(): string | null {
   return session?.accessToken ?? null;
 }
 
-function config(): AppConfig {
-  return {
-    keycloakIssuer: `${window.location.origin}/kc/realms/${KEYCLOAK_REALM}`,
-    clientId: KEYCLOAK_CLIENT_ID,
-  };
-}
-
-function redirectUri(): string {
-  return `${window.location.origin}/auth/callback`;
-}
-
-function base64UrlEncode(bytes: Uint8Array): string {
-  let s = "";
-  for (const b of bytes) {
-    s += String.fromCharCode(b);
-  }
-  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function randomString(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return base64UrlEncode(bytes);
-}
-
-async function sha256(input: string): Promise<Uint8Array> {
-  const buf = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(input),
-  );
-  return new Uint8Array(buf);
-}
-
-const TokenResponseSchema = z.object({
-  access_token: z.string(),
-  id_token: z.string().optional(),
-  expires_in: z.number(),
-});
-
 const AccessClaimsSchema = z.object({
   sub: z.string(),
   realm_access: z.object({ roles: z.array(z.string()) }).optional(),
 });
 
+// Roles live in the access token's realm_access claim, not the ID-token
+// profile, so we decode the access token ourselves rather than relying on
+// oidc-client-ts's profile. decodeJwt only parses — the signature is verified
+// server-side; these claims drive UI gating only.
 function decodeAccess(jwt: string): { sub: string; roles: string[] } {
   const claims = AccessClaimsSchema.parse(decodeJwt(jwt));
   return { sub: claims.sub, roles: claims.realm_access?.roles ?? [] };
 }
 
-async function startFlow(opts: {
-  silent: boolean;
-  returnTo?: string;
-}): Promise<void> {
-  const { keycloakIssuer, clientId } = config();
-  const verifier = randomString();
-  const state = randomString();
-  const challenge = base64UrlEncode(await sha256(verifier));
-  const returnTo =
-    opts.returnTo ?? window.location.pathname + window.location.search;
-
-  const pending: PendingAuth = { verifier, state, returnTo };
-  sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
-
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: clientId,
-    redirect_uri: redirectUri(),
-    scope: "openid profile email",
-    code_challenge: challenge,
-    code_challenge_method: "S256",
-    state,
-  });
-  if (opts.silent) {
-    params.set("prompt", "none");
+function toSession(user: User | null): Session | null {
+  if (!user?.access_token || user.expired) {
+    return null;
   }
+  try {
+    const { sub, roles } = decodeAccess(user.access_token);
+    return {
+      accessToken: user.access_token,
+      idToken: user.id_token ?? "",
+      expiresAt: (user.expires_at ?? 0) * 1000,
+      sub,
+      roles,
+    };
+  } catch {
+    return null;
+  }
+}
 
-  window.location.assign(
-    `${keycloakIssuer}/protocol/openid-connect/auth?${params}`,
-  );
+function settings(): UserManagerSettings {
+  const origin = window.location.origin;
+  return {
+    authority: `${origin}/kc/realms/${KEYCLOAK_REALM}`,
+    client_id: KEYCLOAK_CLIENT_ID,
+    redirect_uri: `${origin}/auth/callback`,
+    silent_redirect_uri: `${origin}/auth/silent`,
+    post_logout_redirect_uri: `${origin}/login`,
+    response_type: "code",
+    scope: "openid profile email",
+    // Renews the access token in the background (hidden iframe, prompt=none)
+    // ~60s before it expires, so an expiry no longer forces a top-level
+    // navigation through Keycloak.
+    automaticSilentRenew: true,
+    // Tokens stay in JS memory only — never persisted to disk. A reload starts
+    // with no user and re-bootstraps via signinSilent (see AuthProvider).
+    userStore: new WebStorageStateStore({ store: new InMemoryWebStorage() }),
+    // The transient PKCE verifier/state must survive the redirect round-trip;
+    // sessionStorage is also shared with the same-origin silent-renew iframe.
+    stateStore: new WebStorageStateStore({ store: window.sessionStorage }),
+    // Roles come from the access token, not the UserInfo endpoint.
+    loadUserInfo: false,
+  };
+}
+
+function wireEvents(m: UserManager): void {
+  // Every successful sign-in (interactive, silent, or renew) stores the user
+  // and fires this — the single place the synchronous snapshot is refreshed.
+  m.events.addUserLoaded((user) => {
+    session = toSession(user);
+    if (session) {
+      localStorage.setItem(PREVIOUS_AUTH_EXISTS, "1");
+    }
+    notify();
+  });
+  m.events.addUserUnloaded(() => {
+    session = null;
+    notify();
+  });
+  // Fires only if a renew failed to land before expiry; the access token is now
+  // unusable, so drop to anonymous.
+  m.events.addAccessTokenExpired(() => {
+    session = null;
+    notify();
+  });
+  m.events.addUserSignedOut(() => {
+    session = null;
+    localStorage.removeItem(PREVIOUS_AUTH_EXISTS);
+    notify();
+  });
+}
+
+function mgr(): UserManager {
+  if (!manager) {
+    manager = new UserManager(settings());
+    wireEvents(manager);
+  }
+  return manager;
 }
 
 export function login(returnTo?: string): void {
-  void startFlow({ silent: false, returnTo });
+  const target = returnTo ?? window.location.pathname + window.location.search;
+  void mgr().signinRedirect({ state: { returnTo: target } });
 }
 
-// Reactive refresh via top-level navigation. Keycloak's session cookie (sent
-// because this is a real navigation, not an iframe) makes prompt=none either
-// bounce straight back with a fresh code, or fail with error=login_required —
-// in which case the callback page falls back to interactive login.
-export function refresh(): void {
+// Background silent refresh via a hidden same-origin iframe (prompt=none).
+// Keycloak's session cookie is sent (real same-origin request, not 3rd-party),
+// so it bounces straight back with a fresh token — no page navigation, in-flight
+// UI state survives. On failure (login_required / no Keycloak session) we drop
+// to anonymous rather than looping. self-guarded against concurrent calls.
+export async function refresh(): Promise<void> {
   if (refreshing) {
     return;
   }
   refreshing = true;
-  void startFlow({ silent: true });
+  try {
+    await mgr().signinSilent();
+  } catch {
+    localStorage.removeItem(PREVIOUS_AUTH_EXISTS);
+    session = null;
+    notify();
+  } finally {
+    refreshing = false;
+  }
 }
 
 interface CallbackResult {
@@ -156,90 +177,39 @@ interface CallbackResult {
   error?: string;
 }
 
+// Completes the interactive Authorization-Code+PKCE redirect. The user is
+// stored as a side effect (firing addUserLoaded), so we only need the returnTo
+// carried through `state`.
 export async function handleCallback(): Promise<CallbackResult> {
-  const params = new URLSearchParams(window.location.search);
-  const raw = sessionStorage.getItem(PENDING_KEY);
-  sessionStorage.removeItem(PENDING_KEY);
-  if (!raw) {
-    return { returnTo: "/", error: "missing_pending_state" };
-  }
-  const pending = JSON.parse(raw) as PendingAuth;
-
-  const error = params.get("error");
-  if (error) {
-    refreshing = false;
-    // login_required after a prompt=none attempt = no Keycloak session;
-    // forget that we were ever logged in so we don't loop on next reload.
-    if (error === "login_required") {
-      localStorage.removeItem(PREVIOUS_AUTH_KEY);
+  try {
+    const user = await mgr().signinRedirectCallback();
+    const state = user.state as { returnTo?: string } | undefined;
+    return { returnTo: state?.returnTo ?? "/" };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "invalid_callback";
+    if (/login_required/i.test(message)) {
+      localStorage.removeItem(PREVIOUS_AUTH_EXISTS);
+      return { returnTo: "/", error: "login_required" };
     }
-    return { returnTo: pending.returnTo, error };
+    return { returnTo: "/", error: message };
   }
+}
 
-  const code = params.get("code");
-  const state = params.get("state");
-  if (!code || state !== pending.state) {
-    return { returnTo: pending.returnTo, error: "invalid_callback" };
-  }
-
-  const { keycloakIssuer, clientId } = config();
-  const body = new URLSearchParams({
-    grant_type: "authorization_code",
-    client_id: clientId,
-    code,
-    redirect_uri: redirectUri(),
-    code_verifier: pending.verifier,
-  });
-  const res = await fetch(`${keycloakIssuer}/protocol/openid-connect/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  if (!res.ok) {
-    refreshing = false;
-    return {
-      returnTo: pending.returnTo,
-      error: `token_exchange_${res.status}`,
-    };
-  }
-  const json = TokenResponseSchema.parse(await res.json());
-  const { sub, roles } = decodeAccess(json.access_token);
-
-  session = {
-    accessToken: json.access_token,
-    idToken: json.id_token ?? "",
-    expiresAt: Date.now() + json.expires_in * 1000,
-    sub,
-    roles,
-  };
-  refreshing = false;
-  localStorage.setItem(PREVIOUS_AUTH_KEY, "1");
-  notify();
-
-  return { returnTo: pending.returnTo };
+// Runs inside the silent-renew iframe: parses the prompt=none response and
+// notifies the parent window's UserManager.
+export async function silentCallback(): Promise<void> {
+  await mgr().signinSilentCallback();
 }
 
 export function logout(): void {
-  const { keycloakIssuer, clientId } = config();
-  const idToken = session?.idToken;
+  localStorage.removeItem(PREVIOUS_AUTH_EXISTS);
   session = null;
-  localStorage.removeItem(PREVIOUS_AUTH_KEY);
   notify();
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    post_logout_redirect_uri: `${window.location.origin}/login`,
-  });
-  if (idToken) {
-    params.set("id_token_hint", idToken);
-  }
-  window.location.assign(
-    `${keycloakIssuer}/protocol/openid-connect/logout?${params}`,
-  );
+  void mgr().signoutRedirect();
 }
 
 // True if the browser previously held a successful session — used by the
 // AuthProvider to attempt a silent refresh on bootstrap.
 export function hasPreviousAuth(): boolean {
-  return localStorage.getItem(PREVIOUS_AUTH_KEY) === "1";
+  return localStorage.getItem(PREVIOUS_AUTH_EXISTS) === "1";
 }

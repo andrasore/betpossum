@@ -31,17 +31,22 @@ import type { OddsEvent } from "@/types";
 
 export default function AdminPage() {
   const router = useRouter();
-  const { isAuthenticated, roles } = useAuth();
+  const { isAuthenticated, isLoading, roles } = useAuth();
 
   useEffect(() => {
+    // Wait for the silent bootstrap to settle before deciding — a full-page
+    // load lands here unauthenticated for a beat while the session restores.
+    if (isLoading) {
+      return;
+    }
     if (!isAuthenticated || !roles.includes("admin")) {
       router.replace("/dashboard");
     }
-  }, [isAuthenticated, roles, router]);
+  }, [isLoading, isAuthenticated, roles, router]);
 
   const isAdmin = isAuthenticated && roles.includes("admin");
 
-  if (!isAdmin) {
+  if (isLoading || !isAdmin) {
     return null;
   }
 

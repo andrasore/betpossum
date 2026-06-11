@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useState,
   useSyncExternalStore,
 } from "react";
 import {
@@ -17,6 +18,11 @@ import {
 
 interface AuthValue {
   isAuthenticated: boolean;
+  // True until the initial silent bootstrap settles. Auth-gated pages must
+  // wait this out before treating a null session as "anonymous" — otherwise a
+  // full-page load of a protected route redirects before the background
+  // restore lands.
+  isLoading: boolean;
   accessToken: string | null;
   sub: string | null;
   roles: string[];
@@ -36,22 +42,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getSession,
     getServerSnapshot,
   );
+  const [isLoading, setIsLoading] = useState(true);
 
   // First mount: if this browser was previously authenticated, attempt a
-  // silent refresh against Keycloak. Top-level navigation, so Keycloak's
-  // session cookie is sent and the round-trip is invisible if the session is
-  // still alive. If it isn't, the callback page clears the flag.
+  // background silent refresh against Keycloak (hidden iframe, prompt=none) —
+  // its session cookie makes the round-trip invisible if still signed in. We
+  // stay in the loading state until that settles so gated pages don't redirect
+  // prematurely; if it fails, refresh() clears the flag and we fall anonymous.
   useEffect(() => {
     if (session) {
+      setIsLoading(false);
       return;
     }
-    if (hasPreviousAuth() && window.location.pathname !== "/auth/callback") {
-      refresh();
+    const path = window.location.pathname;
+    // Skip the OIDC round-trip routes: /auth/callback finishes the interactive
+    // flow itself, and /auth/silent runs inside the renew iframe (bootstrapping
+    // there would recurse into a nested iframe).
+    if (
+      hasPreviousAuth() &&
+      path !== "/auth/callback" &&
+      path !== "/auth/silent"
+    ) {
+      void refresh().finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
   }, [session]);
 
   const value: AuthValue = {
     isAuthenticated: session !== null,
+    isLoading,
     accessToken: session?.accessToken ?? null,
     sub: session?.sub ?? null,
     roles: session?.roles ?? [],

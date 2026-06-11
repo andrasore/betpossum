@@ -5,7 +5,7 @@ import type { League, Outcome, Sport } from "./schemas";
 async function authedFetch(url: string, init?: RequestInit): Promise<Response> {
   const token = getAccessToken();
   if (!token) {
-    refresh();
+    void refresh();
     throw new Error("Unauthenticated");
   }
   const res = await fetch(url, {
@@ -17,7 +17,7 @@ async function authedFetch(url: string, init?: RequestInit): Promise<Response> {
     },
   });
   if (res.status === 401) {
-    refresh();
+    void refresh();
     throw new Error("Unauthenticated");
   }
   return res;

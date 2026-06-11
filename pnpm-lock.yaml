@@ -45,6 +45,9 @@ importers:
       next:
         specifier: 16.2.4
         version: 16.2.4(@playwright/test@1.60.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      oidc-client-ts:
+        specifier: ^3.5.0
+        version: 3.5.0
       react:
         specifier: ^19.2.5
         version: 19.2.6
@@ -3884,6 +3887,10 @@ packages:
   jws@4.0.1:
     resolution: {integrity: sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA==}
 
+  jwt-decode@4.0.0:
+    resolution: {integrity: sha512-+KJGIyHgkGuIq3IEBNftfhW/LfWhXUIY6OmyVWjliu5KH1y0fw7VQ8YndE2O4qZdMSd9SqbnC8GOcZEy0Om7sA==}
+    engines: {node: '>=18'}
+
   lazystream@1.0.1:
     resolution: {integrity: sha512-b94GiNHQNy6JNTrt5w6zNyffMrNkXZb3KTkCZJb2V1xaEGCk093vkZ2jk3tpaeP33/OiXC+WvK9AxUebnf5nbw==}
     engines: {node: '>= 0.6.3'}
@@ -4244,6 +4251,10 @@ packages:
   obug@2.1.2:
     resolution: {integrity: sha512-AWGB9WFcRXOQs48Z/udjI5ZcZMHXwX8XPByNpOydgcGsDLIzjGizhoMWJyKAWze7AVW/2W1i+/gPX4YtKe5cyg==}
     engines: {node: '>=12.20.0'}
+
+  oidc-client-ts@3.5.0:
+    resolution: {integrity: sha512-l2q8l9CTCTOlbX+AnK4p3M+4CEpKpyQhle6blQkdFhm0IsBqsxm15bYaSa11G7pWdsYr6epdsRZxJpCyCRbT8A==}
+    engines: {node: '>=18'}
 
   on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -9415,6 +9426,8 @@ snapshots:
       jwa: 2.0.1
       safe-buffer: 5.2.1
 
+  jwt-decode@4.0.0: {}
+
   lazystream@1.0.1:
     dependencies:
       readable-stream: 2.3.8
@@ -9684,6 +9697,10 @@ snapshots:
   object-inspect@1.13.4: {}
 
   obug@2.1.2: {}
+
+  oidc-client-ts@3.5.0:
+    dependencies:
+      jwt-decode: 4.0.0
 
   on-finished@2.4.1:
     dependencies:

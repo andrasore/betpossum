@@ -17,17 +17,13 @@ export function getSocket(): Socket {
     transports: ["websocket"],
   });
 
-  let recovering = false;
-  socket.on("connect", () => {
-    recovering = false;
-  });
   socket.on("connect_error", () => {
-    if (recovering) {
+    if (socket?.active) {
+      // `socket.active` is true for a transport/network failure (gateway down,
+      // blip): socket.io is already auto-reconnecting, so leave it be
       return;
     }
-    recovering = true;
-    // Likely token expiry. Trigger a redirect-based refresh.
-    refresh();
+    void refresh();
   });
 
   return socket;

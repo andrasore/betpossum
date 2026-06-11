@@ -11,7 +11,7 @@ import { useOddsIndex } from "@/hooks/useOddsIndex";
 import { useAuth } from "@/lib/auth-context";
 
 export default function MyBetsPage() {
-  const { isAuthenticated, accessToken, login } = useAuth();
+  const { isAuthenticated, isLoading, accessToken, login } = useAuth();
   const sessionKey = accessToken;
   const { data: bets } = useBets(sessionKey);
   const oddsIndex = useOddsIndex(sessionKey);
@@ -26,7 +26,12 @@ export default function MyBetsPage() {
             My Bets
           </Heading>
 
-          {!isAuthenticated ? (
+          {isAuthenticated ? (
+            <Flex direction="column" gap="6" style={{ maxWidth: 900 }}>
+              <BetsChart />
+              <BetsTable bets={bets ?? []} oddsIndex={oddsIndex} />
+            </Flex>
+          ) : isLoading ? null : (
             <Flex direction="column" align="start" gap="3">
               <Text size="2" color="gray">
                 Sign in to see your bet history.
@@ -39,11 +44,6 @@ export default function MyBetsPage() {
                 <LogIn size={16} />
                 Sign in
               </Button>
-            </Flex>
-          ) : (
-            <Flex direction="column" gap="6" style={{ maxWidth: 900 }}>
-              <BetsChart />
-              <BetsTable bets={bets ?? []} oddsIndex={oddsIndex} />
             </Flex>
           )}
         </main>
