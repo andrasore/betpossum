@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 import { WalletService } from "../wallet/wallet.service";
@@ -42,25 +42,36 @@ export class UsersService {
 
   async createUser(dto: CreateUserDto): Promise<UserView> {
     // TODO do not create db user for admins
-    const existing = await this.repo.findOneBy({ id: dto.id });
-    if (existing) {
-      throw new ConflictException(`User ${dto.id} already exists`);
-    }
     // TODO this is not updated when someone changes their name in keycloak
-    const local = await this.repo.save(
-      this.repo.create({
+    // Two of a new user's first authed requests can race here (both see no
+    // row), so let the primary key arbitrate instead of a check-then-insert:
+    // ON CONFLICT DO NOTHING returns a row only to the request that actually
+    // inserted. Only that winner provisions the wallet, so creation stays
+    // idempotent and a concurrent caller no longer hits a duplicate-key error.
+    const insert = await this.repo
+      .createQueryBuilder()
+      .insert()
+      .into(User)
+      .values({
         id: dto.id,
         email: dto.email ?? null,
         name: dto.name ?? null,
-      }),
-    );
-    this.logger.log(`Creating wallet account for new user ${local.id}`);
-    // TODO maybe expect this to fail
-    await this.wallet.createAccount(local.id);
+      })
+      .orIgnore()
+      .returning("*")
+      .execute();
+
+    if (insert.raw.length > 0) {
+      this.logger.log(`Creating wallet account for new user ${dto.id}`);
+      // TODO maybe expect this to fail
+      await this.wallet.createAccount(dto.id);
+    }
+
+    const local = await this.repo.findOneByOrFail({ id: dto.id });
     return {
       id: local.id,
-      email: dto.email ?? null,
-      name: dto.name ?? null,
+      email: local.email,
+      name: local.name,
       createdAt: local.createdAt,
     };
   }
