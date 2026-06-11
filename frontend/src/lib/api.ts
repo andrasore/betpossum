@@ -22,43 +22,12 @@ async function send(
   return res;
 }
 
-// Core lazily provisions the user row (and wallet) on the first authed request
-// it sees. A new user's dashboard fires several authed calls at once (e.g.
-// /bets and /wallet/balance), and two of them racing that create would make
-// one fail on the primary key. So serialize the first authed request: the very
-// first caller runs alone while everyone else waits on it, and once it lands —
-// by which point the row exists — traffic flows in parallel as normal.
-let bootstrap: Promise<void> | null = null;
-let provisioned = false;
-
 async function authedFetch(url: string, init?: RequestInit): Promise<Response> {
   const token = getAccessToken();
   if (!token) {
     void refresh();
     throw new Error("Unauthenticated");
   }
-
-  if (!provisioned) {
-    if (bootstrap) {
-      // A first request is already in flight — wait for it, then proceed.
-      await bootstrap;
-    } else {
-      // We are the first request: hold the gate, run alone, release on settle.
-      let release!: () => void;
-      bootstrap = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      try {
-        const res = await send(url, token, init);
-        provisioned = true;
-        return res;
-      } finally {
-        release();
-        bootstrap = null;
-      }
-    }
-  }
-
   return send(url, token, init);
 }
 

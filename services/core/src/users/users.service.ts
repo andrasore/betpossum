@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 import { WalletService } from "../wallet/wallet.service";
@@ -42,25 +42,30 @@ export class UsersService {
 
   async createUser(dto: CreateUserDto): Promise<UserView> {
     // TODO do not create db user for admins
-    const existing = await this.repo.findOneBy({ id: dto.id });
-    if (existing) {
-      throw new ConflictException(`User ${dto.id} already exists`);
-    }
+
+    // Idempotent: a new user's dashboard fires several authed requests at once,
+    // and each one that finds no row will land here concurrently. ON CONFLICT
+    // DO NOTHING lets them all converge on a single row instead of racing the
+    // primary key.
+
     // TODO this is not updated when someone changes their name in keycloak
-    const local = await this.repo.save(
-      this.repo.create({
-        id: dto.id,
-        email: dto.email ?? null,
-        name: dto.name ?? null,
-      }),
-    );
-    this.logger.log(`Creating wallet account for new user ${local.id}`);
-    // TODO maybe expect this to fail
+    await this.repo
+      .createQueryBuilder()
+      .insert()
+      .into(User)
+      .values({ id: dto.id, email: dto.email ?? null, name: dto.name ?? null })
+      .orIgnore()
+      .execute();
+
+    const local = await this.repo.findOneByOrFail({ id: dto.id });
+
+    this.logger.log(`Ensuring wallet account for user ${local.id}`);
     await this.wallet.createAccount(local.id);
+
     return {
       id: local.id,
-      email: dto.email ?? null,
-      name: dto.name ?? null,
+      email: local.email,
+      name: local.name,
       createdAt: local.createdAt,
     };
   }
