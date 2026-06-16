@@ -1,0 +1,55 @@
+# Public entry point. A single host routes everything to the nginx Service,
+# which does the internal path-routing (incl. Keycloak under /kc) — so only ONE
+# Ingress host is needed now that Keycloak is consolidated behind nginx.
+#
+# Assumes ingress-nginx + cert-manager are installed in the cluster. cert-manager
+# watches this Ingress (via the cluster-issuer annotation) and provisions the
+# TLS cert into the `betpossum-tls` Secret automatically.
+#
+# Alternative (no Ingress): set the nginx Service (40-nginx.yaml) to
+# type: LoadBalancer and terminate TLS at the cloud LB or in nginx, then delete
+# this file.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@example.com          # CHANGE_ME: ACME registration / expiry notices
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: betpossum
+  namespace: betpossum
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Keep the live websocket (/socket.io) and Keycloak redirects healthy.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # Keycloak login pages and tokens can be large; don't truncate buffers.
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - betpossum.example.com       # CHANGE_ME (must match PUBLIC_HOST)
+      secretName: betpossum-tls
+  rules:
+    - host: betpossum.example.com     # CHANGE_ME
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx
+                port:
+                  number: 80

@@ -1,0 +1,61 @@
+# Odds ingestion (FastAPI). Serves the public GET /odds hydrate and runs the
+# polling loop that publishes odds.updated.
+#
+# replicas: 1 — INTENTIONAL. This is a poller: each replica would run its own
+# ingestion loop and publish duplicate odds.updated messages. Do not scale.
+apiVersion: v1
+kind: Service
+metadata:
+  name: odds
+  namespace: betpossum
+spec:
+  selector:
+    app: odds
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odds
+  namespace: betpossum
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate          # avoid two pollers overlapping during a rollout
+  selector:
+    matchLabels:
+      app: odds
+  template:
+    metadata:
+      labels:
+        app: odds
+    spec:
+      containers:
+        - name: odds
+          image: ghcr.io/andrasore/betpossum-odds:latest   # Dockerfile target: odds
+          envFrom:
+            - configMapRef:
+                name: betpossum-config
+            - secretRef:
+                name: betpossum-app-secrets
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /odds
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi

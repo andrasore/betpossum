@@ -1,0 +1,62 @@
+# Edge proxy + SPA host. The image (Dockerfile target: frontend) bakes the
+# static SPA export and nginx.conf, which path-routes to the upstream Services
+# by name: core:4000, odds:8000, notifications:8000, keycloak:8080 (/kc), and
+# serves the SPA at /. The Service names in this directory match those upstreams.
+#
+# Startup ordering: nginx resolves its upstream hostnames at config load, so the
+# core/odds/notifications/keycloak *Services* must exist (their ClusterIP DNS is
+# stable even before pods are Ready). With `kubectl apply -f k8s/` they are all
+# created together; nginx may CrashLoopBackOff for a few seconds until the
+# Service objects land, then stabilizes.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: betpossum
+spec:
+  # ClusterIP because an Ingress fronts it (see 50-ingress.yaml). To expose nginx
+  # directly instead, change type to LoadBalancer and drop the Ingress.
+  type: ClusterIP
+  selector:
+    app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: betpossum
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: ghcr.io/andrasore/betpossum-frontend:latest   # Dockerfile target: frontend
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi

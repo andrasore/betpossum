@@ -1,0 +1,107 @@
+# Identity provider. Stateless pod (all state lives in keycloak-postgres), but
+# kept at 1 replica: multi-replica Keycloak needs a distributed cache (JGroups
+# discovery) which is out of scope here.
+#
+# The image is built from keycloak/Dockerfile — it bakes KC_HTTP_RELATIVE_PATH=/kc
+# and the realm import runs via `start --optimized --import-realm` (baked CMD).
+# Provide the realm as a ConfigMap (see README): it MUST use production redirect
+# URIs — https://<PUBLIC_HOST>/auth/callback and webOrigins https://<PUBLIC_HOST>.
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: betpossum
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: betpossum
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: ghcr.io/andrasore/betpossum-keycloak:latest   # build from keycloak/Dockerfile
+          env:
+            - name: PUBLIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: betpossum-config
+                  key: PUBLIC_HOST
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://keycloak-postgres:5432/keycloak
+            - name: KC_DB_USERNAME
+              value: keycloak
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KC_DB_PASSWORD
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KC_BOOTSTRAP_ADMIN_USERNAME
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KC_BOOTSTRAP_ADMIN_PASSWORD
+            # Single public origin, Keycloak under /kc. The path must be in
+            # KC_HOSTNAME so generated links (issuer, login-action POSTs) route
+            # back through nginx; the proxy terminates TLS so trust forwarded headers.
+            - name: KC_HOSTNAME
+              value: https://$(PUBLIC_HOST)/kc
+            - name: KC_HTTP_RELATIVE_PATH
+              value: /kc
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /kc/realms/master
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 30      # realm import on first boot can be slow
+          livenessProbe:
+            httpGet:
+              path: /kc/realms/master
+              port: 8080
+            initialDelaySeconds: 90
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: realm-import
+          configMap:
+            name: keycloak-realm     # created out of band — see README

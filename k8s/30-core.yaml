@@ -1,0 +1,67 @@
+# Core API (NestJS) — bets, wallet/ledger, settlement.
+#
+# Safe to scale: core's only broker consumer is events.resolved bound to a
+# DURABLE NAMED queue (core.events.resolved), so replicas are competing
+# consumers — each event is settled exactly once across the set. Notifications
+# are published per HTTP request / per settlement, so they don't duplicate either.
+#
+# seccomp Unconfined: core's TigerBeetle client uses io_uring.
+apiVersion: v1
+kind: Service
+metadata:
+  name: core
+  namespace: betpossum
+spec:
+  selector:
+    app: core
+  ports:
+    - port: 4000
+      targetPort: 4000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core
+  namespace: betpossum
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: core
+  template:
+    metadata:
+      labels:
+        app: core
+    spec:
+      securityContext:
+        seccompProfile:
+          type: Unconfined
+      containers:
+        - name: core
+          image: ghcr.io/andrasore/betpossum-core:latest   # Dockerfile target: core
+          env:
+            - name: PORT
+              value: "4000"
+          envFrom:
+            - configMapRef:
+                name: betpossum-config
+            - secretRef:
+                name: betpossum-app-secrets
+          ports:
+            - containerPort: 4000
+          readinessProbe:
+            tcpSocket:
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi

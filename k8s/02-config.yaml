@@ -1,0 +1,24 @@
+# Non-secret shared configuration. Edit PUBLIC_HOST (and the derived issuer) to
+# your real domain. The issuer/host carry the /kc prefix because Keycloak is
+# fronted by nginx under that path (single origin); KEYCLOAK_INTERNAL_URL is the
+# in-cluster backchannel the services use directly (bypasses nginx).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: betpossum-config
+  namespace: betpossum
+data:
+  PUBLIC_HOST: betpossum.example.com
+  KEYCLOAK_REALM: betting
+  KEYCLOAK_ISSUER_URL: https://betpossum.example.com/kc/realms/betting
+  KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
+  KEYCLOAK_ADMIN_CLIENT_ID: betting-core
+  TIGERBEETLE_ADDRESS: tigerbeetle:6000
+  TIGERBEETLE_CLUSTER_ID: "0"
+  # Odds ingestion. Switch ODDS_PROVIDERS to a real provider (e.g. "theoddsapi")
+  # and supply the matching key in betpossum-app-secrets.
+  ODDS_PROVIDERS: mock
+  ODDS_STORAGE: postgres
+  POLL_INTERVAL_SECONDS: "3000"
+  APIFOOTBALL_LEAGUES: "421"
+  APIFOOTBALL_SEASON: "2023"

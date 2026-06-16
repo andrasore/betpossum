@@ -1,0 +1,76 @@
+# Financial ledger (core's wallet module). Single replica, replica-count=1
+# cluster — matches the dev topology. Must run with the seccomp profile
+# Unconfined because TigerBeetle uses io_uring, which the default profile blocks.
+apiVersion: v1
+kind: Service
+metadata:
+  name: tigerbeetle
+  namespace: betpossum
+spec:
+  clusterIP: None
+  selector:
+    app: tigerbeetle
+  ports:
+    - port: 6000
+      targetPort: 6000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tigerbeetle
+  namespace: betpossum
+spec:
+  serviceName: tigerbeetle
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tigerbeetle
+  template:
+    metadata:
+      labels:
+        app: tigerbeetle
+    spec:
+      securityContext:
+        seccompProfile:
+          type: Unconfined        # io_uring needs the default seccomp filter off
+      # TigerBeetle does not handle SIGTERM; give it a short grace then SIGKILL.
+      terminationGracePeriodSeconds: 15
+      containers:
+        - name: tigerbeetle
+          image: ghcr.io/tigerbeetle/tigerbeetle:0.17.3
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              /tigerbeetle format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle 2>/dev/null || true &&
+              exec /tigerbeetle start --addresses=0.0.0.0:6000 --development /data/0_0.tigerbeetle
+          ports:
+            - containerPort: 6000
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            tcpSocket:
+              port: 6000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 6000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              # TigerBeetle statically allocates its whole memory budget at
+              # startup (~1.4Gi floor), so request near actual usage.
+              memory: 1536Mi
+            limits:
+              memory: 2Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
