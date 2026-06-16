@@ -80,10 +80,11 @@ user-info lookups). Keycloak ships with its own dedicated Postgres instance.
 The primary application service. Responsibilities:
 - Bet placement and settlement logic
 - Wallet / ledger operations against TigerBeetle (in-process module)
-- Subscribes to the `odds.updated` exchange and re-publishes UI events to the
-  `notifications` exchange
-- Publishes UI events (balance updates, bet status changes, broadcast odds)
-  to the `notifications` exchange for the notifications service to deliver
+- Subscribes to the `events.resolved` exchange (durable queue
+  `core.events.resolved`) and settles any held bets on the resolved event
+- Publishes per-user UI events (bet held / settled, balance updated,
+  insufficient balance) to the `notifications` exchange for the notifications
+  service to deliver
 
 Internally the wallet logic lives as a Nest module within the core service and
 is invoked by the bets module via direct method calls — no broker hop for
@@ -144,10 +145,17 @@ messages sent while no subscriber is connected are dropped.
 
 ### Exchanges and event types
 
-| Exchange        | Publisher    | Subscribers   | Payload             |
-|-----------------|--------------|---------------|---------------------|
-| `odds.updated`  | Odds Service | Core API      | `OddsUpdatedEvent`  |
-| `notifications` | Core API     | Notifications | `NotificationEvent` |
+| Exchange          | Publisher           | Subscribers   | Payload              |
+|-------------------|---------------------|---------------|----------------------|
+| `odds.updated`    | Odds Service        | —             | `OddsUpdatedEvent`   |
+| `events.resolved` | Odds Service        | Core API      | `EventResolvedEvent` |
+| `notifications`   | Core + Odds Service | Notifications | `NotificationEvent`  |
+
+The browser's live odds updates do **not** flow over `odds.updated`: the Odds
+Service separately broadcasts an `oddsUpdated` `NotificationEvent` (empty
+`userId`) on the `notifications` exchange, which the Notifications service
+relays. `odds.updated` carries the raw `OddsUpdatedEvent` and currently has no
+in-process subscriber. Core consumes `events.resolved` to settle held bets.
 
 `NotificationEvent` is a flat envelope: `userId` (empty = broadcast), `kind`
 (discriminator mapped to a socket.io event name), and `payload` (the inner
