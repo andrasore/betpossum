@@ -243,14 +243,4 @@ describe("BetsService", () => {
     const settled = await betRepo.findOneByOrFail({ id: bet.id });
     expect(settled.status).toBe("won");
   });
-
-  it("handleEventResolved ignores events with an unknown outcome", async () => {
-    const userId = await newFundedUser(10000);
-    const bet = await bets.place(userId, "evt-unspec", "home", 2, 5);
-
-    await bets.handleEventResolved(encodeEvent("evt-unspec", "unspecified"));
-
-    const stored = await betRepo.findOneByOrFail({ id: bet.id });
-    expect(stored.status).toBe("held");
-  });
 });

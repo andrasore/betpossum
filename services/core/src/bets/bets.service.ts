@@ -1,10 +1,7 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
-import {
-  type EventResolvedEvent,
-  EventResolvedEventSchema,
-} from "../generated/events";
+import { EventResolvedEventSchema } from "../generated/events";
 import { MessagingService } from "../messaging/messaging.service";
 import { NotificationsClient } from "../notifications/notifications.client";
 import { WalletService } from "../wallet/wallet.service";
@@ -97,15 +94,7 @@ export class BetsService implements OnModuleInit {
   // settled it moves to 'won'/'lost' and won't be picked up again. On a
   // mid-batch crash, redelivery resumes from the remaining held bets.
   async handleEventResolved(raw: Buffer): Promise<void> {
-    let event: EventResolvedEvent;
-    try {
-      event = EventResolvedEventSchema.parse(JSON.parse(raw.toString()));
-    } catch (err) {
-      // Drop (ack) malformed messages rather than letting the durable queue
-      // requeue them forever.
-      this.logger.warn("Ignoring malformed events.resolved message", err);
-      return;
-    }
+    const event = EventResolvedEventSchema.parse(JSON.parse(raw.toString()));
     const outcome: Selection = event.outcome;
 
     const held = await this.repo.find({
