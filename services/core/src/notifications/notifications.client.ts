@@ -36,18 +36,6 @@ export class NotificationsClient {
     });
   }
 
-  insufficientBalance(
-    userId: string,
-    stake: number,
-    balance: number,
-  ): Promise<void> {
-    return this.publish({
-      userId,
-      kind: "insufficientBalance",
-      payload: { stake, balance },
-    });
-  }
-
   private async publish(message: NotificationEvent): Promise<void> {
     const msg = NotificationEventSchema.parse(message);
     await this.messaging.publish(CHANNEL, Buffer.from(JSON.stringify(msg)));

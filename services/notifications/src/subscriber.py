@@ -19,7 +19,6 @@ SOCKET_EVENT = {
     "betHeld": "bet.held",
     "betSettled": "bet.settled",
     "balanceUpdated": "balance.updated",
-    "insufficientBalance": "insufficient.balance",
 }
 
 

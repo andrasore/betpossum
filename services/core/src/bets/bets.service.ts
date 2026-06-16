@@ -7,10 +7,7 @@ import {
 } from "../generated/events";
 import { MessagingService } from "../messaging/messaging.service";
 import { NotificationsClient } from "../notifications/notifications.client";
-import {
-  InsufficientBalanceError,
-  WalletService,
-} from "../wallet/wallet.service";
+import { WalletService } from "../wallet/wallet.service";
 import { Bet } from "./bet.entity";
 
 type Selection = "home" | "away" | "draw";
@@ -57,10 +54,6 @@ export class BetsService implements OnModuleInit {
       await this.wallet.hold(userId, bet.id, stakeCents);
     } catch (err) {
       await this.repo.delete(bet.id);
-      if (err instanceof InsufficientBalanceError) {
-        const balance = await this.wallet.getBalance(userId);
-        await this.notifications.insufficientBalance(userId, stake, balance);
-      }
       throw err;
     }
     await this.repo.update(bet.id, { status: "held" });

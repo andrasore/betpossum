@@ -56,22 +56,12 @@ class BalanceUpdatedNotification(BaseModel):
     balance: float = Field(..., description='Dollars, not cents.')
 
 
-class InsufficientBalanceNotification(BaseModel):
-    model_config = ConfigDict(
-        extra='forbid',
-    )
-    stake: float
-    balance: float
-
-
 class NotificationEvent(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
     userId: str = Field(..., description='Empty means broadcast.')
-    kind: Literal[
-        'oddsUpdated', 'betHeld', 'betSettled', 'balanceUpdated', 'insufficientBalance'
-    ] = Field(
+    kind: Literal['oddsUpdated', 'betHeld', 'betSettled', 'balanceUpdated'] = Field(
         ...,
         description='Discriminator for the body; maps to a socket.io event name in the notifications relay.',
     )

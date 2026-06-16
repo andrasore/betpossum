@@ -88,17 +88,6 @@
         }
       }
     },
-    "InsufficientBalanceNotification": {
-      "title": "InsufficientBalanceNotification",
-      "description": "Core API -> Notifications. Per-user notification: a bet placement was rejected because the requested stake exceeded the user's available balance.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["stake", "balance"],
-      "properties": {
-        "stake": { "type": "number" },
-        "balance": { "type": "number" }
-      }
-    },
     "NotificationEvent": {
       "title": "NotificationEvent",
       "description": "Any service -> Notifications Service. Fire-and-forget envelope; `userId` empty means broadcast. `payload` is the inner message object matching `kind`.",
@@ -116,8 +105,7 @@
             "oddsUpdated",
             "betHeld",
             "betSettled",
-            "balanceUpdated",
-            "insufficientBalance"
+            "balanceUpdated"
           ],
           "description": "Discriminator for the body; maps to a socket.io event name in the notifications relay."
         },

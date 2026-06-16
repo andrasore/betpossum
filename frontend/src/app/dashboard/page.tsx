@@ -12,7 +12,6 @@ import { SportFilterBar } from "@/components/SportFilterBar";
 import { useBalance } from "@/hooks/useBalance";
 import { useBets } from "@/hooks/useBets";
 import { useDashboardFilters } from "@/hooks/useDashboardFilters";
-import { useInsufficientBalanceToast } from "@/hooks/useInsufficientBalanceToast";
 import { useLeagues } from "@/hooks/useLeagues";
 import { useOdds } from "@/hooks/useOdds";
 import { useSports } from "@/hooks/useSports";
@@ -38,7 +37,6 @@ export default function DashboardPage() {
   );
   const { data: bets, mutate } = useBets(sessionKey);
   const balance = useBalance(sessionKey);
-  useInsufficientBalanceToast(sessionKey);
 
   return (
     <Flex direction="column" style={{ height: "100vh" }}>

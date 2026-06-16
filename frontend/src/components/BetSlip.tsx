@@ -90,8 +90,8 @@ export function BetSlip({
       setStake("");
       onPlaced();
     } catch {
-      // Failures surface via the insufficient-balance toast (or are logged
-      // server-side for other errors).
+      // Stake is validated against the balance before submit; any other
+      // placement failure is logged server-side.
     } finally {
       setLoading(false);
     }
