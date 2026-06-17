@@ -181,6 +181,7 @@ export function BetSlip({
             disabled={!stakeValid || overBalance}
             data-testid="place-bet-button"
             style={{ width: "100%" }}
+            variant="classic"
           >
             Place Bet
           </Button>
@@ -189,6 +190,7 @@ export function BetSlip({
             onClick={onLogin}
             data-testid="betslip-login-button"
             style={{ width: "100%" }}
+            variant="classic"
           >
             <LogIn size={16} />
             Sign in to Place Bet

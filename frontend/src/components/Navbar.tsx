@@ -7,16 +7,20 @@ import {
   DropdownMenu,
   Flex,
   Link,
+  Separator,
   Text,
 } from "@radix-ui/themes";
 import {
   ChevronDown,
+  LayoutDashboard,
   ListChecks,
   LogIn,
   LogOut,
   Shield,
   Wallet,
 } from "lucide-react";
+import NextLink from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
 interface NavbarProps {
@@ -28,6 +32,9 @@ export function Navbar({ balance }: NavbarProps) {
   const isAdmin = isAuthenticated && roles.includes("admin");
   const displayName = name ?? "";
   const initial = displayName.charAt(0).toUpperCase();
+  const pathname = usePathname();
+  const navItemVariant = (href: string) =>
+    pathname === href ? "solid" : "ghost";
   return (
     <Flex
       asChild
@@ -38,39 +45,87 @@ export function Navbar({ balance }: NavbarProps) {
       style={{ borderBottom: "1px solid var(--gray-a5)" }}
     >
       <nav>
-        <Link href="/dashboard" underline="hover">
-          <Flex align="center" gap="3">
-            <span
-              aria-hidden
-              style={{
-                display: "block",
-                width: 90,
-                height: 48,
-                backgroundColor: "var(--accent-11)",
-                WebkitMaskImage: "url(/possum.png)",
-                maskImage: "url(/possum.png)",
-                WebkitMaskRepeat: "no-repeat",
-                maskRepeat: "no-repeat",
-                WebkitMaskSize: "contain",
-                maskSize: "contain",
-                WebkitMaskPosition: "center",
-                maskPosition: "center",
-              }}
-            />
-            <Text
-              size="7"
-              weight="bold"
-              style={{
-                fontFamily: "var(--font-display), system-ui, sans-serif",
-                letterSpacing: "-0.02em",
-                color: "var(--accent-11)",
-              }}
+        <Flex align="center" flexGrow="1" flexBasis="0">
+          <Link asChild underline="hover">
+            <NextLink href="/dashboard">
+              <Flex align="center" gap="3">
+              <span
+                aria-hidden
+                style={{
+                  display: "block",
+                  width: 90,
+                  height: 48,
+                  backgroundColor: "var(--accent-11)",
+                  WebkitMaskImage: "url(/possum.png)",
+                  maskImage: "url(/possum.png)",
+                  WebkitMaskRepeat: "no-repeat",
+                  maskRepeat: "no-repeat",
+                  WebkitMaskSize: "contain",
+                  maskSize: "contain",
+                  WebkitMaskPosition: "center",
+                  maskPosition: "center",
+                }}
+              />
+              <Text
+                size="7"
+                weight="bold"
+                style={{
+                  fontFamily: "var(--font-display), system-ui, sans-serif",
+                  letterSpacing: "-0.02em",
+                  color: "var(--accent-11)",
+                }}
+              >
+                BetPossum
+              </Text>
+            </Flex>
+            </NextLink>
+          </Link>
+        </Flex>
+        <Flex asChild align="center" justify="center" gap="3">
+          <nav aria-label="Primary">
+            <Button
+              asChild
+              size="2"
+              radius="full"
+              variant={navItemVariant("/dashboard")}
+              data-testid="dashboard-link"
             >
-              BetPossum
-            </Text>
-          </Flex>
-        </Link>
-        <Flex align="center" gap="4">
+              <NextLink href="/dashboard">
+                <LayoutDashboard size={16} />
+                Dashboard
+              </NextLink>
+            </Button>
+            {isAuthenticated && (
+              <Button
+                asChild
+                size="2"
+                radius="full"
+                variant={navItemVariant("/my-bets")}
+                data-testid="my-bets-link"
+              >
+                <NextLink href="/my-bets">
+                  <ListChecks size={16} />
+                  My Bets
+                </NextLink>
+              </Button>
+            )}
+            {isAdmin && (
+              <Button
+                asChild
+                size="2"
+                radius="full"
+                variant={navItemVariant("/admin")}
+                data-testid="admin-link"
+              >
+                <NextLink href="/admin">
+                  <Shield size={16} />
+                  Admin
+                </NextLink>
+              </Button>
+            )}
+          </nav>
+        </Flex>
+        <Flex align="center" justify="end" gap="4" flexGrow="1" flexBasis="0">
           {balance != null && (
             <Badge
               color={balance === 0 ? "yellow" : "green"}
@@ -79,25 +134,12 @@ export function Navbar({ balance }: NavbarProps) {
               size="2"
               data-testid="balance"
             >
-              <Wallet size={14} aria-hidden />
-              Balance: £{balance.toFixed(2)}
+              <Wallet size={18} aria-hidden />
+              <Text color="gray">Balance:</Text>
+              <Text size="3" weight="bold" style={{ color: "white" }}>
+                £{balance.toFixed(2)}
+              </Text>
             </Badge>
-          )}
-          {isAuthenticated && (
-            <Button asChild variant="ghost" size="2" data-testid="my-bets-link">
-              <Link href="/my-bets">
-                <ListChecks size={16} />
-                My Bets
-              </Link>
-            </Button>
-          )}
-          {isAdmin && (
-            <Button asChild variant="ghost" size="2" data-testid="admin-link">
-              <Link href="/admin">
-                <Shield size={16} />
-                Admin
-              </Link>
-            </Button>
           )}
           {isAuthenticated ? (
             <DropdownMenu.Root>
