@@ -2,7 +2,7 @@
 
 import { Badge, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import Link from "next/link";
-import { statusColor } from "@/lib/betDisplay";
+import { betOutcomeLabel, statusColor } from "@/lib/betDisplay";
 import type { Bet, OddsEvent } from "@/types";
 
 const RECENT_LIMIT = 5;
@@ -69,7 +69,7 @@ export function RecentBets({ bets, oddsIndex }: RecentBetsProps) {
                         color={statusColor[bet.status]}
                         style={{ textTransform: "capitalize" }}
                       >
-                        {bet.status}
+                        {betOutcomeLabel(bet)}
                       </Badge>
                     </Flex>
                   </Flex>

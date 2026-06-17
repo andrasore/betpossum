@@ -43,6 +43,13 @@ describe("RecentBets", () => {
     expect(teams).toHaveTextContent("Arsenal vs Chelsea");
   });
 
+  it("shows the won profit on a settled winning bet", () => {
+    const bet = makeBet({ id: "bet-1", status: "won", payout: 25.5 });
+    render(<RecentBets bets={[bet]} oddsIndex={emptyIndex} />);
+
+    expect(screen.getByText("Won +£25.50")).toBeInTheDocument();
+  });
+
   it("omits the matchup line when the event is not in the index", () => {
     const bet = makeBet({ id: "bet-1", eventId: "mock:missing" });
     render(<RecentBets bets={[bet]} oddsIndex={emptyIndex} />);
