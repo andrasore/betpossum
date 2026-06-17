@@ -17,9 +17,8 @@ type RecentBetsProps = {
 // /my-bets); each row links there with the matching bet anchored. `bets` arrive
 // newest-first from the API (placedAt DESC), so a head slice is "most recent".
 // Each bet carries only an `eventId`; we join against `oddsIndex` to surface the
-// competing team names, emphasising the side the user backed. The join may miss
-// (odds still loading, or an event long gone), in which case the matchup line is
-// simply omitted.
+// competing team names. The join may miss (odds still loading, or an event long
+// gone), in which case the matchup line is simply omitted.
 export function RecentBets({ bets, oddsIndex }: RecentBetsProps) {
   const recent = bets.slice(0, RECENT_LIMIT);
   return (
@@ -48,23 +47,11 @@ export function RecentBets({ bets, oddsIndex }: RecentBetsProps) {
                   <Flex direction="column" gap="2">
                     {event && (
                       <Text size="2" data-testid={`bet-teams-${bet.id}`}>
-                        <Text
-                          as="span"
-                          weight={bet.selection === "home" ? "bold" : "regular"}
-                          color={bet.selection === "home" ? undefined : "gray"}
-                        >
-                          {event.homeTeamName ?? event.homeTeam}
-                        </Text>
+                        {event.homeTeamName ?? event.homeTeam}
                         <Text as="span" color="gray">
                           {" vs "}
                         </Text>
-                        <Text
-                          as="span"
-                          weight={bet.selection === "away" ? "bold" : "regular"}
-                          color={bet.selection === "away" ? undefined : "gray"}
-                        >
-                          {event.awayTeamName ?? event.awayTeam}
-                        </Text>
+                        {event.awayTeamName ?? event.awayTeam}
                       </Text>
                     )}
                     <Flex align="center" justify="between" gap="4">
