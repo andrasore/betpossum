@@ -19,10 +19,7 @@ export function useBalance(token: string | null) {
 
     const socket = getSocket();
     socket.on("balance.updated", (data: unknown) => {
-      const result = BalanceUpdatedNotificationSchema.safeParse(data);
-      if (result.success) {
-        setBalance(result.data.balance);
-      }
+      setBalance(BalanceUpdatedNotificationSchema.parse(data).balance);
     });
     return () => {
       socket.off("balance.updated");

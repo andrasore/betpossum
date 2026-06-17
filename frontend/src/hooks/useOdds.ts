@@ -38,22 +38,19 @@ export function useOdds(loggedIn: boolean, sport?: string, league?: number) {
 
     const socket = getSocket();
     socket.on("odds.updated", (data: unknown) => {
-      const result = OddsUpdatedEventSchema.safeParse(data);
-      if (!result.success) {
-        return;
-      }
+      const update = OddsUpdatedEventSchema.parse(data);
       // A tick is a delta (changing odds only); identity and canonical names
       // come from the hydrate. Merge onto the existing event so those survive.
       setOdds((prev) => {
-        const existing = prev.get(result.data.eventId);
+        const existing = prev.get(update.eventId);
         // No hydrated event yet → nothing to render from a bare delta; the next
         // hydrate will bring this event in with its identity/names.
         if (!existing) {
           return prev;
         }
-        return new Map(prev).set(result.data.eventId, {
+        return new Map(prev).set(update.eventId, {
           ...existing,
-          ...result.data,
+          ...update,
         });
       });
     });
