@@ -25,6 +25,18 @@ function formatCommenceTime(ms: number): string {
 }
 
 export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
+  // Active (still bettable) events first; resolved ones sink to the bottom.
+  // Copy before sorting so we don't mutate the prop, and keep it stable so the
+  // server's within-group ordering survives.
+  const ordered = events
+    .map((e, i) => [e, i] as const)
+    .sort(([a, ai], [b, bi]) => {
+      const ar = a.outcome != null ? 1 : 0;
+      const br = b.outcome != null ? 1 : 0;
+      return ar - br || ai - bi;
+    })
+    .map(([e]) => e);
+
   return (
     <Grid columns="repeat(auto-fill, 200px)" gap="3">
       {events.length === 0 &&
@@ -53,15 +65,27 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
             </Skeleton>
           </Card>
         ))}
-      {events.map((e) => {
+      {ordered.map((e) => {
         const selected = e.eventId === selectedEventId;
+        // A resolved event (outcome set by the odds service) can no longer be
+        // bet on — settlement has already happened, so the bet would never
+        // settle. Render it inert: no click, dimmed, with a "Final" badge.
+        const resolved = e.outcome != null;
+        const winnerLabel =
+          e.outcome === "home"
+            ? (e.homeTeamName ?? e.homeTeam)
+            : e.outcome === "away"
+              ? (e.awayTeamName ?? e.awayTeam)
+              : "Draw";
         return (
           <Card
             key={e.eventId}
             data-testid={`event-card-${e.eventId}`}
-            onClick={() => onToggle(e)}
+            aria-disabled={resolved || undefined}
+            onClick={resolved ? undefined : () => onToggle(e)}
             style={{
-              cursor: "pointer",
+              cursor: resolved ? "not-allowed" : "pointer",
+              opacity: resolved ? 0.55 : undefined,
               transition: "outline-color 0.15s, background-color 0.15s",
               ...(selected
                 ? {
@@ -98,10 +122,21 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
                 </Text>
               </Flex>
             </Card>
-            {e.commenceTime != null && (
-              <Text as="div" size="1" color="gray" mt="4">
-                {formatCommenceTime(e.commenceTime)}
-              </Text>
+            {resolved ? (
+              <Flex align="center" gap="2" mt="4">
+                <Badge size="1" color="gray" variant="solid">
+                  Final
+                </Badge>
+                <Text size="1" color="gray">
+                  {winnerLabel}
+                </Text>
+              </Flex>
+            ) : (
+              e.commenceTime != null && (
+                <Text as="div" size="1" color="gray" mt="4">
+                  {formatCommenceTime(e.commenceTime)}
+                </Text>
+              )
             )}
           </Card>
         );
