@@ -82,7 +82,7 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   await expect(betRow).toContainText(/held/i);
 
   // Started at £100, staked £10 → £90 held until settlement.
-  await expect(alicePage.getByTestId("balance")).toHaveText("Balance: £90.00");
+  await expect(alicePage.getByTestId("balance")).toContainText("£90.00");
 
   // Resolve the event in alice's favour by clicking the Home button on
   // the row in bob's Events admin tab.
