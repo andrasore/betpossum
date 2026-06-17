@@ -7,7 +7,6 @@ import {
   DropdownMenu,
   Flex,
   Link,
-  Separator,
   Text,
 } from "@radix-ui/themes";
 import {
@@ -49,35 +48,35 @@ export function Navbar({ balance }: NavbarProps) {
           <Link asChild underline="hover">
             <NextLink href="/dashboard">
               <Flex align="center" gap="3">
-              <span
-                aria-hidden
-                style={{
-                  display: "block",
-                  width: 90,
-                  height: 48,
-                  backgroundColor: "var(--accent-11)",
-                  WebkitMaskImage: "url(/possum.png)",
-                  maskImage: "url(/possum.png)",
-                  WebkitMaskRepeat: "no-repeat",
-                  maskRepeat: "no-repeat",
-                  WebkitMaskSize: "contain",
-                  maskSize: "contain",
-                  WebkitMaskPosition: "center",
-                  maskPosition: "center",
-                }}
-              />
-              <Text
-                size="7"
-                weight="bold"
-                style={{
-                  fontFamily: "var(--font-display), system-ui, sans-serif",
-                  letterSpacing: "-0.02em",
-                  color: "var(--accent-11)",
-                }}
-              >
-                BetPossum
-              </Text>
-            </Flex>
+                <span
+                  aria-hidden
+                  style={{
+                    display: "block",
+                    width: 90,
+                    height: 48,
+                    backgroundColor: "var(--accent-11)",
+                    WebkitMaskImage: "url(/possum.png)",
+                    maskImage: "url(/possum.png)",
+                    WebkitMaskRepeat: "no-repeat",
+                    maskRepeat: "no-repeat",
+                    WebkitMaskSize: "contain",
+                    maskSize: "contain",
+                    WebkitMaskPosition: "center",
+                    maskPosition: "center",
+                  }}
+                />
+                <Text
+                  size="7"
+                  weight="bold"
+                  style={{
+                    fontFamily: "var(--font-display), system-ui, sans-serif",
+                    letterSpacing: "-0.02em",
+                    color: "var(--accent-11)",
+                  }}
+                >
+                  BetPossum
+                </Text>
+              </Flex>
             </NextLink>
           </Link>
         </Flex>

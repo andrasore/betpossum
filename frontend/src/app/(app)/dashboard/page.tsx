@@ -5,7 +5,6 @@ import { useState } from "react";
 import { BetSlipDrawer } from "@/components/BetSlipDrawer";
 import { Leaderboard } from "@/components/Leaderboard";
 import { LeagueFilterBar } from "@/components/LeagueFilterBar";
-import { Navbar } from "@/components/Navbar";
 import { OddsBoard } from "@/components/OddsBoard";
 import { RecentBets } from "@/components/RecentBets";
 import { SportFilterBar } from "@/components/SportFilterBar";
@@ -41,8 +40,7 @@ export default function DashboardPage() {
   const balance = useBalance(sessionKey);
 
   return (
-    <Flex direction="column" style={{ height: "100vh" }}>
-      <Navbar balance={balance} />
+    <>
       <Flex flexGrow="1" overflow="hidden">
         <Box asChild flexGrow="1" p="6" style={{ overflowY: "auto" }}>
           <main>
@@ -108,6 +106,6 @@ export default function DashboardPage() {
         onLogin={() => login("/dashboard")}
         onClose={() => setSelection(null)}
       />
-    </Flex>
+    </>
   );
 }

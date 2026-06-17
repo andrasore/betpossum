@@ -17,7 +17,6 @@ import { Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
-import { Navbar } from "@/components/Navbar";
 import type { Outcome } from "@/generated/events";
 import {
   type AdminUserRow,
@@ -51,29 +50,26 @@ export default function AdminPage() {
   }
 
   return (
-    <Flex direction="column" style={{ height: "100vh" }}>
-      <Navbar />
-      <Box asChild flexGrow="1" p="6" style={{ overflowY: "auto" }}>
-        <main>
-          <Tabs.Root defaultValue="users">
-            <Tabs.List>
-              <Tabs.Trigger value="users">Users</Tabs.Trigger>
-              <Tabs.Trigger value="events" data-testid="admin-events-tab">
-                Events
-              </Tabs.Trigger>
-            </Tabs.List>
-            <Box pt="4">
-              <Tabs.Content value="users">
-                <UsersPanel />
-              </Tabs.Content>
-              <Tabs.Content value="events">
-                <EventsPanel />
-              </Tabs.Content>
-            </Box>
-          </Tabs.Root>
-        </main>
-      </Box>
-    </Flex>
+    <Box asChild flexGrow="1" p="6" style={{ overflowY: "auto" }}>
+      <main>
+        <Tabs.Root defaultValue="users">
+          <Tabs.List>
+            <Tabs.Trigger value="users">Users</Tabs.Trigger>
+            <Tabs.Trigger value="events" data-testid="admin-events-tab">
+              Events
+            </Tabs.Trigger>
+          </Tabs.List>
+          <Box pt="4">
+            <Tabs.Content value="users">
+              <UsersPanel />
+            </Tabs.Content>
+            <Tabs.Content value="events">
+              <EventsPanel />
+            </Tabs.Content>
+          </Box>
+        </Tabs.Root>
+      </main>
+    </Box>
   );
 }
 
