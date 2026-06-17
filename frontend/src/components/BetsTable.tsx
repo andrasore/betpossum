@@ -25,8 +25,6 @@ export function BetsTable({ bets, oddsIndex }: BetsTableProps) {
   // Guard so we scroll/flash the deep-linked row exactly once, not on every
   // later bets revalidation (a settlement would otherwise yank the user back).
   const handledHashRef = useRef(false);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: bets is a deliberate trigger — re-run as rows render so the deep-linked row exists in the DOM to scroll to
   useEffect(() => {
     if (handledHashRef.current) {
       return;

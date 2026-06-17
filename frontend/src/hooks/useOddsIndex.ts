@@ -18,8 +18,7 @@ export function useOddsIndex(
     async () => {
       const events = await fetchOdds();
       const parsed = events.flatMap((e) => {
-        const result = OddsEventSchema.safeParse(e);
-        return result.success ? [result.data] : [];
+        return OddsEventSchema.parse(e);
       });
       return new Map(parsed.map((e) => [e.eventId, e]));
     },

@@ -29,12 +29,7 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
     <Grid columns="repeat(auto-fill, 200px)" gap="3">
       {events.length === 0 &&
         Array.from({ length: SKELETON_PLACEHOLDER_COUNT }).map((_, i) => (
-          <Card
-            // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list
-            key={i}
-            aria-busy="true"
-            aria-label="Loading live odds"
-          >
+          <Card key={i} aria-busy="true" aria-label="Loading live odds">
             <Skeleton width="56px" mb="3">
               <Badge size="1">sport</Badge>
             </Skeleton>
