@@ -14,6 +14,7 @@ import { useBets } from "@/hooks/useBets";
 import { useDashboardFilters } from "@/hooks/useDashboardFilters";
 import { useLeagues } from "@/hooks/useLeagues";
 import { useOdds } from "@/hooks/useOdds";
+import { useOddsIndex } from "@/hooks/useOddsIndex";
 import { useSports } from "@/hooks/useSports";
 import { useAuth } from "@/lib/auth-context";
 import type { OddsEvent } from "@/types";
@@ -36,6 +37,7 @@ export default function DashboardPage() {
     selectedLeague ?? undefined,
   );
   const { data: bets, mutate } = useBets(sessionKey);
+  const oddsIndex = useOddsIndex(sessionKey);
   const balance = useBalance(sessionKey);
 
   return (
@@ -84,7 +86,9 @@ export default function DashboardPage() {
           <aside>
             <Flex direction="column" gap="6">
               <Leaderboard />
-              {isAuthenticated && bets && <RecentBets bets={bets} />}
+              {isAuthenticated && bets && (
+                <RecentBets bets={bets} oddsIndex={oddsIndex} />
+              )}
             </Flex>
           </aside>
         </Box>
