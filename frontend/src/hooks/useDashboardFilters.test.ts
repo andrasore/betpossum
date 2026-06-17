@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { League } from "@/lib/schemas";
+import type { League } from "@/generated/events";
 import { useDashboardFilters } from "./useDashboardFilters";
 
 const nbaLeague: League = { id: 7, name: "NBA", sportSlug: "basketball" };

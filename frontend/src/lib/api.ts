@@ -1,6 +1,6 @@
+import type { League, Outcome, Sport } from "@/generated/events";
 import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
 import { getAccessToken, refresh } from "./auth";
-import type { League, Outcome, Sport } from "./schemas";
 
 async function send(
   url: string,

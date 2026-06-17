@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR from "swr";
+import { OddsEventSchema } from "@/generated/events";
 import { fetchOdds } from "@/lib/api";
-import { OddsEventSchema } from "@/lib/schemas";
 import type { OddsEvent } from "@/types";
 
 // A static lookup of every event keyed by `eventId`, used to enrich a user's
@@ -17,9 +17,7 @@ export function useOddsIndex(
     sessionKey ? "odds-index" : null,
     async () => {
       const events = await fetchOdds();
-      const parsed = events.flatMap((e) => {
-        return OddsEventSchema.parse(e);
-      });
+      const parsed = events.map((e) => OddsEventSchema.parse(e));
       return new Map(parsed.map((e) => [e.eventId, e]));
     },
   );

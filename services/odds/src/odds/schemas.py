@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from generated.rest import League, OddsEvent, Sport
+
 from .models import (
     CanonicalEvent,
     CanonicalLeague,
@@ -8,79 +10,45 @@ from .models import (
     h2h_odds,
 )
 
-
-class OddsEventResponse(BaseModel):
-    model_config = {"populate_by_name": True}
-
-    event_id: str = Field(serialization_alias="eventId")
-    origin: str
-    sport: str
-    home_team: str = Field(serialization_alias="homeTeam")
-    away_team: str = Field(serialization_alias="awayTeam")
-    home_odds: float = Field(serialization_alias="homeOdds")
-    away_odds: float = Field(serialization_alias="awayOdds")
-    draw_odds: float = Field(serialization_alias="drawOdds")
-    updated_at: int = Field(serialization_alias="updatedAt")
-    commence_time: int | None = Field(default=None, serialization_alias="commenceTime")
-    outcome: Outcome | None = None
-    resolved_at: int | None = Field(default=None, serialization_alias="resolvedAt")
-    # Canonical display names from the entity join; None when the event's
-    # sport/league/team link is unresolved (the frontend falls back to the raw
-    # sport/home_team/away_team above).
-    sport_name: str | None = Field(default=None, serialization_alias="sportName")
-    league_id: int | None = Field(default=None, serialization_alias="leagueId")
-    league_name: str | None = Field(default=None, serialization_alias="leagueName")
-    home_team_name: str | None = Field(default=None, serialization_alias="homeTeamName")
-    away_team_name: str | None = Field(default=None, serialization_alias="awayTeamName")
-
-    @classmethod
-    def from_event(cls, event: CanonicalEvent) -> "OddsEventResponse":
-        projected = h2h_odds(event)
-        home_odds, away_odds, draw_odds = (
-            projected if projected is not None else (0.0, 0.0, 0.0)
-        )
-        return cls(
-            event_id=event.event_id,
-            origin=event.origin,
-            sport=event.sport,
-            home_team=event.home_team,
-            away_team=event.away_team,
-            home_odds=home_odds,
-            away_odds=away_odds,
-            draw_odds=draw_odds,
-            updated_at=event.updated_at,
-            commence_time=event.commence_time,
-            outcome=event.outcome,
-            resolved_at=event.resolved_at,
-            sport_name=event.sport_title,
-            league_id=event.league_id,
-            league_name=event.league_name,
-            home_team_name=event.home_team_name,
-            away_team_name=event.away_team_name,
-        )
+# The wire shapes (`OddsEvent`/`Sport`/`League`) are generated from
+# schemas/json/rest.json — the single source of truth shared with the
+# frontend. These mappers project the internal canonical models onto them;
+# missing canonical names stay None and the frontend falls back to the raw
+# sport/team fields.
 
 
-class SportResponse(BaseModel):
-    model_config = {"populate_by_name": True}
+def event_to_response(event: CanonicalEvent) -> OddsEvent:
+    projected = h2h_odds(event)
+    home_odds, away_odds, draw_odds = (
+        projected if projected is not None else (0.0, 0.0, 0.0)
+    )
+    return OddsEvent(
+        eventId=event.event_id,
+        origin=event.origin,
+        sport=event.sport,
+        homeTeam=event.home_team,
+        awayTeam=event.away_team,
+        homeOdds=home_odds,
+        awayOdds=away_odds,
+        drawOdds=draw_odds,
+        updatedAt=event.updated_at,
+        commenceTime=event.commence_time,
+        outcome=event.outcome,
+        resolvedAt=event.resolved_at,
+        sportName=event.sport_title,
+        leagueId=event.league_id,
+        leagueName=event.league_name,
+        homeTeamName=event.home_team_name,
+        awayTeamName=event.away_team_name,
+    )
 
-    slug: str
-    name: str
 
-    @classmethod
-    def from_sport(cls, sport: CanonicalSport) -> "SportResponse":
-        return cls(slug=sport.slug, name=sport.title)
+def sport_to_response(sport: CanonicalSport) -> Sport:
+    return Sport(slug=sport.slug, name=sport.title)
 
 
-class LeagueResponse(BaseModel):
-    model_config = {"populate_by_name": True}
-
-    id: int
-    name: str
-    sport_slug: str = Field(serialization_alias="sportSlug")
-
-    @classmethod
-    def from_league(cls, league: CanonicalLeague) -> "LeagueResponse":
-        return cls(id=league.id, name=league.name, sport_slug=league.sport_slug)
+def league_to_response(league: CanonicalLeague) -> League:
+    return League(id=league.id, name=league.name, sportSlug=league.sport_slug)
 
 
 class ResolveEventRequest(BaseModel):

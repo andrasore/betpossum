@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Flex } from "@radix-ui/themes";
-import type { Sport } from "@/lib/schemas";
+import type { Sport } from "@/generated/events";
 import { type AccentColor, sportColor } from "@/lib/sportColor";
 
 type SportFilterBarProps = {

@@ -2,7 +2,7 @@
   "name": "@betting/core",
   "version": "0.1.0",
   "scripts": {
-    "schema:gen": "mkdir -p ./src/generated && node ../../tools/gen-zod.mjs ./src/generated/events.ts",
+    "schema:gen": "mkdir -p ./src/generated && node ../../tools/gen-zod.mjs ../../schemas/json ./src/generated/events.ts",
     "build": "nest build",
     "start": "node dist/main",
     "start:dev": "nest start --watch",

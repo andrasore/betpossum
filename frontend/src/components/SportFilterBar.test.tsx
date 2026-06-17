@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Sport } from "@/lib/schemas";
+import type { Sport } from "@/generated/events";
 import { render, screen } from "@/test/render";
 import { SportFilterBar } from "./SportFilterBar";
 

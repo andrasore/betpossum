@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { Navbar } from "@/components/Navbar";
+import type { Outcome } from "@/generated/events";
 import {
   type AdminUserRow,
   fetchAdminUsers,
@@ -26,7 +27,6 @@ import {
   setAdminUserBalance,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import type { Outcome } from "@/lib/schemas";
 import type { OddsEvent } from "@/types";
 
 export default function AdminPage() {

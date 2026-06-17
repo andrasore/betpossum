@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OddsUpdatedEventSchema } from "@/generated/events";
+import { OddsEventSchema, OddsUpdatedEventSchema } from "@/generated/events";
 import { fetchOdds } from "@/lib/api";
-import { OddsEventSchema } from "@/lib/schemas";
 import { getSocket } from "@/lib/websocket";
 import type { OddsEvent } from "@/types";
 
@@ -22,10 +21,7 @@ export function useOdds(loggedIn: boolean, sport?: string, league?: number) {
         if (cancelled) {
           return;
         }
-        const parsed = events.flatMap((e) => {
-          const result = OddsEventSchema.safeParse(e);
-          return result.success ? [result.data] : [];
-        });
+        const parsed = events.map((e) => OddsEventSchema.parse(e));
         setOdds(new Map(parsed.map((e) => [e.eventId, e])));
       })
       .catch((err) => console.warn("[useOdds] hydrate failed", err));

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # schema_guard.sh — ensures generated binding files (Zod / Pydantic) are always
-# in sync with schemas/events.schema.json before a push is accepted.
+# in sync with the schemas in schemas/json/ before a push is accepted.
 #
 #   1. Runs `pnpm schema:gen` to (re)generate every service's bindings in-place.
 #   2. Checks `git diff` on each service's generated/ directory.
@@ -29,7 +29,7 @@ done
 
 if [ ${#dirty[@]} -gt 0 ]; then
   echo ""
-  echo "error: generated bindings are out of sync with schemas/events.schema.json."
+  echo "error: generated bindings are out of sync with schemas/json/."
   echo "  Stage the following and try again:"
   for path in "${dirty[@]}"; do
     echo "    $path"

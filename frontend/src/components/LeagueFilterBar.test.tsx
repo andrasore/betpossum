@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { League } from "@/lib/schemas";
+import type { League } from "@/generated/events";
 import { render, screen } from "@/test/render";
 import { LeagueFilterBar } from "./LeagueFilterBar";
 

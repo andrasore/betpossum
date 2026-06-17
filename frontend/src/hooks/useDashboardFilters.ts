@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { League } from "@/lib/schemas";
+import type { League } from "@/generated/events";
 
 export type DashboardFilters = {
   // The selected sport slug (what GET /odds filters on), or null for "All".

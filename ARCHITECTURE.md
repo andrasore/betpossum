@@ -126,8 +126,9 @@ external providers. Responsibilities:
 ## Inter-service Communication
 
 Cross-process traffic flows over RabbitMQ fanout exchanges with **JSON**
-payloads — `schemas/events.schema.json` serves as the contract, from which each
-service generates its bindings (Zod for TS, Pydantic for Python). The wallet
+payloads — the schemas in `schemas/json/` serve as the contract (`events.json`
+for the pubsub messages, `rest.json` for the HTTP resource shapes), from which
+each service generates its bindings (Zod for TS, Pydantic for Python). The wallet
 logic is colocated inside Core as a Nest module; bets call the wallet via
 direct in-process method calls.
 

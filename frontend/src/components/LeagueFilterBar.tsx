@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Flex } from "@radix-ui/themes";
-import type { League } from "@/lib/schemas";
+import type { League } from "@/generated/events";
 import { type AccentColor, sportColor } from "@/lib/sportColor";
 
 type LeagueFilterBarProps = {

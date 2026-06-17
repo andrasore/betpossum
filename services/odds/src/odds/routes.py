@@ -8,11 +8,11 @@ from storage.dependencies import StorageDep
 
 from .models import EventResult
 from .schemas import (
-    LeagueResponse,
-    OddsEventResponse,
     ResolveEventRequest,
     ResolveEventResponse,
-    SportResponse,
+    event_to_response,
+    league_to_response,
+    sport_to_response,
 )
 
 router = APIRouter(prefix="/odds", tags=["odds"])
@@ -23,14 +23,14 @@ async def list_odds(
     storage: StorageDep, sport: str | None = None, league: int | None = None
 ) -> list[dict[str, object]]:
     events = await storage.list_current(sport, league)
-    return [OddsEventResponse.from_event(e).model_dump(by_alias=True) for e in events]
+    return [event_to_response(e).model_dump() for e in events]
 
 
 # Declared before `/{event_id}` so "sports" isn't captured as an event id.
 @router.get("/sports")
 async def list_sports(storage: StorageDep) -> list[dict[str, object]]:
     sports = await storage.list_sports()
-    return [SportResponse.from_sport(s).model_dump(by_alias=True) for s in sports]
+    return [sport_to_response(s).model_dump() for s in sports]
 
 
 # Declared before `/{event_id}` so "leagues" isn't captured as an event id.
@@ -39,7 +39,7 @@ async def list_leagues(
     storage: StorageDep, sport: str | None = None
 ) -> list[dict[str, object]]:
     leagues = await storage.list_leagues(sport)
-    return [LeagueResponse.from_league(lg).model_dump(by_alias=True) for lg in leagues]
+    return [league_to_response(lg).model_dump() for lg in leagues]
 
 
 @router.get("/{event_id}")
@@ -47,7 +47,7 @@ async def get_odds(event_id: str, storage: StorageDep) -> dict[str, object]:
     event = await storage.get_current(event_id)
     if event is None:
         raise HTTPException(status_code=404, detail="event not found")
-    return OddsEventResponse.from_event(event).model_dump(by_alias=True)
+    return event_to_response(event).model_dump()
 
 
 # Admin action: resolve an event and fan out the result. Auth is enforced via

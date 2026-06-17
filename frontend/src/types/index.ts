@@ -1,4 +1,4 @@
-export type { OddsEvent } from "@/lib/schemas";
+export type { OddsEvent } from "@/generated/events";
 
 export interface Bet {
   id: string;

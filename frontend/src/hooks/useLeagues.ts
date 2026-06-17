@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR from "swr";
+import { type League, LeagueSchema } from "@/generated/events";
 import { fetchLeagues } from "@/lib/api";
-import { type League, LeagueSchema } from "@/lib/schemas";
 
 // The canonical leagues backing the dashboard's league filter chips. Scoped to
 // the selected sport (`sport` = its slug); undefined lists every sport's
@@ -14,10 +14,7 @@ export function useLeagues(sport?: string) {
     sport ? `leagues:${sport}` : "leagues",
     async () => {
       const leagues = await fetchLeagues(sport);
-      return leagues.flatMap((l) => {
-        const result = LeagueSchema.safeParse(l);
-        return result.success ? [result.data] : [];
-      });
+      return leagues.map((l) => LeagueSchema.parse(l));
     },
   );
 

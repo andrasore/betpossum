@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://betting.local/schemas/rest.schema.json",
+  "$comment": "Single source of truth for the HTTP REST resource shapes served by the Odds service and consumed by the frontend. JSON on the wire, camelCase keys. Field descriptions are the spec. See CLAUDE.md.",
+  "$defs": {
+    "Outcome": {
+      "title": "Outcome",
+      "description": "Resolved outcome of a sports event.",
+      "type": "string",
+      "enum": ["home", "away", "draw"]
+    },
+    "OddsEvent": {
+      "title": "OddsEvent",
+      "description": "Odds Service -> Frontend (GET /odds). A market with its head-to-head odds plus the canonical identity/display names from the entity join. This is the hydrate the live `OddsUpdatedEvent` delta is merged onto.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventId",
+        "origin",
+        "sport",
+        "homeTeam",
+        "awayTeam",
+        "homeOdds",
+        "awayOdds",
+        "updatedAt"
+      ],
+      "properties": {
+        "eventId": { "type": "string", "minLength": 1 },
+        "origin": { "type": "string" },
+        "sport": { "type": "string", "minLength": 1 },
+        "homeTeam": { "type": "string", "minLength": 1 },
+        "awayTeam": { "type": "string", "minLength": 1 },
+        "homeOdds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Decimal odds. 0 when the event carries no head-to-head market."
+        },
+        "awayOdds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Decimal odds. 0 when the event carries no head-to-head market."
+        },
+        "drawOdds": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Decimal odds. 0 when no draw market (e.g. basketball) or no head-to-head market."
+        },
+        "updatedAt": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Unix ms."
+        },
+        "commenceTime": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Scheduled kickoff (Unix ms); null/absent when the provider doesn't supply one. Hydrate-only — live ticks don't carry it."
+        },
+        "outcome": {
+          "type": ["string", "null"],
+          "enum": ["home", "away", "draw", null],
+          "description": "Resolved outcome; null/absent while the event is still open."
+        },
+        "resolvedAt": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Settlement time (Unix ms); null/absent while the event is still open."
+        },
+        "sportName": {
+          "type": ["string", "null"],
+          "description": "Canonical sport display name from the entity join; null/absent when unresolved (UI falls back to the raw `sport`)."
+        },
+        "leagueId": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Canonical league id (what GET /odds filters on, `?league=<id>`); null/absent when the league link is unresolved."
+        },
+        "leagueName": {
+          "type": ["string", "null"],
+          "description": "Canonical league display name; null/absent when unresolved."
+        },
+        "homeTeamName": {
+          "type": ["string", "null"],
+          "description": "Canonical home-team display name; null/absent when unresolved (UI falls back to the raw `homeTeam`)."
+        },
+        "awayTeamName": {
+          "type": ["string", "null"],
+          "description": "Canonical away-team display name; null/absent when unresolved (UI falls back to the raw `awayTeam`)."
+        }
+      }
+    },
+    "Sport": {
+      "title": "Sport",
+      "description": "Odds Service -> Frontend (GET /odds/sports). A canonical sport for the dashboard filter bar: `slug` is what GET /odds filters on (`?sport=<slug>`); `name` is the chip label.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slug", "name"],
+      "properties": {
+        "slug": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "League": {
+      "title": "League",
+      "description": "Odds Service -> Frontend (GET /odds/leagues). A canonical league for the dashboard's league filter bar: `id` is what GET /odds filters on (`?league=<id>`); `name` is the chip label; `sportSlug` ties the league to its parent sport.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "sportSlug"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "sportSlug": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

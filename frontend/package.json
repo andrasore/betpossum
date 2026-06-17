@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "schema:gen": "mkdir -p ./src/generated && node ../tools/gen-zod.mjs ./src/generated/events.ts",
+    "schema:gen": "mkdir -p ./src/generated && node ../tools/gen-zod.mjs ../schemas/json ./src/generated/events.ts",
     "lint": "pnpx @biomejs/biome check",
     "lint:fix": "pnpx @biomejs/biome check --write --unsafe"
   },
