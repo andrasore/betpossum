@@ -1,4 +1,4 @@
-"""Postgres read store for the stats projection.
+"""Postgres read store for the stats read model.
 
 Owns a single table, ``stats_settlements`` — one row per settled bet, keyed by
 ``bet_id`` so redelivery of the durable ``bets.settled`` event is idempotent

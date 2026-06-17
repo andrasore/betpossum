@@ -124,7 +124,9 @@ external providers. Responsibilities:
 > normalisation layer over an external feed.
 
 ### FastAPI — Stats Service
-A read-side **CQRS projection** over settled bets. Responsibilities:
+Maintains a read model built from settled bets — a separate read store kept in
+sync off an event, so the dashboard's aggregate reads don't hit Core.
+Responsibilities:
 - Subscribes to the durable `bets.settled` exchange (durable queue
   `stats.bets.settled`, manual ack) and upserts one row per settlement into its
   own Postgres (`stats_settlements`), keyed on `betId` so redelivery is
@@ -171,7 +173,7 @@ messages sent while no subscriber is connected are dropped.
 | `notifications`   | Core + Odds Service | Notifications | `NotificationEvent`  |
 
 `bets.settled` is durable + persistent (like `events.resolved`): the stats
-projection must not drop settlements, so it cannot ride the fire-and-forget
+read model must not drop settlements, so it cannot ride the fire-and-forget
 `notifications` exchange.
 
 The browser's live odds updates do **not** flow over `odds.updated`: the Odds
@@ -247,7 +249,7 @@ Suggested repo structure:
 │   ├── core/          # NestJS — includes wallet/TigerBeetle module
 │   ├── notifications/ # Flask + Flask-SocketIO (browser-facing WS)
 │   ├── odds/          # FastAPI
-│   └── stats/         # FastAPI — CQRS read projection over settled bets
+│   └── stats/         # FastAPI — read model over settled bets
 ├── schemas/           # Shared JSON Schema message definitions
 ├── docker-compose.yml
 └── ARCHITECTURE.md

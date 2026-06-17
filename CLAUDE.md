@@ -75,7 +75,7 @@ the system overview.
 | [`frontend/`](frontend/CLAUDE.md) | Next.js static-export SPA, OIDC+PKCE auth, runtime config |
 | [`services/core/`](services/core/CLAUDE.md) | NestJS API: bets, wallet/ledger, settlement semantics, durable channels |
 | [`services/odds/`](services/odds/CLAUDE.md) | FastAPI ingestion: pluggable provider/storage/publisher, co-located deps |
-| [`services/stats/`](services/stats/CLAUDE.md) | FastAPI CQRS read projection: durable `bets.settled` consumer, own read store |
+| [`services/stats/`](services/stats/CLAUDE.md) | FastAPI read model over settled bets: durable `bets.settled` consumer, own store |
 | [`services/notifications/`](services/notifications/CLAUDE.md) | Stateless socket.io relay; JSON-on-the-wire |
 | [`schemas/`](schemas/CLAUDE.md) | Shared JSON Schema message contracts; regenerate-from-root workflow |
 | [`nginx/`](nginx/CLAUDE.md) | Single-origin edge proxy (fronts the SPA, APIs, and Keycloak under `/kc`) |

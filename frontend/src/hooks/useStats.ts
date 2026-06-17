@@ -6,7 +6,7 @@ import { fetchLeaderboard, fetchPnlSeries, fetchStatsSummary } from "@/lib/api";
 import { getSocket } from "@/lib/websocket";
 import type { LeaderboardEntry, PnlPoint, StatsSummary } from "@/types";
 
-// Stats are a projection of settled bets, so they only change on settlement.
+// Stats are derived from settled bets, so they only change on settlement.
 // Revalidate on the per-user `bet.settled` socket event (and on reconnect, to
 // cover a settlement that landed while the socket was down).
 function useSettlementRevalidation<T>(

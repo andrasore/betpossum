@@ -19,7 +19,7 @@ bindings and Turbo caching assume the root run. Lint is ruff
 
 ## What this service owns
 
-A read-side **CQRS projection** over settled bets. It owns one Postgres table,
+A read model built from settled bets. It owns one Postgres table,
 `stats_settlements` (one row per settled bet), in its **own** database — kept
 separate from Core's `betting` DB.
 
@@ -32,7 +32,7 @@ separate from Core's `betting` DB.
   queue `stats.bets.settled` is durable with manual ack (mirrors Core's
   `events.resolved`). Idempotency is the `ON CONFLICT (bet_id) DO NOTHING`
   upsert — redelivery of a settlement is a no-op.
-- **Forward-only.** No backfill of pre-existing bets; the projection accrues
+- **Forward-only.** No backfill of pre-existing bets; the read model accrues
   from new settlements.
 - **Signed cents.** `profit_cents` is +profit on a win, −stake on a loss, so a
   plain `SUM` is net P&L. Money crosses the HTTP boundary in **dollars**.
