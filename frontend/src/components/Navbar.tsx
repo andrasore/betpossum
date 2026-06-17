@@ -1,8 +1,22 @@
 "use client";
 
-import { Button, Flex, Link, Text } from "@radix-ui/themes";
-import { ListChecks, LogIn, LogOut, Shield } from "lucide-react";
-import Image from "next/image";
+import {
+  Avatar,
+  Badge,
+  Button,
+  DropdownMenu,
+  Flex,
+  Link,
+  Text,
+} from "@radix-ui/themes";
+import {
+  ChevronDown,
+  ListChecks,
+  LogIn,
+  LogOut,
+  Shield,
+  Wallet,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 interface NavbarProps {
@@ -10,8 +24,10 @@ interface NavbarProps {
 }
 
 export function Navbar({ balance }: NavbarProps) {
-  const { isAuthenticated, roles, login, logout } = useAuth();
+  const { isAuthenticated, name, roles, login, logout } = useAuth();
   const isAdmin = isAuthenticated && roles.includes("admin");
+  const displayName = name ?? "";
+  const initial = displayName.charAt(0).toUpperCase();
   return (
     <Flex
       asChild
@@ -24,13 +40,30 @@ export function Navbar({ balance }: NavbarProps) {
       <nav>
         <Link href="/dashboard" underline="hover">
           <Flex align="center" gap="3">
-            <Image src="/possum.png" alt="" width={90} height={48} priority />
+            <span
+              aria-hidden
+              style={{
+                display: "block",
+                width: 90,
+                height: 48,
+                backgroundColor: "var(--accent-11)",
+                WebkitMaskImage: "url(/possum.png)",
+                maskImage: "url(/possum.png)",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+              }}
+            />
             <Text
               size="7"
               weight="bold"
               style={{
                 fontFamily: "var(--font-display), system-ui, sans-serif",
                 letterSpacing: "-0.02em",
+                color: "var(--accent-11)",
               }}
             >
               BetPossum
@@ -39,9 +72,16 @@ export function Navbar({ balance }: NavbarProps) {
         </Link>
         <Flex align="center" gap="4">
           {balance != null && (
-            <Text size="2" weight="medium" data-testid="balance">
+            <Badge
+              color={balance === 0 ? "yellow" : "green"}
+              variant="soft"
+              radius="full"
+              size="2"
+              data-testid="balance"
+            >
+              <Wallet size={14} aria-hidden />
               Balance: £{balance.toFixed(2)}
-            </Text>
+            </Badge>
           )}
           {isAuthenticated && (
             <Button asChild variant="ghost" size="2" data-testid="my-bets-link">
@@ -60,15 +100,52 @@ export function Navbar({ balance }: NavbarProps) {
             </Button>
           )}
           {isAuthenticated ? (
-            <Button
-              variant="ghost"
-              size="2"
-              onClick={() => logout()}
-              data-testid="logout-button"
-            >
-              <LogOut size={16} />
-              Sign out
-            </Button>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger>
+                <button
+                  type="button"
+                  data-testid="account-menu"
+                  aria-label="Account menu"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-2)",
+                    padding: "var(--space-1) var(--space-2)",
+                    borderRadius: "var(--radius-3)",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "inherit",
+                  }}
+                >
+                  <Flex direction="column" align="end" gap="0">
+                    <Text size="1" color="gray">
+                      Welcome back
+                    </Text>
+                    <Text size="2" weight="medium" data-testid="account-name">
+                      {displayName}
+                    </Text>
+                  </Flex>
+                  <Avatar
+                    size="2"
+                    radius="full"
+                    fallback={initial}
+                    variant="solid"
+                  />
+                  <ChevronDown size={16} aria-hidden />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content align="end">
+                <DropdownMenu.Item
+                  color="red"
+                  onSelect={() => logout()}
+                  data-testid="logout-button"
+                >
+                  <LogOut size={16} />
+                  Sign out
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
           ) : (
             <Button
               variant="ghost"

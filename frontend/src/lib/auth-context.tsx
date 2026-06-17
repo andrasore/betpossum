@@ -25,6 +25,7 @@ interface AuthValue {
   isLoading: boolean;
   accessToken: string | null;
   sub: string | null;
+  name: string | null;
   roles: string[];
   login: (returnTo?: string) => void;
   logout: () => void;
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     accessToken: session?.accessToken ?? null,
     sub: session?.sub ?? null,
+    name: session?.name ?? null,
     roles: session?.roles ?? [],
     login,
     logout,

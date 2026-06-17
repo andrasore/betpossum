@@ -23,6 +23,7 @@ interface Session {
   idToken: string;
   expiresAt: number;
   sub: string;
+  name: string;
   roles: string[];
 }
 
@@ -56,16 +57,32 @@ export function getAccessToken(): string | null {
 
 const AccessClaimsSchema = z.object({
   sub: z.string(),
+  given_name: z.string().optional(),
+  preferred_username: z.string().optional(),
+  name: z.string().optional(),
   realm_access: z.object({ roles: z.array(z.string()) }).optional(),
 });
 
 // Roles live in the access token's realm_access claim, not the ID-token
 // profile, so we decode the access token ourselves rather than relying on
 // oidc-client-ts's profile. decodeJwt only parses — the signature is verified
-// server-side; these claims drive UI gating only.
-function decodeAccess(jwt: string): { sub: string; roles: string[] } {
+// server-side; these claims drive UI gating only. The display name prefers the
+// first name (given_name), falling back to the username, then the full name.
+function decodeAccess(jwt: string): {
+  sub: string;
+  name: string;
+  roles: string[];
+} {
   const claims = AccessClaimsSchema.parse(decodeJwt(jwt));
-  return { sub: claims.sub, roles: claims.realm_access?.roles ?? [] };
+  return {
+    sub: claims.sub,
+    name:
+      claims.given_name ??
+      claims.preferred_username ??
+      claims.name ??
+      claims.sub,
+    roles: claims.realm_access?.roles ?? [],
+  };
 }
 
 function toSession(user: User | null): Session | null {
@@ -73,12 +90,13 @@ function toSession(user: User | null): Session | null {
     return null;
   }
   try {
-    const { sub, roles } = decodeAccess(user.access_token);
+    const { sub, name, roles } = decodeAccess(user.access_token);
     return {
       accessToken: user.access_token,
       idToken: user.id_token ?? "",
       expiresAt: (user.expires_at ?? 0) * 1000,
       sub,
+      name,
       roles,
     };
   } catch {

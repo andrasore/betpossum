@@ -16,7 +16,7 @@ test("session survives a reload via silent renew (tokens are memory-only)", asyn
 
   await loginAs(page, "alice");
   await page.waitForURL("**/dashboard");
-  await expect(page.getByTestId("logout-button")).toBeVisible({
+  await expect(page.getByTestId("account-menu")).toBeVisible({
     timeout: 15_000,
   });
 
@@ -25,7 +25,7 @@ test("session survives a reload via silent renew (tokens are memory-only)", asyn
   // SSO cookie — without bouncing the user back through the KC login form.
   await page.reload();
   await page.waitForURL("**/dashboard");
-  await expect(page.getByTestId("logout-button")).toBeVisible({
+  await expect(page.getByTestId("account-menu")).toBeVisible({
     timeout: 15_000,
   });
   // We stayed signed in: the Keycloak login form was never re-rendered.

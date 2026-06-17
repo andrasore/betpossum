@@ -37,10 +37,10 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   const aliceWarmupPage = await aliceWarmupCtx.newPage();
   await loginAs(aliceWarmupPage, "alice");
   await aliceWarmupPage.waitForURL("**/dashboard");
-  // Wait until the client session has resolved (signalled by the logout
-  // button appearing). At that point the dashboard hooks have fired their
+  // Wait until the client session has resolved (signalled by the account menu
+  // appearing). At that point the dashboard hooks have fired their
   // authed requests, which is what creates Alice's row lazily in core.
-  await expect(aliceWarmupPage.getByTestId("logout-button")).toBeVisible({
+  await expect(aliceWarmupPage.getByTestId("account-menu")).toBeVisible({
     timeout: 15_000,
   });
   await aliceWarmupCtx.close();
