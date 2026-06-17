@@ -22,7 +22,7 @@ interface Props {
   onClose: () => void;
 }
 
-const DRAWER_WIDTH = 420;
+const DRAWER_WIDTH = 500;
 
 export function BetSlipDrawer({ selection, onClose, ...slip }: Props) {
   const open = selection !== null;
