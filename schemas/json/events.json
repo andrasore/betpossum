@@ -88,6 +88,50 @@
         }
       }
     },
+    "BetSettledEvent": {
+      "title": "BetSettledEvent",
+      "description": "Core API -> Stats. Durable, exactly-once domain event emitted when a bet settles, published on the `bets.settled` exchange. Distinct from BetSettledNotification (a UI-only notification): this is the event-sourcing contract for the stats read model and carries everything the read side needs, denormalized. `payout` is profit only (matches Bet.payout). Amounts in dollars.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "userId",
+        "betId",
+        "eventId",
+        "selection",
+        "odds",
+        "stake",
+        "won",
+        "payout",
+        "settledAt"
+      ],
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": {
+          "type": ["string", "null"],
+          "description": "Display name for the leaderboard; null if unknown."
+        },
+        "betId": { "type": "string" },
+        "eventId": { "type": "string" },
+        "selection": {
+          "type": "string",
+          "enum": ["home", "away", "draw"]
+        },
+        "odds": { "type": "number" },
+        "stake": {
+          "type": "number",
+          "description": "Dollars."
+        },
+        "won": { "type": "boolean" },
+        "payout": {
+          "type": "number",
+          "description": "Profit only, not total return. 0 on loss."
+        },
+        "settledAt": {
+          "type": "integer",
+          "description": "Unix ms."
+        }
+      }
+    },
     "NotificationEvent": {
       "title": "NotificationEvent",
       "description": "Any service -> Notifications Service. Fire-and-forget envelope; `userId` empty means broadcast. `payload` is the inner message object matching `kind`.",

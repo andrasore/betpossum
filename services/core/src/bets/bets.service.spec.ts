@@ -10,6 +10,7 @@ import type { Repository } from "typeorm";
 import { MessagingService } from "../messaging/messaging.service";
 import { NotificationsClient } from "../notifications/notifications.client";
 import { User } from "../users/user.entity";
+import { UsersService } from "../users/users.service";
 import {
   startTigerBeetle,
   type TbInstance,
@@ -64,6 +65,7 @@ describe("BetsService", () => {
       ],
       providers: [
         BetsService,
+        UsersService,
         WalletService,
         {
           provide: ConfigService,
@@ -143,6 +145,36 @@ describe("BetsService", () => {
       true,
       20,
     );
+  });
+
+  it("publishes a durable BetSettledEvent carrying the denormalized fields", async () => {
+    const userId = await newFundedUser(10000);
+    await userRepo.update(userId, { name: "Ada" });
+    const bet = await bets.place(userId, "evt-evt", "home", 3, 10);
+    messaging.publish.mockClear();
+
+    await bets.settle(bet.id, true, 20);
+
+    const settledCall = messaging.publish.mock.calls.find(
+      ([channel]) => channel === "bets.settled",
+    );
+    expect(settledCall).toBeDefined();
+    const [, payload, opts] = settledCall as [string, Buffer, unknown];
+    expect(opts).toEqual({ durable: true });
+
+    const event = JSON.parse(payload.toString());
+    expect(event).toMatchObject({
+      userId,
+      userName: "Ada",
+      betId: bet.id,
+      eventId: "evt-evt",
+      selection: "home",
+      odds: 3,
+      stake: 10,
+      won: true,
+      payout: 20, // profit only
+    });
+    expect(typeof event.settledAt).toBe("number");
   });
 
   it("settles a losing bet: keeps the hold, no payout", async () => {

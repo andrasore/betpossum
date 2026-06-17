@@ -68,6 +68,22 @@ services:
       timeout: 5s
       retries: 10
 
+  # Dedicated read store for the stats projection, kept separate from Core's
+  # `betting` database so the read model is fully independent.
+  stats_postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: stats
+      POSTGRES_USER: betting
+      POSTGRES_PASSWORD: betting_dev
+    volumes:
+      - stats_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U betting"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   keycloak:
     build: ./keycloak
     environment:
@@ -165,6 +181,24 @@ services:
       keycloak:
         condition: service_started
 
+  stats:
+    build:
+      context: .
+      target: stats
+    environment:
+      RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
+      DATABASE_URL: postgresql://betting:betting_dev@stats_postgres:5432/stats
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
+      KEYCLOAK_ISSUER_URL: http://localhost:8080/kc/realms/betting
+      KEYCLOAK_REALM: betting
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      stats_postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
   nginx:
     build:
       context: .
@@ -175,9 +209,11 @@ services:
       - core
       - notifications
       - odds
+      - stats
       - keycloak
 
 volumes:
   postgres_data:
   tigerbeetle_data:
   keycloak_postgres_data:
+  stats_postgres_data:

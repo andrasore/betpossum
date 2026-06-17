@@ -30,6 +30,12 @@ services:
         - type=gha,scope=notifications
       cache_to:
         - type=gha,mode=max,scope=notifications
+  stats:
+    build:
+      cache_from:
+        - type=gha,scope=stats
+      cache_to:
+        - type=gha,mode=max,scope=stats
   nginx:
     build:
       cache_from:

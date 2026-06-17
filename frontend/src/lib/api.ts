@@ -1,5 +1,12 @@
 import type { League, Outcome, Sport } from "@/generated/events";
-import type { Bet, OddsEvent, PlaceBetPayload } from "@/types";
+import type {
+  Bet,
+  LeaderboardEntry,
+  OddsEvent,
+  PlaceBetPayload,
+  PnlPoint,
+  StatsSummary,
+} from "@/types";
 import { getAccessToken, refresh } from "./auth";
 
 async function send(
@@ -97,6 +104,30 @@ export async function fetchBalance(): Promise<number> {
   }
   const { balance } = (await res.json()) as { balance: number };
   return balance;
+}
+
+export async function fetchPnlSeries(): Promise<PnlPoint[]> {
+  const res = await authedFetch("/stats/me/pnl");
+  if (!res.ok) {
+    throw new Error("Failed to fetch P&L series");
+  }
+  return res.json();
+}
+
+export async function fetchStatsSummary(): Promise<StatsSummary> {
+  const res = await authedFetch("/stats/me/summary");
+  if (!res.ok) {
+    throw new Error("Failed to fetch stats summary");
+  }
+  return res.json();
+}
+
+export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
+  const res = await fetch("/stats/leaderboard");
+  if (!res.ok) {
+    throw new Error("Failed to fetch leaderboard");
+  }
+  return res.json();
 }
 
 export interface AdminUserRow {

@@ -28,6 +28,9 @@ services:
   notifications:
     environment:
       KEYCLOAK_ISSUER_URL: http://localhost:18080/kc/realms/betting
+  stats:
+    environment:
+      KEYCLOAK_ISSUER_URL: http://localhost:18080/kc/realms/betting
   keycloak:
     environment:
       # Reached only through the nginx origin (18080) under /kc; relative path

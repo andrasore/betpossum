@@ -30,6 +30,7 @@ table.
 |----------------|---------------------|-----------------------------|
 | `/socket.io/`  | notifications:8000  | WebSocket upgrade           |
 | `/odds`        | odds:8000/odds      | public, unauthenticated     |
+| `/stats`       | stats:8000/stats    | `/me/*` authed, leaderboard public |
 | `/api/`        | core:4000/          | Bearer token forwarded as-is|
 | `/kc/`         | keycloak:8080/kc/   | OIDC; `X-Forwarded-*` set   |
 | `/` (default)  | SPA static export   | `try_files … /index.html`   |

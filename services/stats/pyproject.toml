@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stats-service"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+  "fastapi==0.121.2",
+  "uvicorn[standard]==0.40.0",
+  "sqlmodel==0.0.38",
+  "sqlalchemy==2.0.50",
+  # asyncpg is the runtime driver for the postgresql+asyncpg:// engine; it is
+  # loaded by name by SQLAlchemy, so keep it pinned.
+  "asyncpg==0.31.0",
+  "aio-pika==9.5.5",
+  "pydantic==2.13.3",
+  "pydantic-core==2.46.3",
+  "pyjwt[crypto]==2.10.1",
+  "pex==2.93.4",
+]
+
+[project.optional-dependencies]
+dev = ["pyright", "datamodel-code-generator", "ruff", "pytest", "pytest-asyncio", "testcontainers[postgres]"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pyright]
+pythonVersion = "3.14"
+include = ["src"]
+strict = ["src"]
+exclude = ["src/generated"]
+extraPaths = ["src"]
+venvPath = "."
+venv = ".venv"
+
+[tool.ruff]
+extend-exclude = ["src/generated"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["test"]
+pythonpath = ["src"]

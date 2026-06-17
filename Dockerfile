@@ -53,3 +53,13 @@ RUN python -m venv .venv && mkdir -p ./src && .venv/bin/pip install -e .
 COPY services/notifications/src/ ./src/
 USER appuser
 CMD ["/app/.venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
+
+# Stage 6: Stats service runtime — FastAPI read model + durable consumer.
+FROM python:3.14-alpine AS stats
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+WORKDIR /app
+COPY services/stats/pyproject.toml .
+RUN python -m venv .venv && mkdir -p ./src && .venv/bin/pip install -e .
+COPY services/stats/src/ ./src/
+USER appuser
+CMD ["/app/.venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]

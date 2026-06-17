@@ -85,7 +85,7 @@ export default function DashboardPage() {
         >
           <aside>
             <Flex direction="column" gap="6">
-              <Leaderboard />
+              <Leaderboard token={sessionKey} />
               {isAuthenticated && bets && (
                 <RecentBets bets={bets} oddsIndex={oddsIndex} />
               )}

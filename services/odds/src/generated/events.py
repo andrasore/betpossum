@@ -56,6 +56,24 @@ class BalanceUpdatedNotification(BaseModel):
     balance: float = Field(..., description='Dollars, not cents.')
 
 
+class BetSettledEvent(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    userId: str
+    userName: str | None = Field(
+        None, description='Display name for the leaderboard; null if unknown.'
+    )
+    betId: str
+    eventId: str
+    selection: Literal['home', 'away', 'draw']
+    odds: float
+    stake: float = Field(..., description='Dollars.')
+    won: bool
+    payout: float = Field(..., description='Profit only, not total return. 0 on loss.')
+    settledAt: int = Field(..., description='Unix ms.')
+
+
 class NotificationEvent(BaseModel):
     model_config = ConfigDict(
         extra='forbid',

@@ -5,9 +5,11 @@ import { LogIn } from "lucide-react";
 import { BetsChart } from "@/components/BetsChart";
 import { BetsTable } from "@/components/BetsTable";
 import { Navbar } from "@/components/Navbar";
+import { StatsSummary } from "@/components/StatsSummary";
 import { useBalance } from "@/hooks/useBalance";
 import { useBets } from "@/hooks/useBets";
 import { useOddsIndex } from "@/hooks/useOddsIndex";
+import { usePnlSeries, useStatsSummary } from "@/hooks/useStats";
 import { useAuth } from "@/lib/auth-context";
 
 export default function MyBetsPage() {
@@ -16,6 +18,8 @@ export default function MyBetsPage() {
   const { data: bets } = useBets(sessionKey);
   const oddsIndex = useOddsIndex(sessionKey);
   const balance = useBalance(sessionKey);
+  const { data: pnl } = usePnlSeries(sessionKey);
+  const { data: summary } = useStatsSummary(sessionKey);
 
   return (
     <Flex direction="column" style={{ height: "100vh" }}>
@@ -28,7 +32,8 @@ export default function MyBetsPage() {
 
           {isAuthenticated ? (
             <Flex direction="column" gap="6" style={{ maxWidth: 900 }}>
-              <BetsChart />
+              {summary && <StatsSummary summary={summary} />}
+              <BetsChart series={pnl ?? []} />
               <BetsTable bets={bets ?? []} oddsIndex={oddsIndex} />
             </Flex>
           ) : isLoading ? null : (

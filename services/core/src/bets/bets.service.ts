@@ -1,13 +1,23 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
-import { EventResolvedEventSchema } from "../generated/events";
+import {
+  BetSettledEventSchema,
+  EventResolvedEventSchema,
+} from "../generated/events";
 import { MessagingService } from "../messaging/messaging.service";
 import { NotificationsClient } from "../notifications/notifications.client";
+import { UsersService } from "../users/users.service";
 import { WalletService } from "../wallet/wallet.service";
 import { Bet } from "./bet.entity";
 
 type Selection = "home" | "away" | "draw";
+
+// Durable fanout for the bet-settled domain event consumed by the stats
+// service. Distinct from the fire-and-forget `notifications` exchange: stats
+// must not drop settlements, so this is durable + persistent like
+// `events.resolved`.
+const BETS_SETTLED_EXCHANGE = "bets.settled";
 
 @Injectable()
 export class BetsService implements OnModuleInit {
@@ -16,6 +26,7 @@ export class BetsService implements OnModuleInit {
   constructor(
     @InjectRepository(Bet) private readonly repo: Repository<Bet>,
     private readonly notifications: NotificationsClient,
+    private readonly users: UsersService,
     private readonly wallet: WalletService,
     private readonly messaging: MessagingService,
   ) {}
@@ -88,6 +99,35 @@ export class BetsService implements OnModuleInit {
       payout: won ? payout : 0,
     });
     await this.notifications.betSettled(bet.userId, betId, won, payout);
+    await this.publishSettled(bet, won, payout);
+  }
+
+  // Durable domain event for the stats read model. Carries everything the read
+  // side needs (denormalized, incl. display name) so stats never reaches into
+  // Core's tables. `payout` is profit only (0 on loss), matching Bet.payout.
+  private async publishSettled(
+    bet: Bet,
+    won: boolean,
+    payout: number,
+  ): Promise<void> {
+    const user = await this.users.findById(bet.userId);
+    const event = BetSettledEventSchema.parse({
+      userId: bet.userId,
+      userName: user?.name ?? null,
+      betId: bet.id,
+      eventId: bet.eventId,
+      selection: bet.selection,
+      odds: Number(bet.odds),
+      stake: Number(bet.stake),
+      won,
+      payout: won ? payout : 0,
+      settledAt: Date.now(),
+    });
+    await this.messaging.publish(
+      BETS_SETTLED_EXCHANGE,
+      Buffer.from(JSON.stringify(event)),
+      { durable: true },
+    );
   }
 
   // Idempotency is provided by the `status: 'held'` filter: once a bet is

@@ -17,3 +17,26 @@ export interface PlaceBetPayload {
   odds: number;
   stake: number;
 }
+
+// One point of the cumulative-ROI% series (one per active UTC day).
+export interface PnlPoint {
+  date: string;
+  roiPct: number;
+}
+
+export interface StatsSummary {
+  totalStaked: number;
+  settledCount: number;
+  wins: number;
+  winRatePct: number;
+  netProfit: number;
+  roiPct: number;
+}
+
+export interface LeaderboardEntry {
+  userId: string;
+  userName: string | null;
+  roiPct: number;
+  netProfit: number;
+  settledCount: number;
+}

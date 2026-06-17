@@ -44,6 +44,8 @@ Path routing:
 |----------------|-----------------------------------|---------------------------|
 | `/socket.io/*` | Notifications                     | WebSocket upgrade         |
 | `/odds`        | Odds Service                      | Public, unauthenticated   |
+| `/stats`       | Stats Service                     | `/me/*` authed, leaderboard public |
+| `/api/*`       | Core API                          | Bearer token forwarded    |
 | `/kc/*`        | Keycloak                          | OIDC login + token/JWKS   |
 | `/` (default)  | Frontend (Next.js)                | Includes HMR WebSocket    |
 
@@ -121,6 +123,21 @@ external providers. Responsibilities:
 > **Note:** This service does not calculate odds. It is purely an ingestion and
 > normalisation layer over an external feed.
 
+### FastAPI — Stats Service
+A read-side **CQRS projection** over settled bets. Responsibilities:
+- Subscribes to the durable `bets.settled` exchange (durable queue
+  `stats.bets.settled`, manual ack) and upserts one row per settlement into its
+  own Postgres (`stats_settlements`), keyed on `betId` so redelivery is
+  idempotent
+- Serves the dashboard reads: `GET /stats/me/pnl` (cumulative ROI% per active
+  UTC day), `GET /stats/me/summary` (staked / win-rate / ROI / net P&L — both
+  authed), and `GET /stats/leaderboard` (top players by ROI, public)
+
+The stats service owns its store and **never reads Core's or Odds' tables** —
+the `BetSettledEvent` carries everything it needs (denormalized, incl. the
+player's display name). It starts empty and accrues forward; there is no
+backfill.
+
 ---
 
 ## Inter-service Communication
@@ -150,7 +167,12 @@ messages sent while no subscriber is connected are dropped.
 |-------------------|---------------------|---------------|----------------------|
 | `odds.updated`    | Odds Service        | —             | `OddsUpdatedEvent`   |
 | `events.resolved` | Odds Service        | Core API      | `EventResolvedEvent` |
+| `bets.settled`    | Core API            | Stats Service | `BetSettledEvent`    |
 | `notifications`   | Core + Odds Service | Notifications | `NotificationEvent`  |
+
+`bets.settled` is durable + persistent (like `events.resolved`): the stats
+projection must not drop settlements, so it cannot ride the fire-and-forget
+`notifications` exchange.
 
 The browser's live odds updates do **not** flow over `odds.updated`: the Odds
 Service separately broadcasts an `oddsUpdated` `NotificationEvent` (empty
@@ -183,7 +205,9 @@ Owned exclusively by the Core API service. Stores:
 - Sports events and market definitions
 - Current odds (written by the Odds service, read by Core)
 
-Keycloak runs against its own separate Postgres instance.
+Keycloak runs against its own separate Postgres instance, and the Stats service
+against another (the `stats` database) — its read model is kept independent of
+Core's `betting` database.
 
 ### TigerBeetle
 Owned exclusively by Core's wallet module. Stores:
@@ -222,7 +246,8 @@ Suggested repo structure:
 ├── services/
 │   ├── core/          # NestJS — includes wallet/TigerBeetle module
 │   ├── notifications/ # Flask + Flask-SocketIO (browser-facing WS)
-│   └── odds/          # FastAPI
+│   ├── odds/          # FastAPI
+│   └── stats/         # FastAPI — CQRS read projection over settled bets
 ├── schemas/           # Shared JSON Schema message definitions
 ├── docker-compose.yml
 └── ARCHITECTURE.md
