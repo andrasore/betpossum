@@ -76,7 +76,8 @@ Keycloak owns all authentication. The realm `betting` defines two roles —
 `admin` (gates admin pages) and `user` (default for everyone) — plus two
 clients: a public `betting-frontend` (PKCE, used by the SPA) and a
 confidential `betting-core` (service-account access to the admin API for
-user-info lookups). Keycloak ships with its own dedicated Postgres instance.
+user-info lookups). Keycloak persists to its own `keycloak` database on the
+shared Postgres instance, isolated from the app's `betting` database.
 
 ### NestJS — Core API
 The primary application service. Responsibilities:
@@ -124,13 +125,14 @@ external providers. Responsibilities:
 > normalisation layer over an external feed.
 
 ### FastAPI — Stats Service
-Maintains a read model built from settled bets — a separate read store kept in
-sync off an event, so the dashboard's aggregate reads don't hit Core.
+Maintains a read model built from settled bets — a logically separate read store
+(its own schema) kept in sync off an event, so the dashboard's aggregate reads
+don't hit Core.
 Responsibilities:
 - Subscribes to the durable `bets.settled` exchange (durable queue
   `stats.bets.settled`, manual ack) and upserts one row per settlement into its
-  own Postgres (`stats_settlements`), keyed on `betId` so redelivery is
-  idempotent
+  own `stats` schema (`stats_settlements`) of the shared `betting` DB, keyed on
+  `betId` so redelivery is idempotent
 - Serves the dashboard reads: `GET /stats/me/pnl` (cumulative ROI% per active
   UTC day), `GET /stats/me/summary` (staked / win-rate / ROI / net P&L — both
   authed), and `GET /stats/leaderboard` (top players by ROI, public)
@@ -200,16 +202,21 @@ does not wait for a reply.
 ## Data Storage
 
 ### PostgreSQL
-Owned exclusively by the Core API service. Stores:
-- Local user records (id only — primary key matches the Keycloak `sub`;
-  email and name are fetched on demand from Keycloak)
-- Bet history and state
-- Sports events and market definitions
-- Current odds (written by the Odds service, read by Core)
+A single Postgres instance backs the whole stack. It hosts two databases:
 
-Keycloak runs against its own separate Postgres instance, and the Stats service
-against another (the `stats` database) — its read model is kept independent of
-Core's `betting` database.
+- **`betting`** — the application database, partitioned into one schema per
+  service (`DB_SCHEMA` selects it) so each owns its tables in isolation:
+  - `core` — local user records (id only — PK matches the Keycloak `sub`; email
+    and name are fetched on demand from Keycloak), bet history and state.
+  - `odds` — current odds + history written by the Odds service (read over HTTP
+    by the SPA, not via a shared table).
+  - `stats` — the Stats read model (`stats_settlements`), kept independent of
+    Core's tables.
+- **`keycloak`** — Keycloak's own database (own role/credentials), isolated from
+  application data.
+
+`postgres/init.sql` provisions the `keycloak` database and the three schemas on
+first boot of a fresh data volume.
 
 ### TigerBeetle
 Owned exclusively by Core's wallet module. Stores:

@@ -18,8 +18,9 @@ at container start. Keycloak owns **all** authentication.
   - `betting-frontend` — **public**, PKCE; used by the SPA.
   - `betting-core` — **confidential**, service account; Core uses it to call the
     admin API for user email/name lookups.
-- Keycloak runs against its **own** dedicated Postgres instance, separate from
-  Core's database.
+- Keycloak runs against its **own `keycloak` database** (own role/credentials)
+  on the shared Postgres instance, separate from the app's `betting` database.
+  Infra's `postgres/init.sql` provisions it.
 
 ## Conventions
 
@@ -27,14 +28,17 @@ at container start. Keycloak owns **all** authentication.
   `--import-realm` apply them on boot; don't hand-tweak through the admin UI and
   expect it to persist — changes there are lost on the next clean boot.
 - **`--import-realm` only imports a realm that does not already exist.** Once the
-  `betting` realm is persisted in the `keycloak_postgres_data` volume, edits to
+  `betting` realm is persisted in the `keycloak` database (now a database on the
+  shared `postgres` container, no longer a dedicated volume), edits to
   `realm.json` (a new `loginTheme`, client, role, mapper…) are **silently
   ignored** on a plain `docker compose up -d keycloak`. To pick up dev realm
-  changes, wipe the volume and re-import:
+  changes, drop and recreate just the `keycloak` database, then re-import — this
+  leaves the app's `betting` data intact (a full `down -v` would wipe both):
   ```bash
-  docker compose stop keycloak keycloak_postgres
-  docker compose rm -f keycloak keycloak_postgres
-  docker volume rm betpossum_keycloak_postgres_data
+  docker compose stop keycloak
+  docker compose exec -T postgres psql -U betting -c 'DROP DATABASE keycloak;'
+  docker compose exec -T postgres psql -U betting \
+    -c 'CREATE DATABASE keycloak OWNER keycloak;'
   docker compose up -d keycloak
   ```
   The e2e stack is unaffected — its global-setup uses fresh volumes each run, so

@@ -20,8 +20,9 @@ bindings and Turbo caching assume the root run. Lint is ruff
 ## What this service owns
 
 A read model built from settled bets. It owns one Postgres table,
-`stats_settlements` (one row per settled bet), in its **own** database — kept
-separate from Core's `betting` DB.
+`stats_settlements` (one row per settled bet), in its **own `stats` schema** of
+the shared `betting` database — logically separate from Core's tables, which
+live in the `core` schema (`DB_SCHEMA` selects it).
 
 ## Non-obvious conventions
 

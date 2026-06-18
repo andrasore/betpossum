@@ -15,8 +15,6 @@ services:
     ports: !reset []
   tigerbeetle:
     ports: !reset []
-  keycloak_postgres:
-    ports: !reset []
   core:
     environment:
       KEYCLOAK_ISSUER_URL: http://localhost:18080/kc/realms/betting

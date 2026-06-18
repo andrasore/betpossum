@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from types import TracebackType
 from typing import ClassVar
 
-from sqlalchemy import BigInteger, Integer, Text
+from sqlalchemy import BigInteger, Integer, Text, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import Column, Field, SQLModel, col, select
@@ -54,8 +54,11 @@ def _async_dsn(dsn: str) -> str:
 class StatsStore:
     name: ClassVar[str] = "postgres"
 
-    def __init__(self, dsn: str):
+    def __init__(self, dsn: str, schema: str | None = None):
         self._dsn = _async_dsn(dsn)
+        # Tables live in this Postgres schema of the shared `betting` DB; None
+        # (tests) leaves the default `public` search_path untouched.
+        self._schema = schema
         self._engine: AsyncEngine | None = None
         self._session: async_sessionmaker[AsyncSession] | None = None
 
@@ -64,10 +67,15 @@ class StatsStore:
         dsn = os.environ.get("DATABASE_URL")
         if not dsn:
             raise RuntimeError("DATABASE_URL is required")
-        return cls(dsn=dsn)
+        return cls(dsn=dsn, schema=os.environ.get("DB_SCHEMA") or None)
 
     async def __aenter__(self) -> StatsStore:
-        self._engine = create_async_engine(self._dsn, pool_size=4, max_overflow=0)
+        connect_args = (
+            {"server_settings": {"search_path": self._schema}} if self._schema else {}
+        )
+        self._engine = create_async_engine(
+            self._dsn, pool_size=4, max_overflow=0, connect_args=connect_args
+        )
         self._session = async_sessionmaker(
             self._engine, class_=AsyncSession, expire_on_commit=False
         )
@@ -86,6 +94,12 @@ class StatsStore:
     async def init_schema(self) -> None:
         assert self._engine is not None
         async with self._engine.begin() as conn:
+            if self._schema:
+                # infra's init.sql already creates it; idempotent self-provision
+                # keeps the search_path target present even on a bare DB.
+                await conn.execute(
+                    text(f'CREATE SCHEMA IF NOT EXISTS "{self._schema}"')
+                )
             await conn.run_sync(SQLModel.metadata.create_all)
 
     def _sessions(self) -> async_sessionmaker[AsyncSession]:

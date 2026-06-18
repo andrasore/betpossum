@@ -1,6 +1,10 @@
 services:
   # ── Infrastructure ─────────────────────────────────────────────────────────
 
+  # Single Postgres instance for the whole stack. The init script provisions
+  # Keycloak's separate `keycloak` database plus a schema per app service
+  # (core/odds/stats) inside this `betting` database. It runs only on a fresh
+  # data volume — `docker compose down -v` to re-provision.
   postgres:
     image: postgres:16-alpine
     environment:
@@ -9,6 +13,7 @@ services:
       POSTGRES_PASSWORD: betting_dev
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -54,41 +59,11 @@ services:
       retries: 10
       start_period: 5s
 
-  keycloak_postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: keycloak
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: keycloak_dev
-    volumes:
-      - keycloak_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U keycloak"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  # Dedicated read store for the stats projection, kept separate from Core's
-  # `betting` database so the read model is fully independent.
-  stats_postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: stats
-      POSTGRES_USER: betting
-      POSTGRES_PASSWORD: betting_dev
-    volumes:
-      - stats_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U betting"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   keycloak:
     build: ./keycloak
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://keycloak_postgres:5432/keycloak
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: keycloak_dev
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -106,7 +81,7 @@ services:
     volumes:
       - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
     depends_on:
-      keycloak_postgres:
+      postgres:
         condition: service_healthy
 
   # ── Application Services ───────────────────────────────────────────────────
@@ -118,6 +93,7 @@ services:
     environment:
       PORT: 4000
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
+      DB_SCHEMA: core
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       TIGERBEETLE_ADDRESS: tigerbeetle:6000
       TIGERBEETLE_CLUSTER_ID: "0"
@@ -147,6 +123,7 @@ services:
     environment:
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
+      DB_SCHEMA: odds
       ODDS_PROVIDERS: ${ODDS_PROVIDERS:-mock}
       ODDS_STORAGE: postgres
       POLL_INTERVAL_SECONDS: 3000
@@ -187,14 +164,15 @@ services:
       target: stats
     environment:
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
-      DATABASE_URL: postgresql://betting:betting_dev@stats_postgres:5432/stats
+      DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
+      DB_SCHEMA: stats
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
       KEYCLOAK_ISSUER_URL: http://localhost:8080/kc/realms/betting
       KEYCLOAK_REALM: betting
     depends_on:
       rabbitmq:
         condition: service_healthy
-      stats_postgres:
+      postgres:
         condition: service_healthy
       keycloak:
         condition: service_started
@@ -215,5 +193,3 @@ services:
 volumes:
   postgres_data:
   tigerbeetle_data:
-  keycloak_postgres_data:
-  stats_postgres_data:
