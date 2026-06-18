@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const oddsIndex = useOddsIndex(sessionKey);
   const balance = useBalance(sessionKey);
 
-  console.log(odds)
+  console.log(odds);
 
   return (
     <>

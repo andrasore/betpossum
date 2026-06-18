@@ -8,7 +8,7 @@ interface Props {
   events: OddsEvent[];
   selectedEventId: string | null;
   onToggle: (event: OddsEvent) => void;
-  isLoading: boolean
+  isLoading: boolean;
 }
 
 const commenceFormatter = new Intl.DateTimeFormat(undefined, {
@@ -23,7 +23,12 @@ function formatCommenceTime(ms: number): string {
   return commenceFormatter.format(new Date(ms));
 }
 
-export function OddsBoard({ events, selectedEventId, onToggle, isLoading }: Props) {
+export function OddsBoard({
+  events,
+  selectedEventId,
+  onToggle,
+  isLoading,
+}: Props) {
   // Active (still bettable) events first; resolved ones sink to the bottom.
   // Copy before sorting so we don't mutate the prop, and keep it stable so the
   // server's within-group ordering survives.
@@ -38,7 +43,13 @@ export function OddsBoard({ events, selectedEventId, onToggle, isLoading }: Prop
 
   if (isLoading && events.length === 0) {
     return (
-      <Flex align="center" justify="center" py="9" aria-busy="true" aria-label="Loading live odds">
+      <Flex
+        align="center"
+        justify="center"
+        py="9"
+        aria-busy="true"
+        aria-label="Loading live odds"
+      >
         <Spinner size="3" />
       </Flex>
     );

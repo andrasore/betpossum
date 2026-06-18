@@ -20,8 +20,8 @@ export function useOdds(loggedIn: boolean, sport?: string, league?: number) {
       return new Map(parsed.map((e) => [e.eventId, e]));
     },
     {
-      keepPreviousData: true
-    }
+      keepPreviousData: true,
+    },
   );
 
   useEffect(() => {
