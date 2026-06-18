@@ -39,8 +39,6 @@ export default function DashboardPage() {
   const oddsIndex = useOddsIndex(sessionKey);
   const balance = useBalance(sessionKey);
 
-  console.log(odds);
-
   return (
     <>
       <Flex flexGrow="1" overflow="hidden">
