@@ -9,11 +9,14 @@ const leagues: League[] = [
 ];
 
 describe("LeagueFilterBar", () => {
-  it("renders nothing when there are no leagues", () => {
+  it("stays mounted but renders no chips when there are no leagues", () => {
     render(
       <LeagueFilterBar leagues={[]} selected={null} onSelect={() => {}} />,
     );
-    expect(screen.queryByTestId("league-filter-bar")).not.toBeInTheDocument();
+    // The bar keeps a fixed-height placeholder so the odds grid below doesn't
+    // jump as chips appear/disappear; it just holds no chips.
+    expect(screen.getByTestId("league-filter-bar")).toBeInTheDocument();
+    expect(screen.queryByTestId("league-chip-all")).not.toBeInTheDocument();
   });
 
   it("presses the chip matching the selected league id", () => {

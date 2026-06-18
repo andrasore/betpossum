@@ -22,15 +22,23 @@ test("anonymous /my-bets is gated behind sign-in, not broken", async ({
   await ctx.close();
 });
 
-// Bob is both an admin and the bettor here: he funds himself, places the bet,
-// and resolves the event. Using bob (whom no other spec places bets for) keeps
-// this test independent of leftover state — alice carries a settled bet from the
-// happy-path spec, so her bet counts aren't deterministic across the run.
+// Bob is the bettor here: he funds himself and places the bet, then a second
+// bob session (a separate browser context) resolves the event. Using bob (whom
+// no other spec places bets for) keeps this test independent of leftover
+// state — alice carries a settled bet from the happy-path spec, so her bet
+// counts aren't deterministic across the run.
+//
+// The resolve happens in a separate session so the bettor page never has to
+// leave My Bets to drive settlement. The final "Won" assertion then exercises
+// the page's query-on-load path: a fresh visit to My Bets refetches /bets and
+// shows the settled row. (The live bet.settled socket push — settling while
+// the bettor is already parked on a bets view — is covered by the happy-path
+// spec, where alice's dashboard row flips in place.)
 //
 // This spec covers the cross-service integration: a placed bet shows in the
-// dashboard's Recent Bets, deep-links into the My Bets page, and settles to
-// "Won" via the settlement socket. The pure rendering — the 5-row Recent Bets
-// cap, the uncapped table, and the odds-join enrichment — is covered by
+// dashboard's Recent Bets, deep-links into the My Bets page, and reads "Won"
+// after the event resolves. The pure rendering — the 5-row Recent Bets cap, the
+// uncapped table, and the odds-join enrichment — is covered by
 // RecentBets.test.tsx and BetsTable.test.tsx.
 test("a placed bet deep-links from Recent Bets into My Bets and settles to Won", async ({
   browser,
@@ -94,24 +102,31 @@ test("a placed bet deep-links from Recent Bets into My Bets and settles to Won",
   await recentRow.click();
   await page.waitForURL("**/my-bets**");
 
-  // The deep-linked row landed on the My Bets page.
-  await expect(page.getByTestId(`bet-row-${betId}`)).toBeVisible();
+  // The deep-linked row landed on the My Bets page, still held.
+  await expect(page.getByTestId(`bet-row-${betId}`)).toContainText(/held/i);
 
-  // Resolve the event in bob's favour (home); the held bet settles to "Won".
-  await page.getByTestId("admin-link").click();
-  await page.waitForURL("**/admin");
-  await page.getByTestId("admin-events-tab").click();
-  const resolveButton = page.getByTestId(`admin-event-resolve-${eventId}-home`);
+  // Resolve the event in bob's favour (home) from a second bob session, so the
+  // bettor page never leaves My Bets to drive settlement.
+  const adminCtx = await browser.newContext();
+  const adminPage = await adminCtx.newPage();
+  await loginAs(adminPage, "bob");
+  await adminPage.waitForURL("**/dashboard");
+  await adminPage.getByTestId("admin-link").click();
+  await adminPage.waitForURL("**/admin");
+  await adminPage.getByTestId("admin-events-tab").click();
+  const resolveButton = adminPage.getByTestId(
+    `admin-event-resolve-${eventId}-home`,
+  );
   await expect(resolveButton).toBeEnabled();
   await resolveButton.click();
-  await expect(page.getByTestId(`admin-event-status-${eventId}`)).toHaveText(
-    /resolved \(home\)/i,
-    { timeout: 10_000 },
-  );
+  await expect(
+    adminPage.getByTestId(`admin-event-status-${eventId}`),
+  ).toHaveText(/resolved \(home\)/i, { timeout: 10_000 });
+  await adminCtx.close();
 
-  // Back on the My Bets page the row reads "Won" via the settlement socket.
-  await page.getByTestId("my-bets-link").click();
-  await page.waitForURL("**/my-bets");
+  // A fresh load of My Bets refetches /bets and shows the settled row — the
+  // page's normal query-on-load path, independent of the live socket push.
+  await page.reload();
   await expect(page.getByTestId(`bet-row-${betId}`)).toContainText(/won/i, {
     timeout: 20_000,
   });
