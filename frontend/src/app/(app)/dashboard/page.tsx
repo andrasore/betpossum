@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const sessionKey = accessToken;
   const sports = useSports();
   const leagues = useLeagues(selectedSport ?? undefined);
-  const odds = useOdds(
+  const { odds, isLoading: oddsLoading } = useOdds(
     isAuthenticated,
     selectedSport ?? undefined,
     selectedLeague ?? undefined,
@@ -59,6 +59,7 @@ export default function DashboardPage() {
             />
             <OddsBoard
               events={odds}
+              isLoading={oddsLoading}
               selectedEventId={selection?.event.eventId ?? null}
               onToggle={(event) =>
                 setSelection((s) =>

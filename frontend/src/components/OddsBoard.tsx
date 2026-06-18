@@ -8,6 +8,7 @@ interface Props {
   events: OddsEvent[];
   selectedEventId: string | null;
   onToggle: (event: OddsEvent) => void;
+  isLoading: boolean
 }
 
 const SKELETON_PLACEHOLDER_COUNT = 8;
@@ -24,7 +25,7 @@ function formatCommenceTime(ms: number): string {
   return commenceFormatter.format(new Date(ms));
 }
 
-export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
+export function OddsBoard({ events, selectedEventId, onToggle, isLoading }: Props) {
   // Active (still bettable) events first; resolved ones sink to the bottom.
   // Copy before sorting so we don't mutate the prop, and keep it stable so the
   // server's within-group ordering survives.
@@ -39,7 +40,7 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
 
   return (
     <Grid columns="repeat(auto-fill, 200px)" gap="3">
-      {events.length === 0 &&
+      {isLoading && events.length === 0 &&
         Array.from({ length: SKELETON_PLACEHOLDER_COUNT }).map((_, i) => (
           <Card key={i} aria-busy="true" aria-label="Loading live odds">
             <Skeleton width="56px" mb="3">
@@ -65,7 +66,7 @@ export function OddsBoard({ events, selectedEventId, onToggle }: Props) {
             </Skeleton>
           </Card>
         ))}
-      {ordered.map((e) => {
+      {!isLoading && ordered.map((e) => {
         const selected = e.eventId === selectedEventId;
         // A resolved event (outcome set by the odds service) can no longer be
         // bet on — settlement has already happened, so the bet would never
