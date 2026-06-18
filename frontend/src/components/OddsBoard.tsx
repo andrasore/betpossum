@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Card, Flex, Grid, Skeleton, Text } from "@radix-ui/themes";
+import { Badge, Card, Flex, Grid, Spinner, Text } from "@radix-ui/themes";
 import { sportColor } from "@/lib/sportColor";
 import type { OddsEvent } from "@/types";
 
@@ -10,8 +10,6 @@ interface Props {
   onToggle: (event: OddsEvent) => void;
   isLoading: boolean
 }
-
-const SKELETON_PLACEHOLDER_COUNT = 8;
 
 const commenceFormatter = new Intl.DateTimeFormat(undefined, {
   weekday: "short",
@@ -38,35 +36,17 @@ export function OddsBoard({ events, selectedEventId, onToggle, isLoading }: Prop
     })
     .map(([e]) => e);
 
+  if (isLoading && events.length === 0) {
+    return (
+      <Flex align="center" justify="center" py="9" aria-busy="true" aria-label="Loading live odds">
+        <Spinner size="3" />
+      </Flex>
+    );
+  }
+
   return (
     <Grid columns="repeat(auto-fill, 200px)" gap="3">
-      {isLoading && events.length === 0 &&
-        Array.from({ length: SKELETON_PLACEHOLDER_COUNT }).map((_, i) => (
-          <Card key={i} aria-busy="true" aria-label="Loading live odds">
-            <Skeleton width="56px" mb="3">
-              <Badge size="1">sport</Badge>
-            </Skeleton>
-            <Flex direction="column" gap="1">
-              <Skeleton width="70%">
-                <Text size="2" weight="medium">
-                  Home team
-                </Text>
-              </Skeleton>
-              <Text size="1" color="gray">
-                vs
-              </Text>
-              <Skeleton width="60%">
-                <Text size="2" weight="medium">
-                  Away team
-                </Text>
-              </Skeleton>
-            </Flex>
-            <Skeleton width="50%" mt="3">
-              <Text size="1">Kickoff time</Text>
-            </Skeleton>
-          </Card>
-        ))}
-      {!isLoading && ordered.map((e) => {
+      {ordered.map((e) => {
         const selected = e.eventId === selectedEventId;
         // A resolved event (outcome set by the odds service) can no longer be
         // bet on — settlement has already happened, so the bet would never

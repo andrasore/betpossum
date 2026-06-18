@@ -1,6 +1,6 @@
 "use client";
 
-import useSWR from "swr";
+import useSWRImmutable from "swr/immutable";
 import { type League, LeagueSchema } from "@/generated/events";
 import { fetchLeagues } from "@/lib/api";
 
@@ -10,7 +10,7 @@ import { fetchLeagues } from "@/lib/api";
 // SWR fetch is enough — no socket. The key embeds the sport so switching sports
 // re-fetches the scoped list.
 export function useLeagues(sport?: string) {
-  const swr = useSWR<League[]>(
+  const swr = useSWRImmutable<League[]>(
     sport ? `leagues:${sport}` : "leagues",
     async () => {
       const leagues = await fetchLeagues(sport);

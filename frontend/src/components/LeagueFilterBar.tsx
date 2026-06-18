@@ -20,28 +20,38 @@ export function LeagueFilterBar({
   selected,
   onSelect,
 }: LeagueFilterBarProps) {
-  if (leagues.length === 0) {
-    return null;
-  }
-
+  // Keep the bar mounted with a fixed minimum height even when there are no
+  // leagues yet (e.g. while the scoped list reloads after a sport switch), so
+  // the odds grid below doesn't jump up as the chips appear and disappear. The
+  // min-height matches a single size-1 chip row.
   return (
-    <Flex gap="2" wrap="wrap" mb="4" data-testid="league-filter-bar">
-      <Chip
-        label="All"
-        active={selected === null}
-        onClick={() => onSelect(null)}
-        testId="league-chip-all"
-      />
-      {leagues.map((league) => (
-        <Chip
-          key={league.id}
-          label={league.name}
-          active={selected === league.id}
-          onClick={() => onSelect(league)}
-          color={sportColor(league.sportSlug)}
-          testId={`league-chip-${league.id}`}
-        />
-      ))}
+    <Flex
+      gap="2"
+      wrap="wrap"
+      mb="4"
+      data-testid="league-filter-bar"
+      style={{ minHeight: "var(--space-5)" }}
+    >
+      {leagues.length > 0 && (
+        <>
+          <Chip
+            label="All"
+            active={selected === null}
+            onClick={() => onSelect(null)}
+            testId="league-chip-all"
+          />
+          {leagues.map((league) => (
+            <Chip
+              key={league.id}
+              label={league.name}
+              active={selected === league.id}
+              onClick={() => onSelect(league)}
+              color={sportColor(league.sportSlug)}
+              testId={`league-chip-${league.id}`}
+            />
+          ))}
+        </>
+      )}
     </Flex>
   );
 }
