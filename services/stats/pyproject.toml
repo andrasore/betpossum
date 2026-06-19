@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pyright", "datamodel-code-generator", "ruff", "pytest", "pytest-asyncio", "testcontainers[postgres]"]
+dev = ["pyright", "datamodel-code-generator", "ruff", "pytest", "pytest-asyncio", "testcontainers[postgres]", "httpx"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
