@@ -66,7 +66,7 @@ const Brand = () => (
               display: "block",
               width: 90,
               height: 48,
-              backgroundColor: "var(--gray-12)",
+              backgroundColor: "var(--accent-11)",
               WebkitMaskImage: "url(/possum.png)",
               maskImage: "url(/possum.png)",
               WebkitMaskRepeat: "no-repeat",
@@ -83,7 +83,7 @@ const Brand = () => (
             style={{
               fontFamily: "var(--font-display), system-ui, sans-serif",
               letterSpacing: "-0.02em",
-              color: "var(--gray-12)",
+              color: "var(--accent-11)",
             }}
           >
             BetPossum
