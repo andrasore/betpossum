@@ -9,8 +9,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <AuthProvider>
       <Theme
         appearance="dark"
-        accentColor="plum"
-        grayColor="mauve"
+        accentColor="green"
+        grayColor="sand"
         radius="small"
         style={{
           minHeight: "100vh",

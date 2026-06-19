@@ -201,7 +201,12 @@ function UserRow({
               textAlign: "end",
               ...(dirty ? { boxShadow: "inset 0 0 0 1px var(--amber-9)" } : {}),
             }}
-          />
+          >
+            {/* Radix pads the input's left edge with text-indent but leaves the
+                right edge with no padding, so right-aligned values collide with
+                the border. An empty right slot restores the gutter. */}
+            <TextField.Slot side="right" />
+          </TextField.Root>
           {dirty && (
             <>
               <IconButton
