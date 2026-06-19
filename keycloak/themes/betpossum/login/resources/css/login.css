@@ -1,8 +1,8 @@
 /* BetPossum login theme overrides.
  *
  * Layered on top of keycloak.v2 (PatternFly v5) + the vendored Radix color
- * scales (--plum-* / --mauve-*, active because <html> carries `dark`). Recolors
- * the brand surfaces to match the app: dark mauve canvas, plum accent, Noto
+ * scales (--green-* / --sand-*, active because <html> carries `dark`). Recolors
+ * the brand surfaces to match the app: dark sand canvas, green accent, Noto
  * Sans, small radius. Targets stable element ids and PatternFly v5 classes;
  * uses !important where PatternFly's own rules would otherwise win. */
 
@@ -17,8 +17,8 @@
 
 body#keycloak-bg,
 .pf-v5-theme-dark body#keycloak-bg {
-  background: var(--mauve-1) !important;
-  color: var(--mauve-12);
+  background: var(--sand-1) !important;
+  color: var(--sand-12);
   font-family: var(--bp-font) !important;
 }
 
@@ -35,15 +35,15 @@ textarea,
 /* ---- Login card ------------------------------------------------------- */
 
 .pf-v5-c-login__main {
-  background: var(--mauve-2) !important;
-  border: 1px solid var(--mauve-6) !important;
+  background: var(--sand-2) !important;
+  border: 1px solid var(--sand-6) !important;
   border-radius: var(--bp-radius) !important;
-  box-shadow: 0 1px 2px var(--mauve-a3), 0 8px 24px var(--mauve-a2);
+  box-shadow: 0 1px 2px var(--sand-a3), 0 8px 24px var(--sand-a2);
 }
 
 /* Brand wordmark (shows realm displayName = "BetPossum"). */
 #kc-header-wrapper {
-  color: var(--plum-11) !important;
+  color: var(--green-11) !important;
   font-weight: 700;
   letter-spacing: 0.01em;
   text-transform: none;
@@ -51,19 +51,29 @@ textarea,
 
 #kc-page-title,
 .pf-v5-c-login__main-header h1 {
-  color: var(--mauve-12) !important;
+  color: var(--sand-12) !important;
 }
 
 .pf-v5-c-login__main-body,
 .pf-v5-c-login__main-body p {
-  color: var(--mauve-11);
+  color: var(--sand-11);
 }
 
 /* ---- Labels + inputs -------------------------------------------------- */
 
 .pf-v5-c-form__label,
 .pf-v5-c-form__label-text {
-  color: var(--mauve-12) !important;
+  color: var(--sand-12) !important;
+}
+
+/* PatternFly v5's blue accent (the source of the form-control underline tint,
+   link colors, etc.) is `--pf-v5-global--primary-color--100`. Recolor that one
+   global to green so we don't have to chase every component rule. The dark
+   variant is what the form-control resolves to under our `dark` html class. */
+:root,
+.pf-v5-c-form-control {
+  --pf-v5-global--primary-color--100: var(--green-9);
+  --pf-v5-global--primary-color--dark-100: var(--green-9);
 }
 
 .pf-v5-c-form-control,
@@ -71,14 +81,17 @@ input[type="text"],
 input[type="email"],
 input[type="password"],
 select {
-  background: var(--mauve-2) !important;
-  color: var(--mauve-12) !important;
-  border: 1px solid var(--mauve-7) !important;
+  background: var(--sand-2) !important;
+  color: var(--sand-12) !important;
+  border: 1px solid var(--sand-7) !important;
   border-radius: var(--bp-radius) !important;
+  /* PatternFly v5 draws an accent underline via an ::after element. Recolor the
+     resting state to the input border; hover/focus inherit the green primary. */
+  --pf-v5-c-form-control--after--BorderBottomColor: var(--sand-7);
 }
 
 .pf-v5-c-form-control::placeholder {
-  color: var(--mauve-10);
+  color: var(--sand-10);
 }
 
 /* PatternFly v5 draws the focus state as a bottom border + box-shadow. */
@@ -86,16 +99,16 @@ select {
 .pf-v5-c-form-control:focus-within,
 input:focus,
 select:focus {
-  border-color: var(--plum-8) !important;
+  border-color: var(--green-8) !important;
   outline: none !important;
-  box-shadow: 0 0 0 2px var(--plum-a6) !important;
+  box-shadow: 0 0 0 2px var(--green-a6) !important;
 }
 
 /* ---- Primary button --------------------------------------------------- */
 
 #kc-login,
 .pf-v5-c-button.pf-m-primary {
-  background: var(--plum-9) !important;
+  background: var(--green-9) !important;
   color: #fff !important;
   border: 1px solid transparent !important;
   border-radius: var(--bp-radius) !important;
@@ -104,55 +117,55 @@ select:focus {
 
 #kc-login:hover,
 .pf-v5-c-button.pf-m-primary:hover {
-  background: var(--plum-10) !important;
+  background: var(--green-10) !important;
 }
 
 #kc-login:active,
 .pf-v5-c-button.pf-m-primary:active {
-  background: var(--plum-8) !important;
+  background: var(--green-8) !important;
 }
 
 /* Secondary / control buttons (e.g. password visibility toggle). */
 .pf-v5-c-button.pf-m-secondary,
 .pf-v5-c-button.pf-m-control {
-  background: var(--mauve-3) !important;
-  color: var(--mauve-12) !important;
-  border: 1px solid var(--mauve-7) !important;
+  background: var(--sand-3) !important;
+  color: var(--sand-12) !important;
+  border: 1px solid var(--sand-7) !important;
   border-radius: var(--bp-radius) !important;
 }
 
 .pf-v5-c-button.pf-m-link {
-  color: var(--plum-11) !important;
+  color: var(--green-11) !important;
 }
 
 /* ---- Links ------------------------------------------------------------ */
 
 a {
-  color: var(--plum-11);
+  color: var(--green-11);
 }
 
 a:hover {
-  color: var(--plum-12);
+  color: var(--green-12);
 }
 
 /* ---- Checkbox (remember me) ------------------------------------------- */
 
 .pf-v5-c-check__input,
 input[type="checkbox"] {
-  accent-color: var(--plum-9);
+  accent-color: var(--green-9);
 }
 
 .pf-v5-c-check__label {
-  color: var(--mauve-11);
+  color: var(--sand-11);
 }
 
 /* ---- Alerts (error / info pages) -------------------------------------- */
 
 .pf-v5-c-alert {
-  background: var(--mauve-3) !important;
+  background: var(--sand-3) !important;
   border-radius: var(--bp-radius) !important;
 }
 
 .pf-v5-c-alert.pf-m-danger {
-  border-left: 3px solid var(--plum-9);
+  border-left: 3px solid var(--green-9);
 }
