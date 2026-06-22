@@ -40,3 +40,9 @@ services:
   nginx:
     ports: !override
       - "18080:80"
+  # Park the bots under a profile the e2e run never activates, so the play-data
+  # generator is excluded from the e2e stack. The base compose puts no profile
+  # on it, so the dev stack still starts it by default.
+  bots:
+    profiles:
+      - donotstart

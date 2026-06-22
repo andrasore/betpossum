@@ -63,3 +63,15 @@ RUN python -m venv .venv && mkdir -p ./src && .venv/bin/pip install -e .
 COPY services/stats/src/ ./src/
 USER appuser
 CMD ["/app/.venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
+
+# Stage 7: Bots — dev-only play-data daemon, run straight from TS via tsx. Not
+# part of the e2e stack (excluded there via a compose profile).
+FROM node:25-alpine AS bots
+RUN npm install corepack -g --force && corepack enable && corepack prepare pnpm@11.1.2 --activate
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY bots/package.json ./bots/
+RUN pnpm install --frozen-lockfile --filter '@betting/bots...'
+COPY bots/ ./bots/
+WORKDIR /app/bots
+CMD ["pnpm", "start"]

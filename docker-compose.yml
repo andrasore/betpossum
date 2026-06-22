@@ -190,6 +190,29 @@ services:
       - stats
       - keycloak
 
+  # Dev-only play-data generator: provisions bot users on the fly via the
+  # Keycloak admin API, funds them through the app admin, and places bets via
+  # the single nginx origin. It waits for the stack to be ready and restarts on
+  # failure, so boot ordering is best-effort. Excluded from the e2e stack (see
+  # docker-compose.e2e.yml).
+  bots:
+    build:
+      context: .
+      target: bots
+    environment:
+      BOT_BASE_URL: http://nginx
+      KC_ADMIN: admin
+      KC_ADMIN_PASSWORD: admin
+      ADMIN_USER: bob
+      ADMIN_PASSWORD: password
+      BOT_COUNT: ${BOT_COUNT:-10}
+    restart: on-failure
+    depends_on:
+      - nginx
+      - core
+      - odds
+      - keycloak
+
 volumes:
   postgres_data:
   tigerbeetle_data:

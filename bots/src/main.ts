@@ -12,6 +12,7 @@ import {
   ensureBotsClient,
   getMasterToken,
   login,
+  type Session,
 } from "./keycloak.js";
 import { generateName } from "./names.js";
 
@@ -63,13 +64,38 @@ async function betTick(cfg: Config, bots: Bot[]): Promise<void> {
   }
 }
 
+// Block until the stack can serve us: Keycloak issues the master token, the
+// bots client exists, the public odds endpoint answers (nginx + odds up), and
+// Core serves an authed admin request (so lazy user creation will work). This
+// keeps a container start during stack boot from crash-looping and leaking
+// half-provisioned Keycloak users.
+async function waitForStack(
+  cfg: Config,
+): Promise<{ master: Session; admin: Session }> {
+  const retries = Number(process.env.BOT_READY_RETRIES ?? 60);
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const master = await getMasterToken(cfg);
+      await ensureBotsClient(cfg, master.accessToken);
+      await getOdds(cfg);
+      const admin = await login(cfg, cfg.adminUser, cfg.adminPassword);
+      await getBalance(cfg, admin.accessToken); // Core readiness probe
+      return { master, admin };
+    } catch (err) {
+      lastErr = err;
+      console.log(`stack not ready (attempt ${attempt}/${retries}), retrying…`);
+      await sleep(2000);
+    }
+  }
+  throw new Error(`stack did not become ready: ${lastErr}`);
+}
+
 async function main(): Promise<void> {
   const cfg = loadConfig();
   console.log(`Provisioning ${cfg.botCount} bots against ${cfg.baseUrl}`);
 
-  const master = await getMasterToken(cfg);
-  await ensureBotsClient(cfg, master.accessToken);
-  const admin = await login(cfg, cfg.adminUser, cfg.adminPassword);
+  const { master, admin } = await waitForStack(cfg);
 
   const bots: Bot[] = [];
   for (let i = 0; i < cfg.botCount; i++) {
