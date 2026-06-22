@@ -26,10 +26,21 @@ export default function MyBetsPage() {
         </Heading>
 
         {isAuthenticated ? (
-          <Flex direction="column" gap="6" style={{ maxWidth: 900 }}>
-            {summary && <StatsSummary summary={summary} />}
-            <BetsChart series={pnl ?? []} />
-            <BetsTable bets={bets ?? []} oddsIndex={oddsIndex} />
+          <Flex direction={{ initial: "column", md: "row" }} gap="6" align="start">
+            <Box flexGrow="1" flexShrink="1" flexBasis="0" width="100%">
+              <BetsTable bets={bets ?? []} oddsIndex={oddsIndex} />
+            </Box>
+            <Flex
+              direction="column"
+              gap="6"
+              flexGrow="1"
+              flexShrink="1"
+              flexBasis="0"
+              width="100%"
+            >
+              {summary && <StatsSummary summary={summary} />}
+              <BetsChart series={pnl ?? []} />
+            </Flex>
           </Flex>
         ) : isLoading ? null : (
           <Flex direction="column" align="start" gap="3">
