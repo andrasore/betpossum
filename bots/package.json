@@ -1,0 +1,17 @@
+{
+  "name": "@betting/bots",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "pnpx @biomejs/biome check",
+    "format": "pnpx @biomejs/biome format --write"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.20.0",
+    "typescript": "^6.0.3"
+  }
+}
