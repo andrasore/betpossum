@@ -11,7 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from consumer import handle
-from db import StatsStore
+from storage.base import StatsStorage
 from generated.events import BetSettledEvent
 
 
@@ -43,7 +43,7 @@ def _event_bytes(
     )
 
 
-async def test_win_maps_payout_to_positive_cents(store: StatsStore) -> None:
+async def test_win_maps_payout_to_positive_cents(store: StatsStorage) -> None:
     await handle(store, _event_bytes(won=True, stake=10.0, payout=15.0))
 
     rows = await store.user_rows("u1")
@@ -52,7 +52,7 @@ async def test_win_maps_payout_to_positive_cents(store: StatsStore) -> None:
     assert rows[0].profit_cents == 1_500
 
 
-async def test_loss_maps_stake_to_negative_cents(store: StatsStore) -> None:
+async def test_loss_maps_stake_to_negative_cents(store: StatsStorage) -> None:
     await handle(store, _event_bytes(won=False, stake=10.0, payout=0.0))
 
     rows = await store.user_rows("u1")
@@ -61,7 +61,7 @@ async def test_loss_maps_stake_to_negative_cents(store: StatsStore) -> None:
     assert rows[0].profit_cents == -1_000
 
 
-async def test_fractional_dollars_round_to_cents(store: StatsStore) -> None:
+async def test_fractional_dollars_round_to_cents(store: StatsStorage) -> None:
     await handle(store, _event_bytes(won=True, stake=2.50, payout=3.75))
 
     rows = await store.user_rows("u1")
@@ -69,7 +69,7 @@ async def test_fractional_dollars_round_to_cents(store: StatsStore) -> None:
     assert rows[0].profit_cents == 375
 
 
-async def test_malformed_body_is_rejected_before_any_write(store: StatsStore) -> None:
+async def test_malformed_body_is_rejected_before_any_write(store: StatsStorage) -> None:
     # consumer.run() relies on this raising so it can nack/requeue.
     with pytest.raises(ValidationError):
         await handle(store, b"{}")
@@ -77,7 +77,7 @@ async def test_malformed_body_is_rejected_before_any_write(store: StatsStore) ->
     assert await store.user_rows("u1") == []
 
 
-async def test_redelivery_of_same_event_is_a_no_op(store: StatsStore) -> None:
+async def test_redelivery_of_same_event_is_a_no_op(store: StatsStorage) -> None:
     body = _event_bytes(won=True, stake=10.0, payout=15.0)
     await handle(store, body)
     await handle(store, body)

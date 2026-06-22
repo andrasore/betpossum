@@ -1,10 +1,10 @@
 """Storage boundary tests: idempotent upsert, per-user scoping, leaderboard."""
 
-from db import StatsStore
+from storage.base import StatsStorage
 
 
 async def _record(
-    store: StatsStore,
+    store: StatsStorage,
     *,
     bet_id: str,
     user_id: str,
@@ -23,7 +23,7 @@ async def _record(
     )
 
 
-async def test_duplicate_bet_id_is_a_no_op(store: StatsStore) -> None:
+async def test_duplicate_bet_id_is_a_no_op(store: StatsStorage) -> None:
     await _record(
         store, bet_id="b1", user_id="u1", stake_cents=10_000, profit_cents=5_000
     )
@@ -36,7 +36,7 @@ async def test_duplicate_bet_id_is_a_no_op(store: StatsStore) -> None:
     assert rows[0].profit_cents == 5_000
 
 
-async def test_user_rows_are_scoped_and_ordered(store: StatsStore) -> None:
+async def test_user_rows_are_scoped_and_ordered(store: StatsStorage) -> None:
     await _record(store, bet_id="b2", user_id="u1", settled_at=200)
     await _record(store, bet_id="b1", user_id="u1", settled_at=100)
     await _record(store, bet_id="b3", user_id="u2", settled_at=150)
@@ -46,7 +46,7 @@ async def test_user_rows_are_scoped_and_ordered(store: StatsStore) -> None:
 
 
 async def test_leaderboard_filters_min_settled_and_ranks_by_roi(
-    store: StatsStore,
+    store: StatsStorage,
 ) -> None:
     # winner: 2 bets, +100 on 200 staked => 50% ROI
     await _record(

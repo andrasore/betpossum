@@ -24,6 +24,18 @@ A read model built from settled bets. It owns one Postgres table,
 the shared `betting` database — logically separate from Core's tables, which
 live in the `core` schema (`DB_SCHEMA` selects it).
 
+## Storage abstraction
+
+Persistence is pluggable, mirroring odds' `storage/` package: a `StatsStorage`
+ABC in `storage/base.py`, the `PostgresStorage` implementation in
+`storage/postgres.py` (selected by `STATS_STORAGE`, default `postgres`, via the
+`get_storage` factory in `storage/__init__.py`), and the process-global
+lifecycle + FastAPI `StorageDep` in `storage/dependencies.py`. `base.py` keeps
+its `SettlementRow` import under `TYPE_CHECKING` so the ABC stays framework-free;
+`LeaderboardEntry` (the leaderboard return type) lives there as part of the
+interface contract. New backend = new `StatsStorage` subclass wired through the
+factory, with `from_env` on the class.
+
 ## Non-obvious conventions
 
 - **The event is the only input.** Stats never reads Core's or Odds' tables; the

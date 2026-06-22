@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 
 from aggregate import cumulative_roi_series, summarise
 from auth import current_user_sub
-from store_dep import StoreDep
+from storage.dependencies import StorageDep
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -15,7 +15,7 @@ LEADERBOARD_MIN_SETTLED = int(os.environ.get("LEADERBOARD_MIN_SETTLED", "3"))
 
 @router.get("/me/pnl")
 async def my_pnl(
-    store: StoreDep, sub: Annotated[str, Depends(current_user_sub)]
+    store: StorageDep, sub: Annotated[str, Depends(current_user_sub)]
 ) -> list[dict[str, object]]:
     rows = await store.user_rows(sub)
     return [{"date": p.date, "roiPct": p.roiPct} for p in cumulative_roi_series(rows)]
@@ -23,7 +23,7 @@ async def my_pnl(
 
 @router.get("/me/summary")
 async def my_summary(
-    store: StoreDep, sub: Annotated[str, Depends(current_user_sub)]
+    store: StorageDep, sub: Annotated[str, Depends(current_user_sub)]
 ) -> dict[str, object]:
     rows = await store.user_rows(sub)
     s = summarise(rows)
@@ -38,7 +38,7 @@ async def my_summary(
 
 
 @router.get("/leaderboard")
-async def leaderboard(store: StoreDep) -> list[dict[str, object]]:
+async def leaderboard(store: StorageDep) -> list[dict[str, object]]:
     entries = await store.leaderboard(
         min_settled=LEADERBOARD_MIN_SETTLED, limit=LEADERBOARD_LIMIT
     )

@@ -21,6 +21,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from aggregate import SettlementRow
 
+from .base import LeaderboardEntry, StatsStorage
+
 
 class Settlement(SQLModel, table=True):
     __tablename__ = "stats_settlements"  # pyright: ignore[reportAssignmentType]
@@ -34,15 +36,6 @@ class Settlement(SQLModel, table=True):
     profit_cents: int = Field(sa_column=Column(Integer, nullable=False))
 
 
-@dataclass(frozen=True)
-class LeaderboardEntry:
-    userId: str
-    userName: str | None
-    roiPct: float
-    netProfit: float
-    settledCount: int
-
-
 def _async_dsn(dsn: str) -> str:
     """Point SQLAlchemy at the asyncpg driver regardless of the URL scheme."""
     for scheme in ("postgresql+asyncpg://", "postgresql://", "postgres://"):
@@ -51,7 +44,7 @@ def _async_dsn(dsn: str) -> str:
     return dsn
 
 
-class StatsStore:
+class PostgresStorage(StatsStorage):
     name: ClassVar[str] = "postgres"
 
     def __init__(self, dsn: str, schema: str | None = None):
@@ -63,13 +56,13 @@ class StatsStore:
         self._session: async_sessionmaker[AsyncSession] | None = None
 
     @classmethod
-    def from_env(cls) -> StatsStore:
+    def from_env(cls) -> PostgresStorage:
         dsn = os.environ.get("DATABASE_URL")
         if not dsn:
             raise RuntimeError("DATABASE_URL is required")
         return cls(dsn=dsn, schema=os.environ.get("DB_SCHEMA") or None)
 
-    async def __aenter__(self) -> StatsStore:
+    async def __aenter__(self) -> PostgresStorage:
         connect_args = (
             {"server_settings": {"search_path": self._schema}} if self._schema else {}
         )

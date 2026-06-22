@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request, Response
 
 from consumer import run as run_consumer
 from routes import router as stats_router
-from store_dep import close_store, open_store
+from storage.dependencies import close_storage, open_storage
 
 logging.basicConfig(level=logging.INFO)
 http_logger = logging.getLogger("stats.http")
@@ -20,7 +20,7 @@ RABBITMQ_URL = os.environ.get("RABBITMQ_URL", "amqp://localhost:5672")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    store = await open_store()
+    store = await open_storage()
     consumer = asyncio.create_task(
         run_consumer(RABBITMQ_URL, store), name="stats-consumer"
     )
@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             await consumer
         except asyncio.CancelledError:
             pass
-        await close_store()
+        await close_storage()
 
 
 app = FastAPI(lifespan=lifespan)

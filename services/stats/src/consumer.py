@@ -10,8 +10,8 @@ import logging
 
 import aio_pika
 
-from db import StatsStore
 from generated.events import BetSettledEvent
+from storage.base import StatsStorage
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ def _signed_profit_cents(event: BetSettledEvent) -> int:
     return -round(event.stake * 100)
 
 
-async def handle(store: StatsStore, body: bytes) -> None:
+async def handle(store: StatsStorage, body: bytes) -> None:
     event = BetSettledEvent.model_validate_json(body)
     await store.record_settlement(
         bet_id=event.betId,
@@ -38,7 +38,7 @@ async def handle(store: StatsStore, body: bytes) -> None:
     )
 
 
-async def run(rabbitmq_url: str, store: StatsStore) -> None:
+async def run(rabbitmq_url: str, store: StatsStorage) -> None:
     connection = await aio_pika.connect_robust(rabbitmq_url)
     channel = await connection.channel()
     await channel.set_qos(prefetch_count=16)
