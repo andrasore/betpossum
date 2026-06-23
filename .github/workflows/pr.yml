@@ -44,7 +44,8 @@ jobs:
           path: |
             services/odds/.venv
             services/notifications/.venv
-          key: venv-${{ runner.os }}-py3.14-${{ hashFiles('services/*/pyproject.toml', 'services/*/requirements.txt') }}
+            services/stats/.venv
+          key: venv-${{ runner.os }}-py3.14-v2-${{ hashFiles('services/*/pyproject.toml', 'services/*/requirements.txt') }}
 
       - name: Cache turbo
         uses: actions/cache@v4
@@ -53,9 +54,13 @@ jobs:
           key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-
 
+      # --force so `turbo run init` actually executes: init has no cached
+      # outputs, so a turbo cache hit replays its logs without recreating the
+      # .venv directories. On this cache-miss path the venvs must really exist
+      # before actions/cache saves them, or the next run restores empty dirs.
       - name: Install deps (cache miss only)
         if: steps.cache-node.outputs.cache-hit != 'true' || steps.cache-venv.outputs.cache-hit != 'true'
-        run: pnpm install && pnpm run init
+        run: pnpm install && pnpm exec turbo run init --force
 
       - run: pnpm run typecheck
       - run: pnpm run lint
