@@ -1,0 +1,20 @@
+# Push overlay: assigns GHCR image names so `docker compose push` can publish
+# the built service images. Combined with docker-compose.ci.yml so the build is
+# served from the BuildKit GHA cache. Used only by the push job in CI, which
+# sets IMAGE_REPO (e.g. ghcr.io/owner/repo). bots is dev-only and not published.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.push.yml ...
+
+services:
+  core:
+    image: ${IMAGE_REPO}/core:${IMAGE_TAG:-latest}
+  odds:
+    image: ${IMAGE_REPO}/odds:${IMAGE_TAG:-latest}
+  notifications:
+    image: ${IMAGE_REPO}/notifications:${IMAGE_TAG:-latest}
+  stats:
+    image: ${IMAGE_REPO}/stats:${IMAGE_TAG:-latest}
+  nginx:
+    image: ${IMAGE_REPO}/frontend:${IMAGE_TAG:-latest}
+  keycloak:
+    image: ${IMAGE_REPO}/keycloak:${IMAGE_TAG:-latest}
