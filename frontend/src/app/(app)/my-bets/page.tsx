@@ -26,7 +26,11 @@ export default function MyBetsPage() {
         </Heading>
 
         {isAuthenticated ? (
-          <Flex direction={{ initial: "column", md: "row" }} gap="6" align="start">
+          <Flex
+            direction={{ initial: "column", md: "row" }}
+            gap="6"
+            align="start"
+          >
             <Box flexGrow="1" flexShrink="1" flexBasis="0" width="100%">
               <BetsTable bets={bets ?? []} oddsIndex={oddsIndex} />
             </Box>
