@@ -100,13 +100,17 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
+      # Two-step build then push: `build --push` is not honored by the Compose
+      # version on the runner under bake delegation (it loads the images into
+      # the local engine instead of pushing). `compose build` followed by
+      # `compose push` reliably publishes the :<sha> staging tags.
       - name: Build and push staging images
         if: github.ref == 'refs/heads/main'
         env:
           IMAGE_TAG: ${{ github.sha }}
-        run: >
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.push.yml
-          build --push core odds notifications stats nginx keycloak
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.push.yml build core odds notifications stats nginx keycloak
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.push.yml push core odds notifications stats nginx keycloak
 
   # Boot the full stack from the just-built images and drive it with Playwright.
   # global-setup runs `compose up -d --build`; with CI set it layers in
