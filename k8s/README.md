@@ -1,7 +1,7 @@
 # Production Kubernetes manifests
 
 Plain-YAML manifests for deploying BetPossum to a Kubernetes cluster. Stateful
-backends (Postgres ×2, RabbitMQ, TigerBeetle) run in-cluster as StatefulSets;
+backends (Postgres, RabbitMQ, TigerBeetle) run in-cluster as StatefulSets;
 the app tier and nginx edge run as Deployments; an Ingress + cert-manager
 terminate TLS.
 
@@ -22,7 +22,7 @@ terminate TLS.
         │    nginx    │   /api→core  /odds→odds  /socket.io→notifications
         │  (SPA + LB) │   /kc→keycloak  /→SPA static
         └─┬───┬───┬─┬─┘
-          │   │   │ └────────────► keycloak ──► keycloak-postgres
+          │   │   │ └────────────► keycloak ──► postgres (keycloak db)
           │   │   └──► notifications ─┐
           │   └──► odds ──┐           │ (RabbitMQ fanout)
           └──► core ──────┴───────────┘
@@ -84,8 +84,9 @@ kubectl -n betpossum create configmap keycloak-realm \
 ```
 
 > `--import-realm` only imports a realm that doesn't already exist. To change the
-> realm after first boot you must edit it via the Keycloak admin API/console or
-> reset the keycloak-postgres volume.
+> realm after first boot you must edit it via the Keycloak admin API/console, or
+> drop the `keycloak` database in the shared Postgres (wiping the postgres PVC
+> would also destroy app data, since one Postgres now hosts both databases).
 
 ## 4. Apply
 

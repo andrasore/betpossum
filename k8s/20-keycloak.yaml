@@ -1,4 +1,4 @@
-# Identity provider. Stateless pod (all state lives in keycloak-postgres), but
+# Identity provider. Stateless pod (all state lives in the shared postgres), but
 # kept at 1 replica: multi-replica Keycloak needs a distributed cache (JGroups
 # discovery) which is out of scope here.
 #
@@ -45,7 +45,7 @@ spec:
             - name: KC_DB
               value: postgres
             - name: KC_DB_URL
-              value: jdbc:postgresql://keycloak-postgres:5432/keycloak
+              value: jdbc:postgresql://postgres:5432/keycloak
             - name: KC_DB_USERNAME
               value: keycloak
             - name: KC_DB_PASSWORD

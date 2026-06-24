@@ -1,6 +1,34 @@
-# Core's primary database. Single-replica StatefulSet with a PVC.
+# The whole stack's database. One single-replica Postgres StatefulSet hosts both
+# the `betting` database (a schema per app service: core/odds/stats) and
+# Keycloak's separate `keycloak` database — matching the single-Postgres
+# convention the docker-compose stack uses (see postgres/init.sql).
+#
+# The init ConfigMap below runs once, on first init of an empty data volume, as
+# the bootstrap superuser. It creates Keycloak's role/database (password injected
+# from keycloak-secret, so it stays out of the ConfigMap) and the app schemas.
+#
 # Production note: a single Postgres pod is a SPOF — for real HA use an operator
 # (CloudNativePG / Zalando) or a managed instance instead.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: betpossum
+data:
+  # *.sh in /docker-entrypoint-initdb.d runs through the entrypoint shell, so the
+  # Keycloak role password is interpolated from $KC_DB_PASSWORD (a Secret) rather
+  # than committed here. Avoid single quotes in that password.
+  init.sh: |
+    #!/bin/sh
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+      CREATE ROLE keycloak WITH LOGIN PASSWORD '${KC_DB_PASSWORD}';
+      CREATE DATABASE keycloak OWNER keycloak;
+      CREATE SCHEMA IF NOT EXISTS core  AUTHORIZATION ${POSTGRES_USER};
+      CREATE SCHEMA IF NOT EXISTS odds  AUTHORIZATION ${POSTGRES_USER};
+      CREATE SCHEMA IF NOT EXISTS stats AUTHORIZATION ${POSTGRES_USER};
+    EOSQL
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -36,11 +64,23 @@ spec:
           envFrom:
             - secretRef:
                 name: postgres-secret
+          env:
+            # Consumed by init.sh to set Keycloak's DB role password; kept in a
+            # Secret rather than the init ConfigMap. Must match keycloak-secret's
+            # KC_DB_PASSWORD, which Keycloak itself uses to connect.
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KC_DB_PASSWORD
           ports:
             - containerPort: 5432
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
           readinessProbe:
             exec:
               command: ["sh", "-c", "pg_isready -U $POSTGRES_USER"]
@@ -57,6 +97,11 @@ spec:
               memory: 256Mi
             limits:
               memory: 1Gi
+      volumes:
+        - name: init
+          configMap:
+            name: postgres-init
+            defaultMode: 0755
   volumeClaimTemplates:
     - metadata:
         name: data
