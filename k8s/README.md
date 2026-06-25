@@ -37,7 +37,11 @@ and only one Ingress host.
 
 - A cluster with a **default StorageClass** (or set `storageClassName` in each
   StatefulSet's `volumeClaimTemplates`).
-- **ingress-nginx** controller installed.
+- **NGINX Ingress Controller** (`nginx/nginx-ingress`, the F5/NGINX Inc
+  project — <https://hub.docker.com/r/nginx/nginx-ingress/>) installed. The
+  `50-ingress.yaml` annotations use its `nginx.org/*` prefix, including
+  `nginx.org/websocket-services` to keep `/socket.io` upgrading (this controller
+  does not enable WebSocket by default).
 - **cert-manager** installed (for automatic TLS). Skip if terminating TLS
   elsewhere — see `50-ingress.yaml`.
 - A container registry you can push to. The manifests use
@@ -101,10 +105,10 @@ Services exist, then stabilizes.
 
 ## 5. DNS
 
-Point `betpossum.example.com` at the ingress-nginx controller's external IP:
+Point `betpossum.example.com` at the NGINX Ingress Controller's external IP:
 
 ```bash
-kubectl -n ingress-nginx get svc ingress-nginx-controller
+kubectl -n nginx-ingress get svc nginx-ingress
 ```
 
 Once DNS resolves, cert-manager completes the HTTP-01 challenge and issues the
