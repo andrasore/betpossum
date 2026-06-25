@@ -1,0 +1,20 @@
+# Production overlay: HTTPS via Ingress + cert-manager, CHANGE_ME secrets filled
+# out of band. Base already carries the prod values (https issuer, KC_HOSTNAME
+# scheme), so no config/keycloak patch is needed here.
+#
+#   kubectl apply -k k8s/overlays/prod
+#
+# Before applying, create the keycloak-realm ConfigMap out of band from a
+# production realm (copy keycloak/realm.json -> realm.prod.json and swap the
+# betting-frontend redirectUris/webOrigins/post-logout to the HTTPS domain):
+#   kubectl -n betpossum create configmap keycloak-realm \
+#     --from-file=realm.json=keycloak/realm.prod.json
+# See ../../README.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: betpossum
+resources:
+  - ../../base
+  - ingress.yaml
+  - cluster-issuer.yaml
+  - secrets.yaml

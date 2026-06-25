@@ -1,0 +1,35 @@
+# Public entry point (local, plain HTTP — no TLS). Same single-host routing as
+# prod: everything goes to the nginx Service, which path-routes internally
+# (incl. Keycloak under /kc). Browse http://localhost:8080.
+#
+# Assumes the NGINX Ingress Controller (nginx/nginx-ingress, the F5/NGINX Inc
+# project) is installed in the local cluster and reachable on host :8080 (e.g.
+# kind extraPortMappings, or `minikube tunnel`). No cert-manager / TLS — this is
+# the only structural difference from overlays/prod/ingress.yaml.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: betpossum
+  namespace: betpossum
+  annotations:
+    # Keep the live websocket (/socket.io) and Keycloak redirects healthy.
+    nginx.org/proxy-read-timeout: "3600s"
+    nginx.org/proxy-send-timeout: "3600s"
+    # Keycloak login pages and tokens can be large; don't truncate buffers.
+    nginx.org/proxy-buffer-size: "16k"
+    # The NGINX Inc controller does NOT upgrade WebSocket connections by default —
+    # /socket.io breaks without this, same as in prod.
+    nginx.org/websocket-services: "nginx"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx
+                port:
+                  number: 80

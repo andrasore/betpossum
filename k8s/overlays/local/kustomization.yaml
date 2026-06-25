@@ -1,0 +1,58 @@
+# Local overlay: plain HTTP at http://localhost:8080, committed dev secrets,
+# single replicas. Reuses keycloak/realm.json verbatim (already shaped for
+# http://localhost:8080). Apply with:
+#
+#   kubectl apply -k k8s/overlays/local
+#
+# Prereqs: a local cluster (kind/minikube) running the NGINX Inc ingress
+# controller, reachable on host :8080. See ../../README.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: betpossum
+resources:
+  - ../../base
+  - ingress.yaml
+  - secrets.yaml
+
+# The keycloak-realm ConfigMap (mounted by the keycloak Deployment) is created
+# out of band from the committed dev realm — kustomize's load restrictor forbids
+# referencing files outside this dir, and `kubectl apply -k` can't relax it:
+#   kubectl -n betpossum create configmap keycloak-realm \
+#     --from-file=realm.json=keycloak/realm.json
+# See ../../README.md.
+
+# Laptop-friendly: drop the prod replica counts.
+replicas:
+  - name: core
+    count: 1
+  - name: nginx
+    count: 1
+
+patches:
+  # Point the app + browser at the local HTTP origin.
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: betpossum-config
+        namespace: betpossum
+      data:
+        PUBLIC_HOST: localhost:8080
+        KEYCLOAK_ISSUER_URL: http://localhost:8080/kc/realms/betting
+  # Flip the Keycloak hostname scheme to http (no TLS locally). The other
+  # hostname env (KC_HOSTNAME_STRICT=false, KC_PROXY_HEADERS=xforwarded,
+  # KC_HTTP_ENABLED=true) in base already make HTTP-behind-nginx work.
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: keycloak
+        namespace: betpossum
+      spec:
+        template:
+          spec:
+            containers:
+              - name: keycloak
+                env:
+                  - name: KC_HOSTNAME
+                    value: http://$(PUBLIC_HOST)/kc
