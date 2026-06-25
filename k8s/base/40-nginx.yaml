@@ -40,7 +40,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: ghcr.io/andrasore/betpossum-frontend:latest   # Dockerfile target: frontend
+          image: ghcr.io/andrasore/betpossum/frontend:latest   # Dockerfile target: frontend
           ports:
             - containerPort: 80
           readinessProbe:

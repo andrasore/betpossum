@@ -13,3 +13,4 @@ requirements.txt
 __pycache__
 .tb_bin/
 .env.dev
+.envrc

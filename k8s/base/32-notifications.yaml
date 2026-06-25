@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
         - name: notifications
-          image: ghcr.io/andrasore/betpossum-notifications:latest   # Dockerfile target: notifications
+          image: ghcr.io/andrasore/betpossum/notifications:latest   # Dockerfile target: notifications
           envFrom:
             - configMapRef:
                 name: betpossum-config

@@ -7,10 +7,10 @@ app tier and nginx edge run as Deployments; an Ingress fronts nginx.
 A shared **base** holds the env-agnostic manifests; two **overlays** carry the
 differences:
 
-| Overlay | Entry point | TLS | Secrets | Realm |
-|---------|-------------|-----|---------|-------|
-| `overlays/local` | `http://localhost:8080` | none | committed dev creds | `keycloak/realm.json` (as-is) |
-| `overlays/prod`  | `https://<your-domain>` | cert-manager | `CHANGE_ME` (fill out of band) | `keycloak/realm.prod.json` |
+| Overlay          | Entry point             | TLS          | Secrets                        | Realm                         |
+|------------------|-------------------------|--------------|--------------------------------|-------------------------------|
+| `overlays/local` | `http://localhost:8080` | none         | committed dev creds            | `keycloak/realm.json` (as-is) |
+| `overlays/prod`  | `https://<your-domain>` | cert-manager | `CHANGE_ME` (fill out of band) | `keycloak/realm.prod.json`    |
 
 ```bash
 kubectl apply -k k8s/overlays/local   # local HTTP stack
@@ -66,7 +66,17 @@ only one Ingress host.
   project — <https://hub.docker.com/r/nginx/nginx-ingress/>) installed. The
   Ingress annotations use its `nginx.org/*` prefix, including
   `nginx.org/websocket-services` to keep `/socket.io` upgrading (this controller
-  does not enable WebSocket by default).
+  does not enable WebSocket by default). Install it via the project's Helm chart
+  (note: this is **not** the community `ingress-nginx` chart — that one ignores
+  the `nginx.org/*` annotations):
+
+  ```bash
+  helm repo add nginx-stable https://helm.nginx.com/stable
+  helm repo update
+  helm install nginx-ingress nginx-stable/nginx-ingress \
+    -n nginx-ingress --create-namespace
+  ```
+
   - **local:** the controller must be reachable on host **:8080** (e.g. a kind
     cluster with `extraPortMappings` 8080→ingress, or `minikube tunnel`). The
     issuer is `http://localhost:8080/kc/realms/betting`, so the browser URL must
@@ -81,7 +91,7 @@ only one Ingress host.
 ## 1. Images
 
 The five app images (`core`, `odds`, `notifications`, `frontend`, `keycloak`)
-are built and published to `ghcr.io/andrasore/betpossum-*` **automatically by CI
+are built and published to `ghcr.io/andrasore/betpossum/*` **automatically by CI
 on the PR flow** — there is nothing to build or push by hand for a deploy. The
 manifests reference the `:latest` tag with the default `Always` pull policy, so
 the cluster pulls the current published image.
@@ -155,7 +165,7 @@ to know:
   Ingress entirely and port-forward the `nginx` Service (shown below — the
   Service already path-routes everything internally).
 - **Images are pulled from the registry.** The app images are public on
-  `ghcr.io/andrasore/betpossum-*` and are published automatically by CI on the PR
+  `ghcr.io/andrasore/betpossum/*` and are published automatically by CI on the PR
   flow — there is nothing to build or push by hand. The default `Always` pull
   policy is correct: k3s pulls them directly, no containerd import or pull secret
   needed.

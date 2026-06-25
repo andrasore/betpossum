@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
         - name: odds
-          image: ghcr.io/andrasore/betpossum-odds:latest   # Dockerfile target: odds
+          image: ghcr.io/andrasore/betpossum/odds:latest   # Dockerfile target: odds
           envFrom:
             - configMapRef:
                 name: betpossum-config

@@ -38,7 +38,7 @@ spec:
           type: Unconfined
       containers:
         - name: core
-          image: ghcr.io/andrasore/betpossum-core:latest   # Dockerfile target: core
+          image: ghcr.io/andrasore/betpossum/core:latest   # Dockerfile target: core
           env:
             - name: PORT
               value: "4000"
