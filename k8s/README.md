@@ -75,23 +75,21 @@ only one Ingress host.
   elsewhere — see `overlays/prod/ingress.yaml`.
 - A cluster with a **default StorageClass** (or set `storageClassName` in each
   StatefulSet's `volumeClaimTemplates`).
-- A container registry. The manifests use `ghcr.io/andrasore/betpossum-*`
-  placeholders — replace with yours (prod), or load locally-built images into
-  the cluster (local; e.g. `kind load docker-image`).
+- The cluster must be able to reach `ghcr.io` to pull the app images (they are
+  public — no pull secret needed).
 
-## 1. Build images
+## 1. Images
 
-Four app images come from the root multi-stage `Dockerfile` targets; Keycloak
-from `keycloak/Dockerfile`. From the repo root:
+The five app images (`core`, `odds`, `notifications`, `frontend`, `keycloak`)
+are built and published to `ghcr.io/andrasore/betpossum-*` **automatically by CI
+on the PR flow** — there is nothing to build or push by hand for a deploy. The
+manifests reference the `:latest` tag with the default `Always` pull policy, so
+the cluster pulls the current published image.
 
-```bash
-REG=ghcr.io/andrasore
-for tgt in core odds notifications frontend; do
-  docker build --target $tgt -t $REG/betpossum-$tgt:latest .
-done
-docker build -t $REG/betpossum-keycloak:latest keycloak/
-# prod: docker push each.  local: `kind load docker-image $REG/betpossum-<tgt>:latest`
-```
+The images come from the root multi-stage `Dockerfile` targets (`core`, `odds`,
+`notifications`, `frontend`) and `keycloak/Dockerfile`. You can build them
+locally for inspection (`docker build --target core -t betpossum-core .`), but
+publishing is CI-owned — don't `docker push` them manually.
 
 ## 2. Create the keycloak-realm ConfigMap
 
@@ -145,6 +143,54 @@ exist, then stabilizes.
   (`kubectl -n nginx-ingress get svc nginx-ingress`); once DNS resolves,
   cert-manager completes the HTTP-01 challenge and issues the cert into
   `betpossum-tls`.
+
+## Local quickstart on k3s
+
+k3s is a quick way to exercise the `local` overlay end to end. Two k3s specifics
+to know:
+
+- **k3s ships Traefik**, but the local overlay's Ingress targets
+  `ingressClassName: nginx` (NGINX-Inc `nginx.org/*` annotations). Install with
+  `--disable traefik` and either install the NGINX-Inc controller, or skip the
+  Ingress entirely and port-forward the `nginx` Service (shown below — the
+  Service already path-routes everything internally).
+- **Images are pulled from the registry.** The app images are public on
+  `ghcr.io/andrasore/betpossum-*` and are published automatically by CI on the PR
+  flow — there is nothing to build or push by hand. The default `Always` pull
+  policy is correct: k3s pulls them directly, no containerd import or pull secret
+  needed.
+
+```bash
+# 1. k3s without Traefik (it would otherwise grab :80/:443)
+curl -sfL https://get.k3s.io | sh -s - --disable traefik
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml          # or copy to ~/.kube/config
+
+# 2. Realm ConfigMap + apply the local overlay (images come from ghcr via CI)
+kubectl create namespace betpossum
+kubectl -n betpossum create configmap keycloak-realm \
+  --from-file=realm.json=keycloak/realm.json
+kubectl apply -k k8s/overlays/local
+
+# 3. Reach it on :8080 (straight to the nginx Service — no Ingress controller needed)
+kubectl -n betpossum rollout status deploy/nginx
+kubectl -n betpossum port-forward svc/nginx 8080:80     # → http://localhost:8080
+```
+
+Browse `http://localhost:8080`, register/log in (exercises the
+`http://localhost:8080` Keycloak issuer + PKCE) and place a bet (exercises the
+`/socket.io` live channel). Once CI publishes a newer image, force a fresh
+`Always` pull with:
+
+```bash
+kubectl -n betpossum rollout restart deploy/core        # or whichever service
+```
+
+> To test through the Ingress instead of port-forwarding the Service, install the
+> NGINX-Inc controller (`helm install nginx-ingress nginx-stable/nginx-ingress -n
+> nginx-ingress --create-namespace --set controller.service.type=ClusterIP`) and
+> port-forward `svc/nginx-ingress-controller 8080:80` — `Host: localhost` matching
+> ignores the port, so the `host: localhost` rule still matches. This is the only
+> path that exercises the `nginx.org/websocket-services` annotation.
 
 ## Scaling caveats (why several services are replicas: 1)
 
