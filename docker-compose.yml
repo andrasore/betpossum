@@ -206,7 +206,6 @@ services:
       ADMIN_USER: bob
       ADMIN_PASSWORD: password
       BOT_COUNT: ${BOT_COUNT:-10}
-    restart: on-failure
     depends_on:
       - nginx
       - core
