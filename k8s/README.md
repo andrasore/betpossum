@@ -218,17 +218,17 @@ kubectl -n betpossum rollout restart deploy/core        # or whichever service
 
 ## Scaling caveats (why several services are replicas: 1)
 
-The prod overlay (= `base/`) scales `core` and `nginx` to 2; the local overlay
-drops both to 1. The single-replica pins below are correctness constraints.
+Both overlays run `core` and `nginx` at 2 replicas (the `base/` default). The
+single-replica pins below are correctness constraints, not resource choices.
 
 | Service                           | Replicas     | Reason                                                                                                                                |
 |-----------------------------------|--------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| core                              | 2 (prod)     | Safe — its only consumer (events.resolved) uses a durable named queue, so replicas are competing consumers (each event settled once). |
+| core                              | 2            | Safe — its only consumer (events.resolved) uses a durable named queue, so replicas are competing consumers (each event settled once). |
 | odds                              | 1            | Polling ingester; N replicas = duplicate ingestion/publishes.                                                                         |
 | notifications                     | 1            | socket.io long-polling handshake must hit one pod; nginx round-robins the Service.                                                    |
 | stats                             | 1 (scalable) | Safe — bets.settled uses a durable queue (competing consumers) and the upsert is idempotent; pinned to 1 only by default.             |
 | keycloak                          | 1            | Multi-replica needs a distributed cache (JGroups) not configured here.                                                                |
-| nginx                             | 2 (prod)     | Stateless static + proxy — safe to scale.                                                                                             |
+| nginx                             | 2            | Stateless static + proxy — safe to scale.                                                                                             |
 | Postgres / RabbitMQ / TigerBeetle | 1            | Single-node StatefulSets; use operators/managed services for real HA.                                                                 |
 
 These are documented in each manifest. Removing a `replicas: 1` pin requires the

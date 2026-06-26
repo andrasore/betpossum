@@ -20,12 +20,10 @@ resources:
 #     --from-file=realm.json=keycloak/realm.json
 # See ../../README.md.
 
-# Laptop-friendly: drop the prod replica counts.
-replicas:
-  - name: core
-    count: 1
-  - name: nginx
-    count: 1
+# Run core + nginx at 2 replicas locally (for multi-replica testing). Both
+# inherit the base count of 2 — no override needed. The other single-replica
+# pins (odds, notifications, keycloak) are correctness constraints, not resource
+# choices, so they stay at 1; see base/3*.yaml and the README scaling table.
 
 patches:
   # Point the app + browser at the local HTTP origin.
