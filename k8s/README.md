@@ -47,14 +47,15 @@ overlay patches the two values that differ from the base default: the config
                │ 80
         ┌──────▼──────┐   path-routes internally:
         │    nginx    │   /api→core  /odds→odds  /socket.io→notifications
-        │  (SPA + LB) │   /kc→keycloak  /→SPA static
-        └─┬───┬───┬─┬─┘
-          │   │   │ └────────────► keycloak ──► postgres (keycloak db)
-          │   │   └──► notifications ─┐
-          │   └──► odds ──┐           │ (RabbitMQ fanout)
-          └──► core ──────┴───────────┘
+        │  (SPA + LB) │   /stats→stats  /kc→keycloak  /→SPA static
+        └─┬─┬─┬───┬─┬─┘
+          │ │ │   │ └──────────────► keycloak ──► postgres (keycloak db)
+          │ │ │   └──► notifications ─┐
+          │ │ └──► stats ──┐          │
+          │ └──► odds ──┐  │          │ (RabbitMQ fanout)
+          └──► core ────┴──┴──────────┘
                  │  └─► tigerbeetle (ledger)
-                 └────► postgres
+                 └────► postgres (core + stats schemas)
 ```
 
 Keycloak is fronted by nginx under `/kc`, so there is a **single origin** and
@@ -74,13 +75,17 @@ only one Ingress host.
   helm repo add nginx-stable https://helm.nginx.com/stable
   helm repo update
   helm install nginx-ingress nginx-stable/nginx-ingress \
-    -n nginx-ingress --create-namespace
+    -n nginx-ingress --create-namespace \
+    -f k8s/overlays/local/nginx-ingress-values.yaml   # local: expose on :8080
   ```
 
-  - **local:** the controller must be reachable on host **:8080** (e.g. a kind
-    cluster with `extraPortMappings` 8080→ingress, or `minikube tunnel`). The
-    issuer is `http://localhost:8080/kc/realms/betting`, so the browser URL must
-    be exactly `http://localhost:8080`.
+  - **local:** the controller must be reachable on host **:8080**, because the
+    issuer is `http://localhost:8080/kc/realms/betting` and the browser URL must
+    be exactly `http://localhost:8080`. The committed
+    `overlays/local/nginx-ingress-values.yaml` sets the controller Service's HTTP
+    port to 8080 (`controller.service.httpPort.port`); on k3s the klipper
+    service-LB then binds host **:8080** straight to the controller. On kind, map
+    it instead via `extraPortMappings` 8080→ingress (or use `minikube tunnel`).
 - **cert-manager** (prod only) for automatic TLS. Skip if terminating TLS
   elsewhere — see `overlays/prod/ingress.yaml`.
 - A cluster with a **default StorageClass** (or set `storageClassName` in each
@@ -90,14 +95,14 @@ only one Ingress host.
 
 ## 1. Images
 
-The five app images (`core`, `odds`, `notifications`, `frontend`, `keycloak`)
-are built and published to `ghcr.io/andrasore/betpossum/*` **automatically by CI
-on the PR flow** — there is nothing to build or push by hand for a deploy. The
-manifests reference the `:latest` tag with the default `Always` pull policy, so
-the cluster pulls the current published image.
+The six app images (`core`, `odds`, `notifications`, `stats`, `frontend`,
+`keycloak`) are built and published to `ghcr.io/andrasore/betpossum/*`
+**automatically by CI on the PR flow** — there is nothing to build or push by
+hand for a deploy. The manifests reference the `:latest` tag with the default
+`Always` pull policy, so the cluster pulls the current published image.
 
 The images come from the root multi-stage `Dockerfile` targets (`core`, `odds`,
-`notifications`, `frontend`) and `keycloak/Dockerfile`. You can build them
+`notifications`, `stats`, `frontend`) and `keycloak/Dockerfile`. You can build them
 locally for inspection (`docker build --target core -t betpossum-core .`), but
 publishing is CI-owned — don't `docker push` them manually.
 
@@ -161,9 +166,9 @@ to know:
 
 - **k3s ships Traefik**, but the local overlay's Ingress targets
   `ingressClassName: nginx` (NGINX-Inc `nginx.org/*` annotations). Install with
-  `--disable traefik` and either install the NGINX-Inc controller, or skip the
-  Ingress entirely and port-forward the `nginx` Service (shown below — the
-  Service already path-routes everything internally).
+  `--disable traefik`, then install the NGINX-Inc controller with the local
+  values file so its Service publishes on **:8080** — k3s' klipper service-LB
+  binds that host port straight to the controller.
 - **Images are pulled from the registry.** The app images are public on
   `ghcr.io/andrasore/betpossum/*` and are published automatically by CI on the PR
   flow — there is nothing to build or push by hand. The default `Always` pull
@@ -175,46 +180,44 @@ to know:
 curl -sfL https://get.k3s.io | sh -s - --disable traefik
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml          # or copy to ~/.kube/config
 
-# 2. Realm ConfigMap + apply the local overlay (images come from ghcr via CI)
+# 2. NGINX-Inc ingress controller, published on host :8080 (see Prerequisites)
+helm repo add nginx-stable https://helm.nginx.com/stable && helm repo update
+helm install nginx-ingress nginx-stable/nginx-ingress \
+  -n nginx-ingress --create-namespace \
+  -f k8s/overlays/local/nginx-ingress-values.yaml
+
+# 3. Realm ConfigMap + apply the local overlay (images come from ghcr via CI)
 kubectl create namespace betpossum
 kubectl -n betpossum create configmap keycloak-realm \
   --from-file=realm.json=keycloak/realm.json
 kubectl apply -k k8s/overlays/local
-
-# 3. Reach it on :8080 (straight to the nginx Service — no Ingress controller needed)
 kubectl -n betpossum rollout status deploy/nginx
-kubectl -n betpossum port-forward svc/nginx 8080:80     # → http://localhost:8080
 ```
 
-Browse `http://localhost:8080`, register/log in (exercises the
-`http://localhost:8080` Keycloak issuer + PKCE) and place a bet (exercises the
-`/socket.io` live channel). Once CI publishes a newer image, force a fresh
-`Always` pull with:
+Browse `http://localhost:8080` (served through the Ingress, so this also
+exercises the `nginx.org/websocket-services` annotation), register/log in
+(exercises the `http://localhost:8080` Keycloak issuer + PKCE) and place a bet
+(exercises the `/socket.io` live channel). Once CI publishes a newer image,
+force a fresh `Always` pull with:
 
 ```bash
 kubectl -n betpossum rollout restart deploy/core        # or whichever service
 ```
-
-> To test through the Ingress instead of port-forwarding the Service, install the
-> NGINX-Inc controller (`helm install nginx-ingress nginx-stable/nginx-ingress -n
-> nginx-ingress --create-namespace --set controller.service.type=ClusterIP`) and
-> port-forward `svc/nginx-ingress-controller 8080:80` — `Host: localhost` matching
-> ignores the port, so the `host: localhost` rule still matches. This is the only
-> path that exercises the `nginx.org/websocket-services` annotation.
 
 ## Scaling caveats (why several services are replicas: 1)
 
 The prod overlay (= `base/`) scales `core` and `nginx` to 2; the local overlay
 drops both to 1. The single-replica pins below are correctness constraints.
 
-| Service       | Replicas | Reason |
-|---------------|----------|--------|
-| core          | 2 (prod) | Safe — its only consumer (events.resolved) uses a durable named queue, so replicas are competing consumers (each event settled once). |
-| odds          | 1 | Polling ingester; N replicas = duplicate ingestion/publishes. |
-| notifications | 1 | socket.io long-polling handshake must hit one pod; nginx round-robins the Service. |
-| keycloak      | 1 | Multi-replica needs a distributed cache (JGroups) not configured here. |
-| nginx         | 2 (prod) | Stateless static + proxy — safe to scale. |
-| Postgres / RabbitMQ / TigerBeetle | 1 | Single-node StatefulSets; use operators/managed services for real HA. |
+| Service                           | Replicas     | Reason                                                                                                                                |
+|-----------------------------------|--------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| core                              | 2 (prod)     | Safe — its only consumer (events.resolved) uses a durable named queue, so replicas are competing consumers (each event settled once). |
+| odds                              | 1            | Polling ingester; N replicas = duplicate ingestion/publishes.                                                                         |
+| notifications                     | 1            | socket.io long-polling handshake must hit one pod; nginx round-robins the Service.                                                    |
+| stats                             | 1 (scalable) | Safe — bets.settled uses a durable queue (competing consumers) and the upsert is idempotent; pinned to 1 only by default.             |
+| keycloak                          | 1            | Multi-replica needs a distributed cache (JGroups) not configured here.                                                                |
+| nginx                             | 2 (prod)     | Stateless static + proxy — safe to scale.                                                                                             |
+| Postgres / RabbitMQ / TigerBeetle | 1            | Single-node StatefulSets; use operators/managed services for real HA.                                                                 |
 
 These are documented in each manifest. Removing a `replicas: 1` pin requires the
 corresponding fix noted there first.

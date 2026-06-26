@@ -1,0 +1,15 @@
+# Helm values for the NGINX-Inc nginx-ingress controller, local overlay only.
+#
+# k3s' klipper service-LB binds the *host* port to the Service `port`, so to make
+# the controller reachable on host :8080 (the issuer URL is hardcoded to
+# http://localhost:8080/kc/...) we set the service's HTTP port to 8080.
+# targetPort stays 80 (the controller still listens on 80 inside the pod).
+#
+# Not consumed by Kustomize — pass it to Helm explicitly:
+#   helm upgrade --install nginx-ingress nginx-stable/nginx-ingress \
+#     -n nginx-ingress --create-namespace \
+#     -f k8s/overlays/local/nginx-ingress-values.yaml
+controller:
+  service:
+    httpPort:
+      port: 8080

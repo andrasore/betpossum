@@ -16,4 +16,5 @@ resources:
   - 30-core.yaml
   - 31-odds.yaml
   - 32-notifications.yaml
+  - 33-stats.yaml
   - 40-nginx.yaml

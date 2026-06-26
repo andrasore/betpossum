@@ -1,10 +1,11 @@
 # Edge proxy + SPA host. The image (Dockerfile target: frontend) bakes the
 # static SPA export and nginx.conf, which path-routes to the upstream Services
-# by name: core:4000, odds:8000, notifications:8000, keycloak:8080 (/kc), and
-# serves the SPA at /. The Service names in this directory match those upstreams.
+# by name: core:4000, odds:8000, notifications:8000, stats:8000, keycloak:8080
+# (/kc), and serves the SPA at /. The Service names in this directory match those
+# upstreams.
 #
 # Startup ordering: nginx resolves its upstream hostnames at config load, so the
-# core/odds/notifications/keycloak *Services* must exist (their ClusterIP DNS is
+# core/odds/notifications/stats/keycloak *Services* must exist (their ClusterIP DNS is
 # stable even before pods are Ready). With `kubectl apply -f k8s/` they are all
 # created together; nginx may CrashLoopBackOff for a few seconds until the
 # Service objects land, then stabilizes.

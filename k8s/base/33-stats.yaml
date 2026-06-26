@@ -1,0 +1,67 @@
+# Stats read model (FastAPI). Serves the /stats projection (/stats/me/* authed,
+# /stats/leaderboard public) and runs the durable bets.settled consumer.
+#
+# Safe to scale: the bets.settled queue (stats.bets.settled) is DURABLE with
+# manual ack, so replicas are competing consumers — each settlement is projected
+# exactly once across the set. The upsert is idempotent (ON CONFLICT (bet_id) DO
+# NOTHING), so even a redelivery during a rollout is a no-op.
+#
+# DB_SCHEMA=stats keeps its one table (stats_settlements) in its own Postgres
+# schema, separate from Core's `core` schema in the shared `betting` database.
+apiVersion: v1
+kind: Service
+metadata:
+  name: stats
+  namespace: betpossum
+spec:
+  selector:
+    app: stats
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stats
+  namespace: betpossum
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stats
+  template:
+    metadata:
+      labels:
+        app: stats
+    spec:
+      containers:
+        - name: stats
+          image: ghcr.io/andrasore/betpossum/stats:latest   # Dockerfile target: stats
+          env:
+            - name: DB_SCHEMA
+              value: stats
+          envFrom:
+            - configMapRef:
+                name: betpossum-config
+            - secretRef:
+                name: betpossum-app-secrets
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
