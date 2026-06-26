@@ -1,11 +1,16 @@
-# Public entry point (local, plain HTTP — no TLS). Same single-host routing as
-# prod: everything goes to the nginx Service, which path-routes internally
-# (incl. Keycloak under /kc). Browse http://localhost:8080.
+# Public entry point. A single host routes everything to the nginx Service,
+# which does the internal path-routing (incl. Keycloak under /kc) — so one
+# Ingress host is enough. Shared by both overlays; only the per-environment
+# bits live in the overlays:
+#   - local → patches the host to `localhost` (plain HTTP, no TLS).
+#   - prod  → keeps the host below and adds the cert-manager TLS block +
+#             cluster-issuer annotation (see overlays/prod/kustomization.yaml
+#             and overlays/prod/cluster-issuer.yaml).
 #
 # Assumes the NGINX Ingress Controller (nginx/nginx-ingress, the F5/NGINX Inc
-# project) is installed in the local cluster and reachable on host :8080 (e.g.
-# kind extraPortMappings, or `minikube tunnel`). No cert-manager / TLS — this is
-# the only structural difference from overlays/prod/ingress.yaml.
+# project — https://hub.docker.com/r/nginx/nginx-ingress/) is installed. The
+# nginx.org/* annotations are specific to that controller; the community
+# ingress-nginx ignores them.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -23,12 +28,12 @@ metadata:
     nginx.org/proxy-buffer-size: "16k"
     nginx.org/proxy-buffers: "8 16k"
     # The NGINX Inc controller does NOT upgrade WebSocket connections by default —
-    # /socket.io breaks without this, same as in prod.
+    # each backend Service that needs it must be listed here, or /socket.io breaks.
     nginx.org/websocket-services: "nginx"
 spec:
   ingressClassName: nginx
   rules:
-    - host: localhost
+    - host: betpossum.example.com     # CHANGE_ME (prod); local overlay patches this to localhost
       http:
         paths:
           - path: /

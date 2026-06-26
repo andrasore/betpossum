@@ -11,7 +11,6 @@ kind: Kustomization
 namespace: betpossum
 resources:
   - ../../base
-  - ingress.yaml
   - secrets.yaml
 
 # The keycloak-realm ConfigMap (mounted by the keycloak Deployment) is created
@@ -62,3 +61,13 @@ patches:
                 env:
                   - name: KC_HOSTNAME
                     value: http://localhost:8080/kc
+  # The shared Ingress (base/50-ingress.yaml) defaults to the prod host; locally
+  # it must be `localhost` so the host rule matches http://localhost:8080. No TLS
+  # block is added (plain HTTP locally).
+  - target:
+      kind: Ingress
+      name: betpossum
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: localhost

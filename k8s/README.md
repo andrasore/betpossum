@@ -87,7 +87,7 @@ only one Ingress host.
     service-LB then binds host **:8080** straight to the controller. On kind, map
     it instead via `extraPortMappings` 8080→ingress (or use `minikube tunnel`).
 - **cert-manager** (prod only) for automatic TLS. Skip if terminating TLS
-  elsewhere — see `overlays/prod/ingress.yaml`.
+  elsewhere — drop the TLS patch in `overlays/prod/kustomization.yaml`.
 - A cluster with a **default StorageClass** (or set `storageClassName` in each
   StatefulSet's `volumeClaimTemplates`).
 - The cluster must be able to reach `ghcr.io` to pull the app images (they are
@@ -137,7 +137,8 @@ kubectl -n betpossum create configmap keycloak-realm \
 - `overlays/prod/secrets.yaml` — every `CHANGE_ME` (keep the URL/password pairs
   in sync; see the consistency rule in the file header).
 - `base/02-config.yaml` — `PUBLIC_HOST` and `KEYCLOAK_ISSUER_URL` → your domain.
-- `overlays/prod/ingress.yaml` — the host (×2); `cluster-issuer.yaml` — the ACME `email`.
+- the Ingress host — `base/50-ingress.yaml` (`rules` host) **and** the matching
+  tls host in `overlays/prod/kustomization.yaml`; `cluster-issuer.yaml` — the ACME `email`.
 - Image references — `ghcr.io/andrasore/...` → your registry, in the `base/` manifests.
 
 The local overlay needs no edits — its secrets are committed dev values.
@@ -161,6 +162,7 @@ exist, then stabilizes.
 
 ## Local quickstart on k3s
 
+The local setup tries to mimic the prod as closely as possible.
 k3s is a quick way to exercise the `local` overlay end to end. Two k3s specifics
 to know:
 

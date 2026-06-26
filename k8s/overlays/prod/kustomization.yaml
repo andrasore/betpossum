@@ -15,6 +15,25 @@ kind: Kustomization
 namespace: betpossum
 resources:
   - ../../base
-  - ingress.yaml
   - cluster-issuer.yaml
   - secrets.yaml
+
+patches:
+  # The shared Ingress (base/50-ingress.yaml) carries the routing + annotations
+  # and already defaults to the prod host (betpossum.example.com — CHANGE_ME,
+  # must match PUBLIC_HOST and the tls host below). Prod adds TLS: cert-manager
+  # watches this Ingress via the cluster-issuer annotation and provisions the
+  # cert into the betpossum-tls Secret.
+  - patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: betpossum
+        namespace: betpossum
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+      spec:
+        tls:
+          - hosts:
+              - betpossum.example.com       # CHANGE_ME (must match the rules host)
+            secretName: betpossum-tls
