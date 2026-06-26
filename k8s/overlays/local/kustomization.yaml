@@ -42,6 +42,12 @@ patches:
   # Flip the Keycloak hostname scheme to http (no TLS locally). The other
   # hostname env (KC_HOSTNAME_STRICT=false, KC_PROXY_HEADERS=xforwarded,
   # KC_HTTP_ENABLED=true) in base already make HTTP-behind-nginx work.
+  #
+  # Use a literal URL, not http://$(PUBLIC_HOST)/kc: this strategic-merge patch
+  # reorders KC_HOSTNAME ahead of PUBLIC_HOST in the env list, and Kubernetes
+  # only expands $(VAR) against vars defined *earlier*. The unexpanded literal
+  # made Keycloak emit a host-less issuer (http:/kc/...). Matches the literal
+  # KEYCLOAK_ISSUER_URL set above.
   - patch: |-
       apiVersion: apps/v1
       kind: Deployment
@@ -55,4 +61,4 @@ patches:
               - name: keycloak
                 env:
                   - name: KC_HOSTNAME
-                    value: http://$(PUBLIC_HOST)/kc
+                    value: http://localhost:8080/kc

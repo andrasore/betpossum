@@ -22,7 +22,12 @@ metadata:
     nginx.org/proxy-read-timeout: "3600s"
     nginx.org/proxy-send-timeout: "3600s"
     # Keycloak login pages and tokens can be large; don't truncate buffers.
+    # proxy-buffers must be enlarged to match: nginx derives proxy_busy_buffers_size
+    # from proxy-buffer-size (2x = 32k here), which must stay below the total
+    # proxy_buffers minus one buffer. The default (8 4k = 32k) is too small and
+    # makes `nginx -t` fail, breaking the whole controller reload.
     nginx.org/proxy-buffer-size: "16k"
+    nginx.org/proxy-buffers: "8 16k"
     # Unlike the community ingress-nginx, the NGINX Inc controller does NOT
     # upgrade WebSocket connections by default — each backend Service that needs
     # it must be listed here, or the /socket.io live channel falls back/breaks.
