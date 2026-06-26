@@ -1,0 +1,23 @@
+# Local overlay values for kube-prometheus-stack — layered OVER
+# kube-prometheus-stack.values.yaml. Mirrors the app's local↔prod Ingress delta
+# (k8s/base/50-ingress.yaml): same route, only host + TLS differ.
+#
+# Grafana is reached at http://grafana.localhost:8080 through the same NGINX-Inc
+# controller that fronts the app on host :8080 (the host rule routes by Host
+# header). `.localhost` resolves to loopback in modern browsers; otherwise add
+#   127.0.0.1 grafana.localhost
+# to /etc/hosts. See k8s/README.md.
+grafana:
+  adminPassword: betting_dev            # committed dev value (local only)
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      # NGINX-Inc controller: keep Grafana Live (websockets) upgrading. Value is
+      # the Grafana Service name (release "kube-prometheus-stack").
+      nginx.org/websocket-services: "kube-prometheus-stack-grafana"
+    path: /
+    pathType: Prefix
+    hosts:
+      - grafana.localhost
+    # No TLS locally (plain HTTP), matching the app's local overlay.

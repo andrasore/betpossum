@@ -160,6 +160,16 @@ exist, then stabilizes.
   cert-manager completes the HTTP-01 challenge and issues the cert into
   `betpossum-tls`.
 
+## 6. (optional) Observability
+
+A Helm-based metrics + logs platform — kube-prometheus-stack (Prometheus +
+Grafana + Alertmanager), Loki (log store), and Alloy (log collector) — installs
+into a separate `observability` namespace, independent of the `kubectl apply -k`
+app deploy. Grafana gets its own Ingress on the same NGINX controller
+(`grafana.localhost` locally, `grafana.<domain>` + TLS in prod). See
+[`observability/README.md`](observability/README.md) for the install commands and
+verification steps.
+
 ## Local quickstart on k3s
 
 The local setup tries to mimic the prod as closely as possible.

@@ -1,0 +1,55 @@
+# Helm values for grafana/alloy (chart 1.10.0) — the log collector.
+#
+#   helm upgrade --install alloy grafana/alloy \
+#     -n observability --create-namespace --version 1.10.0 \
+#     -f k8s/observability/alloy.values.yaml
+#
+# Runs as a DaemonSet (one collector per node). It tails every pod's logs via the
+# Kubernetes API (loki.source.kubernetes), attaches namespace/pod/container/app
+# labels, and ships them to the Loki gateway. API-based tailing needs no host log
+# mounts; the chart's default ClusterRole already grants pods/log.
+controller:
+  type: daemonset
+
+alloy:
+  configMap:
+    content: |-
+      // Discover every pod so we can read its logs and derive labels.
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // Map Kubernetes metadata onto Loki stream labels.
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          target_label  = "app"
+        }
+      }
+
+      // Tail container logs through the Kubernetes API.
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      // Ship to the single-binary Loki via its gateway Service.
+      loki.write "default" {
+        endpoint {
+          url = "http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push"
+        }
+      }

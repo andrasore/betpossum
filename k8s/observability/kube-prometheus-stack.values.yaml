@@ -1,0 +1,83 @@
+# Shared Helm values for prometheus-community/kube-prometheus-stack (chart 87.2.1).
+#
+# Platform observability for BetPossum: Prometheus (cluster/infra metrics via
+# node-exporter, kube-state-metrics, cAdvisor), Alertmanager, and Grafana. App
+# services do not yet expose /metrics, so there are no ServiceMonitors here — this
+# is the infra-metrics + dashboards foundation only.
+#
+# This file is env-agnostic and is layered UNDER an env file that adds the Grafana
+# Ingress (host + TLS) and the admin password:
+#
+#   helm upgrade --install kube-prometheus-stack \
+#     prometheus-community/kube-prometheus-stack \
+#     -n observability --create-namespace --version 87.2.1 \
+#     -f k8s/observability/kube-prometheus-stack.values.yaml \
+#     -f k8s/observability/kube-prometheus-stack.local.values.yaml   # or .prod
+#
+# Persistence below needs the cluster's default StorageClass (already a prereq for
+# the app — see k8s/README.md).
+
+# Control-plane scrape targets that are not reachable on k3s / most managed
+# clusters (the control plane is hidden). Disabled so Prometheus Targets stay
+# green and no false "down" alerts fire. Re-enable on a self-hosted kubeadm
+# cluster where these are scrapeable.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    # Scrape ServiceMonitors/PodMonitors in every namespace regardless of Helm
+    # release labels — so future app ServiceMonitors are picked up without extra
+    # selector wiring.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+grafana:
+  # adminPassword and ingress (host/TLS) are set per-environment in the
+  # .local / .prod overlay values files.
+  defaultDashboardsEnabled: true
+  persistence:
+    enabled: true
+    size: 5Gi
+  # Wire Loki (installed as a separate release in this namespace) as a datasource
+  # so logs are queryable in Grafana Explore. The Prometheus datasource is added
+  # automatically by this chart. The loki-gateway Service fronts both read and
+  # write paths; confirm the name with `kubectl get svc -n observability`.
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki-gateway.observability.svc.cluster.local
+      jsonData:
+        maxLines: 1000

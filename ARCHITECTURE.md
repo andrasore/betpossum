@@ -264,3 +264,19 @@ Suggested repo structure:
 
 > Proto definitions live in a shared top-level `/proto` directory so all
 > services can reference the same schemas without duplication.
+
+## Observability
+
+On Kubernetes, an optional Helm-installed platform lives in its own
+`observability` namespace (`k8s/observability/`):
+
+- **Metrics** — kube-prometheus-stack: Prometheus scrapes cluster/infra metrics
+  (node-exporter, kube-state-metrics, cAdvisor), with Alertmanager for routing.
+- **Logs** — Loki (single-binary, filesystem) as the store, fed by **Alloy** (a
+  DaemonSet) tailing every pod's logs.
+- **Dashboards** — Grafana, wired to both Prometheus and Loki, exposed on its own
+  Ingress host.
+
+This is infra-level only today; the app services do not yet export `/metrics`, so
+per-service instrumentation (prom-client / prometheus_client + ServiceMonitors) is
+a future step. See `k8s/observability/README.md`.

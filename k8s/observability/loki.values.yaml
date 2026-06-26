@@ -1,0 +1,61 @@
+# Helm values for grafana/loki (chart 7.0.0) — single-node log store.
+#
+#   helm upgrade --install loki grafana/loki \
+#     -n observability --create-namespace --version 7.0.0 \
+#     -f k8s/observability/loki.values.yaml
+#
+# SingleBinary + filesystem: one Loki pod, logs on a PVC, no object store and no
+# memcached caches. This matches the single-node posture of the app's stateful
+# backends (Postgres/RabbitMQ/TigerBeetle). A real production deployment should
+# switch to the scalable mode backed by object storage (S3/GCS/MinIO) — see
+# k8s/README.md.
+deploymentMode: SingleBinary
+
+loki:
+  # Single-tenant: no X-Scope-OrgID required from Alloy or Grafana.
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+  # Quiet the analytics phone-home.
+  analytics:
+    reporting_enabled: false
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 10Gi
+
+# Zero out the distributed (read/write/backend) targets — SingleBinary only.
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+
+# Drop the memcached caches and the canary/test pods for a small footprint.
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+
+# Keep the gateway (nginx) — Alloy writes to it and Grafana reads through it at
+# http://loki-gateway.observability.svc.cluster.local
+gateway:
+  enabled: true
