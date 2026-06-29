@@ -15,7 +15,7 @@ against a shared JSON Schema.
     
 | Layer            | Technology                                      |
 |------------------|-------------------------------------------------|
-| Frontend         | Next.js (React, TailwindCSS, SWR / React Query) |
+| Frontend         | Next.js (React, Chakra UI v3, SWR) — static export |
 | Edge proxy       | Nginx (path-based routing only)                 |
 | Core API         | NestJS (Node.js) — includes the wallet module   |
 | Odds Service     | FastAPI (Python, asyncio)                       |
@@ -30,6 +30,35 @@ against a shared JSON Schema.
 ---
 
 ## Services
+
+### Next.js — Frontend (SPA)
+A **pure static single-page app** (Next.js App Router, `output: "export"`).
+`next build` emits `./out/`, which is copied straight into the nginx image —
+there is **no Node.js frontend runtime and no server-side auth**; the browser
+runs the bundle and talks to the backend itself.
+
+- **Authentication** uses the OIDC **Authorization Code + PKCE** flow
+  (`oidc-client-ts`) against Keycloak's public `betting-frontend` client. The
+  access + ID tokens are held **in JS memory only** (never persisted), so a
+  reload starts anonymous and re-bootstraps a session in the background.
+- **Origin-agnostic, zero runtime config.** The realm (`betting`) and client id
+  are the same in every environment and Keycloak is fronted same-origin under
+  `/kc`, so the entire OIDC configuration is derived from
+  `window.location.origin`. There is no `/config.js` / `window.__ENV` injection
+  step — one static export runs unchanged on dev (8080) and e2e (18080).
+- **Silent renew via a hidden same-origin iframe** (`prompt=none`,
+  `automaticSilentRenew` ~60s before expiry). Keycloak's session cookie makes the
+  round-trip invisible, so an expiring token never forces a top-level navigation
+  and in-flight UI state survives. A 401 from the API or a socket `connect_error`
+  triggers the same silent refresh; if it fails, the app drops to anonymous.
+- **Roles** are read client-side from the access token's `realm_access` claim
+  and drive **UI gating only** (e.g. the admin page) — they are never trusted for
+  authorization, which each service enforces by verifying the JWT itself.
+- **Single-origin data access.** Authenticated REST calls hit `/api/*` with the
+  access token attached as `Authorization: Bearer …` from the in-memory snapshot;
+  public reads (`/odds`, the leaderboard) go unauthenticated. REST responses
+  hydrate an SWR cache that live socket.io events merge into (see Inter-service
+  Communication).
 
 ### Edge proxy (Nginx)
 Nginx is the sole browser-facing port and fronts *everything* — the frontend

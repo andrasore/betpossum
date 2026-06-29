@@ -22,13 +22,18 @@ This is a **pure static SPA** — no Node.js frontend container, no server-side
 auth. nginx serves the Next static export and proxies `/api/*` to Core,
 `/odds` to Odds, `/socket.io/` to Notifications.
 
-Auth uses the **OIDC Authorization Code + PKCE** flow against Keycloak
-(public client `betting-frontend`). The access + ID tokens live in JS memory
-only; there is no refresh token — when the access token expires (or a fetch
-returns 401), `refresh()` does a top-level navigation to Keycloak with
-`prompt=none`, which bounces back instantly via Keycloak's own session
-cookie if the user is still signed in there. Auth logic is in
-`src/lib/auth.ts`; the React layer is in `src/lib/auth-context.tsx`.
+Auth uses the **OIDC Authorization Code + PKCE** flow (`oidc-client-ts`)
+against Keycloak (public client `betting-frontend`). The access + ID tokens
+live in JS memory only (`InMemoryWebStorage`) — a reload starts anonymous and
+re-bootstraps via the `auth:previously-authed` localStorage flag. There is no
+stored refresh token; instead the token is renewed by a **hidden same-origin
+iframe** silent renew (`signinSilent`, `prompt=none`), driven by
+`automaticSilentRenew` ~60s before expiry. Keycloak's own session cookie makes
+the round-trip invisible if the user is still signed in there, so an expiry no
+longer forces a top-level navigation and in-flight UI state survives. When the
+access token expires (or a fetch returns 401), `refresh()` runs the same silent
+renew; on failure it drops to anonymous. Auth logic is in `src/lib/auth.ts`;
+the React layer is in `src/lib/auth-context.tsx`.
 
 There is no runtime config injection. Keycloak is fronted by nginx same-origin
 under `/kc`, and the realm/client id are identical in every environment, so
@@ -57,11 +62,11 @@ straight into the nginx image.
 
 - **REST** (`src/lib/api.ts`): calls `/api/...` same-origin with
   `Authorization: Bearer <access_token>` read from the in-memory store. On
-  401, triggers `refresh()` (top-level navigation to Keycloak with
-  `prompt=none`).
+  401, triggers `refresh()` (iframe silent renew via `signinSilent`).
 - **WebSocket** (`src/lib/websocket.ts`): browser opens Socket.io
   same-origin to the gateway; the `auth()` callback returns the in-memory
-  access token. On `connect_error`, triggers `refresh()`.
+  access token. On `connect_error`, triggers `refresh()` (iframe silent
+  renew).
 - **Bets** (`src/hooks/useBets.ts`): SWR-backed, invalidated by
   `bet.held` / `bet.settled` socket events (per-user rooms keyed on JWT
   `sub`).
