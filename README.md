@@ -1,4 +1,4 @@
-<img width="218" height="134" alt="BetPossum logo" src="https://github.com/user-attachments/assets/02a5095f-6c46-4dad-906c-8c944e3a6f9f" />
+<img src="docs/Screenshot.jpg" alt="Screenshot">
 
 # BetPossum
 
@@ -6,7 +6,8 @@
 > using Node.js and Python, and a Next.js frontend, wired together over a RabbitMQ
 > message bus with schema-validated contracts.
 
-<img src="docs/Screenshot.jpg" alt="Screenshot" width="250">
+<img width="218" height="134" alt="BetPossum logo" src="https://github.com/user-attachments/assets/02a5095f-6c46-4dad-906c-8c944e3a6f9f" />
+
 
 ## Overview
 
