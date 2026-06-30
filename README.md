@@ -1,24 +1,11 @@
-# <img width="218" height="134" alt="BetPossum logo" src="https://github.com/user-attachments/assets/02a5095f-6c46-4dad-906c-8c944e3a6f9f" /> BetPossum
+<img width="218" height="134" alt="BetPossum logo" src="https://github.com/user-attachments/assets/02a5095f-6c46-4dad-906c-8c944e3a6f9f" />
+# BetPossum
 
 > A distributed, event-driven sports-betting platform — four backend services
-> across three languages, a static-export React SPA, and a real double-entry
-> financial ledger, wired together over a RabbitMQ message bus with
-> schema-validated contracts.
+> using Node.js and Python, and a Next.js frontend, wired together over a RabbitMQ
+> message bus with schema-validated contracts.
 
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
-![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-000000?logo=flask&logoColor=white)
-![Next.js](https://img.shields.io/badge/Next.js-000000?logo=nextdotjs&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?logo=rabbitmq&logoColor=white)
-![TigerBeetle](https://img.shields.io/badge/TigerBeetle-F2542D)
-![Keycloak](https://img.shields.io/badge/Keycloak-4D4D4D?logo=keycloak&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)
-
-![BetPossum dashboard — live markets, leaderboard, recent bets, and live wallet balance](docs/Screenshot.jpg)
+![BetPossum dashboard — live markets, leaderboard, recent bets, and live wallet balance](docs/Screenshot.jpg | width = 250)
 
 ## Overview
 
@@ -157,7 +144,39 @@ betpossum/
 
 Most folders carry a local `CLAUDE.md` documenting their conventions.
 
-## Getting started (local)
+## Getting started
+
+**Prerequisites:** just Docker + Docker Compose. Everything else (Node, Python,
+pnpm) builds inside the images.
+
+```bash
+# Build and bring up the whole stack — frontend, the four backend services,
+# nginx, keycloak, postgres, rabbitmq, and tigerbeetle.
+docker compose up --build
+```
+
+Then open **http://localhost:8080**. The frontend is served as a static export
+behind Nginx, so this single command gives you the complete app — no extra
+build or config step.
+
+Odds default to a built-in **mock provider**, so no external API keys are
+needed, and the stack starts a small fleet of **bots** (`BOT_COUNT=10`) that
+sign up via Keycloak and place bets, so the live markets, leaderboard, and feed
+populate on their own.
+
+| Service                | URL                          |
+|------------------------|------------------------------|
+| App (via Nginx)        | http://localhost:8080        |
+| RabbitMQ management UI  | http://localhost:15672 (`betting` / `betting_dev`) |
+
+To use **real odds**, set `ODDS_PROVIDERS` (e.g. `theoddsapi`, `apifootball`)
+and the matching API keys (`THE_ODDS_API_KEY`, …) before bringing up the stack.
+
+## Development
+
+For iterating on the **frontend** with hot reload, run it locally instead of
+baked into the Nginx image. The `compose:dev` overlay points Nginx at your
+host's `pnpm dev` server, so HMR works through the same `:8080` origin.
 
 **Prerequisites:** Docker + Docker Compose, Node 25, [pnpm](https://pnpm.io) 11
 (version is pinned via `packageManager`), Python 3.14.
@@ -171,25 +190,16 @@ pnpm install
 
 # 2. Bring up the backend stack (core, odds, stats, notifications, nginx,
 #    keycloak, postgres, rabbitmq, tigerbeetle) in Docker.
-#    Odds defaults to a built-in mock provider — no external API keys needed.
 pnpm compose:dev up -d
 
 # 3. Run the frontend locally with hot reload (Nginx proxies it on :8080)
 cd frontend && pnpm dev
 ```
 
-Then open **http://localhost:8080**. The dev stack also starts a small fleet of
-**bots** (`BOT_COUNT=10`) that sign up via Keycloak and place bets, so the live
-markets, leaderboard, and feed populate on their own.
-
-| Service                | URL                          |
-|------------------------|------------------------------|
-| App (via Nginx)        | http://localhost:8080        |
-| Frontend dev server    | http://localhost:3000        |
-| RabbitMQ management UI  | http://localhost:15672 (`betting` / `betting_dev`) |
-
-To use **real odds**, set `ODDS_PROVIDERS` (e.g. `theoddsapi`, `apifootball`)
-and the matching API keys (`THE_ODDS_API_KEY`, …) before bringing up the stack.
+Open **http://localhost:8080** for the proxied app, or hit the Vite/Next dev
+server directly on **http://localhost:3000**. Backend services run from built
+images and do **not** hot-reload — rebuild a changed one with
+`pnpm compose:dev up -d --build <service>`.
 
 ## Common tasks
 
