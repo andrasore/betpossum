@@ -1,11 +1,12 @@
 <img width="218" height="134" alt="BetPossum logo" src="https://github.com/user-attachments/assets/02a5095f-6c46-4dad-906c-8c944e3a6f9f" />
+
 # BetPossum
 
 > A distributed, event-driven sports-betting platform — four backend services
 > using Node.js and Python, and a Next.js frontend, wired together over a RabbitMQ
 > message bus with schema-validated contracts.
 
-![BetPossum dashboard — live markets, leaderboard, recent bets, and live wallet balance](docs/Screenshot.jpg)
+<img src="docs/Screenshot.jpg" alt="Screenshot" width="250">
 
 ## Overview
 
