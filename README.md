@@ -5,7 +5,7 @@
 > using Node.js and Python, and a Next.js frontend, wired together over a RabbitMQ
 > message bus with schema-validated contracts.
 
-![BetPossum dashboard — live markets, leaderboard, recent bets, and live wallet balance](docs/Screenshot.jpg | width = 250)
+![BetPossum dashboard — live markets, leaderboard, recent bets, and live wallet balance](docs/Screenshot.jpg)
 
 ## Overview
 
