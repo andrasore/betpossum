@@ -60,7 +60,14 @@ services:
       start_period: 5s
 
   keycloak:
+    # Explicit GHCR image names (independent of the compose project name) tag
+    # every locally built image with a stable repo:tag. The dev and e2e stacks
+    # run under different project names but share these tags, so an image built
+    # once is reused instead of rebuilt per project. `docker compose up` only
+    # builds when the tag is missing; pass `--build` to force a rebuild. CI
+    # overrides IMAGE_REPO/IMAGE_TAG to publish (see docker-compose.push.yml).
     build: ./keycloak
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/keycloak:${IMAGE_TAG:-latest}
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
@@ -90,6 +97,7 @@ services:
     build:
       context: .
       target: core
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/core:${IMAGE_TAG:-latest}
     environment:
       PORT: 4000
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
@@ -120,6 +128,7 @@ services:
     build:
       context: .
       target: odds
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/odds:${IMAGE_TAG:-latest}
     environment:
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
@@ -147,6 +156,7 @@ services:
     build:
       context: .
       target: notifications
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/notifications:${IMAGE_TAG:-latest}
     environment:
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
@@ -162,6 +172,7 @@ services:
     build:
       context: .
       target: stats
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/stats:${IMAGE_TAG:-latest}
     environment:
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       DATABASE_URL: postgresql://betting:betting_dev@postgres:5432/betting
@@ -181,6 +192,7 @@ services:
     build:
       context: .
       target: frontend
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/frontend:${IMAGE_TAG:-latest}
     ports:
       - "8080:80"
     depends_on:
@@ -199,6 +211,7 @@ services:
     build:
       context: .
       target: bots
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/bots:${IMAGE_TAG:-latest}
     environment:
       BOT_BASE_URL: http://nginx
       KC_ADMIN: admin
