@@ -1,5 +1,3 @@
-<img src="docs/Screenshot.jpg" alt="Screenshot">
-
 # BetPossum
 
 > A distributed, event-driven sports-betting platform — four backend services
