@@ -1,4 +1,4 @@
-# Notifications (Flask-SocketIO) — the browser's websocket fan-out point.
+# Notifications (FastAPI + python-socketio) — the browser's websocket fan-out point.
 # Stateless: binds an exclusive queue to the notifications fanout and emits to
 # the sockets connected to THIS replica.
 #

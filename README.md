@@ -11,7 +11,7 @@
 
 BetPossum is a demonstration sports-betting application built as a small
 **polyglot microservice system**. A NestJS core handles bets and the wallet, two
-FastAPI services ingest odds and serve a stats read model, a Flask + Socket.IO
+FastAPI services ingest odds and serve a stats read model, a FastAPI + Socket.IO
 service fans real-time events out to browsers, and a Next.js SPA is served as a
 pure static export. Services never call each other's databases — they
 communicate asynchronously over **RabbitMQ fanout exchanges** using JSON
@@ -25,9 +25,8 @@ canonical odds model, observability — see **[ARCHITECTURE.md](ARCHITECTURE.md)
 ## Highlights
 
 **Distributed & polyglot**
-- Four independent services across three languages: **NestJS** (core API +
-  wallet), **FastAPI** (odds ingestion, stats read model), **Flask + Socket.IO**
-  (real-time relay), plus a **Next.js** SPA.
+- Four independent services using Nest.js (Node.js) and FastAPI (Python)
+  - TODO list services here
 - Asynchronous **pub/sub over RabbitMQ fanout** exchanges; each subscriber binds
   its own queue, so services stay decoupled and independently deployable.
 - One **JSON Schema** is the cross-service contract; bindings are *generated* —
@@ -44,20 +43,17 @@ canonical odds model, observability — see **[ARCHITECTURE.md](ARCHITECTURE.md)
   and a pre-push gate (typecheck, lint, test, e2e, schema guard) protect `main`.
 
 **Auth & security**
-- **Keycloak** OIDC with the **Authorization Code + PKCE** flow; the SPA's
-  access tokens live **in JS memory only** and are never persisted.
-- Each service **verifies its own JWT** — roles from the token drive UI gating
-  only and are never trusted for authorization.
-- **Single Nginx origin** fronts the SPA, the APIs, and Keycloak (under `/kc`),
+- **Keycloak** OIDC with the **Authorization Code + PKCE** flow.
+- Each service **verifies JWTs on its own**
+- **Single Nginx origin** fronts the SPA, the APIs, and Keycloak,
   eliminating CORS and any per-environment URL injection in the client bundle.
 
 **Infra & DevOps**
 - **Docker Compose** dev stack with explicit, named overlays
-  (`dev` / `ci` / `e2e`) — no implicit `override.yml`.
+  (`dev` / `ci` / `e2e`)`.
 - **Kubernetes** via Kustomize: a shared `base/` with `local` and `prod`
   overlays.
-- **GitHub Actions** CI: typecheck → build → e2e, then GHCR images are promoted
-  `:<sha>` → `:latest` **by digest** (a registry-side manifest copy, no rebuild).
+- **GitHub Actions** CI: typecheck → build → e2e
 - Optional **observability** stack (kube-prometheus-stack + Loki + Alloy +
   Grafana) in its own namespace.
 
@@ -78,7 +74,7 @@ flowchart TD
     Nginx -->|/odds| Odds[Odds · FastAPI]
     Nginx -->|/stats| Stats[Stats · FastAPI]
     Nginx -->|/kc| KC[Keycloak]
-    Nginx -->|/socket.io| Notif[Notifications · Flask + Socket.IO]
+    Nginx -->|/socket.io| Notif[Notifications · FastAPI + Socket.IO]
 
     Odds -- odds.updated --> MQ{{RabbitMQ fanout}}
     Odds -- events.resolved --> MQ
@@ -115,7 +111,7 @@ flowchart TD
 | Core API         | NestJS (Node.js) — bets, wallet, settlement         |
 | Odds Service     | FastAPI (Python, asyncio) — pluggable providers     |
 | Stats Service    | FastAPI (Python) — read model over settled bets     |
-| Notifications    | Flask + Flask-SocketIO (eventlet)                   |
+| Notifications    | FastAPI + python-socketio (ASGI, uvicorn)           |
 | Identity         | Keycloak (OIDC, realm `betting`)                     |
 | Messaging        | RabbitMQ (fanout exchanges)                          |
 | Message format   | JSON validated against shared JSON Schema            |
@@ -133,7 +129,7 @@ betpossum/
 │   ├── core/            # NestJS API: bets, wallet/ledger, settlement
 │   ├── odds/            # FastAPI: pluggable odds ingestion + normalisation
 │   ├── stats/           # FastAPI: read model over settled bets
-│   └── notifications/   # Flask + Socket.IO real-time relay
+│   └── notifications/   # FastAPI + Socket.IO real-time event fan-out
 ├── schemas/             # Shared JSON Schema contracts → generated Zod/Pydantic
 ├── keycloak/            # Realm, roles, clients
 ├── bots/                # Synthetic players that place bets to populate the demo

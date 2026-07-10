@@ -4,7 +4,7 @@
 
 This is a distributed sports betting application built for demonstration
 purposes. It uses a polyglot service architecture — NestJS for the real-time
-core, FastAPI for the odds ingestion service, Flask + Flask-SocketIO for the
+core, FastAPI for the odds ingestion service, FastAPI + python-socketio for the
 notifications service, and Next.js for the frontend. Services communicate
 asynchronously via RabbitMQ fanout exchanges using JSON messages validated
 against a shared JSON Schema.
@@ -13,19 +13,19 @@ against a shared JSON Schema.
 
 ## Stack
     
-| Layer            | Technology                                      |
-|------------------|-------------------------------------------------|
-| Frontend         | Next.js (React, Chakra UI v3, SWR) — static export |
-| Edge proxy       | Nginx (path-based routing only)                 |
-| Core API         | NestJS (Node.js) — includes the wallet module   |
-| Odds Service     | FastAPI (Python, asyncio)                       |
-| Notifications    | Flask + Flask-SocketIO (Python, eventlet)       |
-| Identity         | Keycloak (OIDC, realm `betting`)                |
-| Messaging        | RabbitMQ (fanout exchanges)                     |
-| Message format   | JSON (validated against shared JSON Schema)     |
-| Primary DB       | PostgreSQL                                      |
-| Financial ledger | TigerBeetle                                     |
-| External data    | The Odds API + API-Football (pluggable providers)|
+| Layer            | Technology                                        |
+|------------------|---------------------------------------------------|
+| Frontend         | Next.js (React, SWR) — static export              |
+| Edge proxy       | Nginx (path-based routing only)                   |
+| Core API         | NestJS (Node.js) — includes the wallet module     |
+| Odds Service     | FastAPI (Python, asyncio)                         |
+| Notifications    | FastAPI + python-socketio (Python, ASGI/uvicorn)  |
+| Identity         | Keycloak (OIDC, realm `betting`)                  |
+| Messaging        | RabbitMQ (fanout exchanges)                       |
+| Message format   | JSON (validated against shared JSON Schema)       |
+| Primary DB       | PostgreSQL                                        |
+| Financial ledger | TigerBeetle                                       |
+| External data    | The Odds API + API-Football (pluggable providers) |
 
 ---
 
@@ -122,7 +122,7 @@ Internally the wallet logic lives as a Nest module within the core service and
 is invoked by the bets module via direct method calls — no broker hop for
 money movement.
 
-### Flask + Flask-SocketIO — Notifications Service
+### FastAPI + python-socketio — Notifications Service
 The only service the browser holds an open socket to. Responsibilities:
 - Accepts socket.io connections, verifies the JWT on `connect`, and joins each
   socket into a room named after its `sub` claim
@@ -283,7 +283,7 @@ Suggested repo structure:
 ├── nginx/             # Edge proxy config
 ├── services/
 │   ├── core/          # NestJS — includes wallet/TigerBeetle module
-│   ├── notifications/ # Flask + Flask-SocketIO (browser-facing WS)
+│   ├── notifications/ # FastAPI + python-socketio (browser-facing WS)
 │   ├── odds/          # FastAPI
 │   └── stats/         # FastAPI — read model over settled bets
 ├── schemas/           # Shared JSON Schema message definitions
