@@ -1,16 +1,16 @@
 # Observability
 
 A self-contained metrics + logs platform for the BetPossum cluster, installed
-with **Helm** (committed values files) into its own `observability` namespace —
+with Helm (committed values files) into its own `observability` namespace —
 separate from the app, which keeps using `kubectl apply -k`.
 
 | Component | Chart | What it does |
 |-----------|-------|--------------|
-| **kube-prometheus-stack** | `prometheus-community/kube-prometheus-stack` (87.2.1) | Prometheus (cluster/infra metrics: node-exporter, kube-state-metrics, cAdvisor), Alertmanager, **Grafana** |
-| **Loki** | `grafana/loki` (7.0.0) | Log store — SingleBinary + filesystem PVC |
-| **Alloy** | `grafana/alloy` (1.10.0) | DaemonSet collector — tails every pod's logs → Loki |
+| kube-prometheus-stack | `prometheus-community/kube-prometheus-stack` (87.2.1) | Prometheus (cluster/infra metrics: node-exporter, kube-state-metrics, cAdvisor), Alertmanager, Grafana |
+| Loki | `grafana/loki` (7.0.0) | Log store — SingleBinary + filesystem PVC |
+| Alloy | `grafana/alloy` (1.10.0) | DaemonSet collector — tails every pod's logs → Loki |
 
-**Scope is platform-only.** The app services (core/odds/notifications/stats) do
+Scope is platform-only. The app services (core/odds/notifications/stats) do
 not expose `/metrics` yet, so there are no app-level metrics or ServiceMonitors —
 this is the infra-metrics + log-aggregation + dashboards foundation. Prometheus
 is pre-configured (`serviceMonitorSelectorNilUsesHelmValues: false`) to pick up
@@ -60,9 +60,9 @@ kubectl -n observability get pods
 ```
 
 Persistence (Grafana, Prometheus, Alertmanager, Loki) needs the cluster's
-**default StorageClass** — already a prereq for the app (k3s ships `local-path`).
+default StorageClass — already a prereq for the app (k3s ships `local-path`).
 
-For **prod**, swap step 2's env file for `kube-prometheus-stack.prod.values.yaml`
+For prod, swap step 2's env file for `kube-prometheus-stack.prod.values.yaml`
 and first fill in its `CHANGE_ME`s (Grafana admin password + the `grafana.<domain>`
 host, which must match the TLS host). It reuses the `letsencrypt-prod`
 ClusterIssuer from `../overlays/prod/cluster-issuer.yaml`.
@@ -87,15 +87,15 @@ ClusterIssuer from `../overlays/prod/cluster-issuer.yaml`.
 
 - **Metrics:** Prometheus `:9090` → Status → Targets are green (node-exporter,
   kube-state-metrics, kubelet/cAdvisor).
-- **Logs:** Grafana → Explore → **Loki** datasource → `{namespace="betpossum"}`.
+- **Logs:** Grafana → Explore → Loki datasource → `{namespace="betpossum"}`.
   Place a bet in the app to generate fresh core/notifications log lines and watch
   them land.
-- **Datasources:** Grafana → Connections → both **Prometheus** and **Loki** show
+- **Datasources:** Grafana → Connections → both Prometheus and Loki show
   "working".
 
 ## Production note
 
-Loki here uses a **filesystem PVC** (single binary). That's fine for local/demo
+Loki here uses a filesystem PVC (single binary). That's fine for local/demo
 but not durable HA — a real production deployment should run Loki in scalable
 mode backed by object storage (S3/GCS/MinIO). Likewise Prometheus/Alertmanager
 here are single-replica with modest retention (7d).

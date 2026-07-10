@@ -4,7 +4,7 @@ Kustomize manifests for deploying BetPossum to a Kubernetes cluster. Stateful
 backends (Postgres, RabbitMQ, TigerBeetle) run in-cluster as StatefulSets; the
 app tier and nginx edge run as Deployments; an Ingress fronts nginx.
 
-A shared **base** holds the env-agnostic manifests; two **overlays** carry the
+A shared base holds the env-agnostic manifests; two overlays carry the
 differences:
 
 | Overlay          | Entry point             | TLS          | Secrets                        | Realm                         |
@@ -58,7 +58,7 @@ overlay patches the two values that differ from the base default: the config
                  └────► postgres (core + stats schemas)
 ```
 
-Keycloak is fronted by nginx under `/kc`, so there is a **single origin** and
+Keycloak is fronted by nginx under `/kc`, so there is a single origin and
 only one Ingress host.
 
 ## Prerequisites
@@ -68,7 +68,7 @@ only one Ingress host.
   Ingress annotations use its `nginx.org/*` prefix, including
   `nginx.org/websocket-services` to keep `/socket.io` upgrading (this controller
   does not enable WebSocket by default). Install it via the project's Helm chart
-  (note: this is **not** the community `ingress-nginx` chart — that one ignores
+  (note: this is not the community `ingress-nginx` chart — that one ignores
   the `nginx.org/*` annotations):
 
   ```bash
@@ -79,16 +79,16 @@ only one Ingress host.
     -f k8s/overlays/local/nginx-ingress-values.yaml   # local: expose on :8080
   ```
 
-  - **local:** the controller must be reachable on host **:8080**, because the
+  - **local:** the controller must be reachable on host `:8080`, because the
     issuer is `http://localhost:8080/kc/realms/betting` and the browser URL must
     be exactly `http://localhost:8080`. The committed
     `overlays/local/nginx-ingress-values.yaml` sets the controller Service's HTTP
     port to 8080 (`controller.service.httpPort.port`); on k3s the klipper
-    service-LB then binds host **:8080** straight to the controller. On kind, map
+    service-LB then binds host `:8080` straight to the controller. On kind, map
     it instead via `extraPortMappings` 8080→ingress (or use `minikube tunnel`).
 - **cert-manager** (prod only) for automatic TLS. Skip if terminating TLS
   elsewhere — drop the TLS patch in `overlays/prod/kustomization.yaml`.
-- A cluster with a **default StorageClass** (or set `storageClassName` in each
+- A cluster with a default StorageClass (or set `storageClassName` in each
   StatefulSet's `volumeClaimTemplates`).
 - The cluster must be able to reach `ghcr.io` to pull the app images (they are
   public — no pull secret needed).
@@ -97,7 +97,7 @@ only one Ingress host.
 
 The six app images (`core`, `odds`, `notifications`, `stats`, `frontend`,
 `keycloak`) are built and published to `ghcr.io/andrasore/betpossum/*`
-**automatically by CI on the PR flow** — there is nothing to build or push by
+automatically by CI on the PR flow — there is nothing to build or push by
 hand for a deploy. The manifests reference the `:latest` tag with the default
 `Always` pull policy, so the cluster pulls the current published image.
 
@@ -137,7 +137,7 @@ kubectl -n betpossum create configmap keycloak-realm \
 - `overlays/prod/secrets.yaml` — every `CHANGE_ME` (keep the URL/password pairs
   in sync; see the consistency rule in the file header).
 - `base/02-config.yaml` — `PUBLIC_HOST` and `KEYCLOAK_ISSUER_URL` → your domain.
-- the Ingress host — `base/50-ingress.yaml` (`rules` host) **and** the matching
+- the Ingress host — `base/50-ingress.yaml` (`rules` host) and the matching
   tls host in `overlays/prod/kustomization.yaml`; `cluster-issuer.yaml` — the ACME `email`.
 - Image references — `ghcr.io/andrasore/...` → your registry, in the `base/` manifests.
 
@@ -176,12 +176,12 @@ The local setup tries to mimic the prod as closely as possible.
 k3s is a quick way to exercise the `local` overlay end to end. Two k3s specifics
 to know:
 
-- **k3s ships Traefik**, but the local overlay's Ingress targets
+- **k3s ships Traefik** — but the local overlay's Ingress targets
   `ingressClassName: nginx` (NGINX-Inc `nginx.org/*` annotations). Install with
   `--disable traefik`, then install the NGINX-Inc controller with the local
-  values file so its Service publishes on **:8080** — k3s' klipper service-LB
+  values file so its Service publishes on `:8080` — k3s' klipper service-LB
   binds that host port straight to the controller.
-- **Images are pulled from the registry.** The app images are public on
+- **Images are pulled from the registry** — the app images are public on
   `ghcr.io/andrasore/betpossum/*` and are published automatically by CI on the PR
   flow — there is nothing to build or push by hand. The default `Always` pull
   policy is correct: k3s pulls them directly, no containerd import or pull secret

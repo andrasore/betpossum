@@ -32,14 +32,14 @@ against a shared JSON Schema.
 ## Services
 
 ### Next.js — Frontend (SPA)
-A **pure static single-page app** (Next.js App Router, `output: "export"`).
+A pure static single-page app (Next.js App Router, `output: "export"`).
 `next build` emits `./out/`, which is copied straight into the nginx image —
-there is **no Node.js frontend runtime and no server-side auth**; the browser
+there is no Node.js frontend runtime and no server-side auth; the browser
 runs the bundle and talks to the backend itself.
 
-- **Authentication** uses the OIDC **Authorization Code + PKCE** flow
+- **Authentication** — uses the OIDC Authorization Code + PKCE flow
   (`oidc-client-ts`) against Keycloak's public `betting-frontend` client. The
-  access + ID tokens are held **in JS memory only** (never persisted), so a
+  access + ID tokens are held in JS memory only (never persisted), so a
   reload starts anonymous and re-bootstraps a session in the background.
 - **Origin-agnostic, zero runtime config.** The realm (`betting`) and client id
   are the same in every environment and Keycloak is fronted same-origin under
@@ -51,8 +51,8 @@ runs the bundle and talks to the backend itself.
   round-trip invisible, so an expiring token never forces a top-level navigation
   and in-flight UI state survives. A 401 from the API or a socket `connect_error`
   triggers the same silent refresh; if it fails, the app drops to anonymous.
-- **Roles** are read client-side from the access token's `realm_access` claim
-  and drive **UI gating only** (e.g. the admin page) — they are never trusted for
+- **Roles** — read client-side from the access token's `realm_access` claim
+  and drive UI gating only (e.g. the admin page); they are never trusted for
   authorization, which each service enforces by verifying the JWT itself.
 - **Single-origin data access.** Authenticated REST calls hit `/api/*` with the
   access token attached as `Authorization: Bearer …` from the in-memory snapshot;
@@ -64,7 +64,7 @@ runs the bundle and talks to the backend itself.
 Nginx is the sole browser-facing port and fronts *everything* — the frontend
 and the public backend endpoints — so the browser only ever sees one origin.
 This eliminates CORS and any need for runtime URL injection in the client
-bundle. It still does path-based routing only and is **not** a smart API
+bundle. It still does path-based routing only and is not a smart API
 gateway.
 
 Path routing:
@@ -86,7 +86,7 @@ Responsibilities:
   and e2e/18080 with no per-environment config)
 - Reverse-proxies Keycloak under `/kc` so the IdP is same-origin too
 
-Explicitly **not** responsibilities of the proxy:
+Explicitly not responsibilities of the proxy:
 - **Authentication / authorisation** — each service verifies its own JWTs.
 - **Rate limiting** — handled per-service if at all.
 
@@ -139,7 +139,7 @@ Lightweight async service responsible for ingesting odds from one or more
 external providers. Responsibilities:
 - Runs a concurrent `asyncio` polling loop (using `aiohttp`) per enabled
   provider (`ODDS_PROVIDERS`); providers run side by side
-- Normalises each provider's payload into a provider-agnostic **common model**
+- Normalises each provider's payload into a provider-agnostic common model
   (`CanonicalEvent` → `Market`s → `Selection`s) that represents many sports and
   bet types; events are kept separate per provider, stamped with an `origin`,
   and linked back to source ids via an `event_source_map` table
@@ -150,7 +150,7 @@ external providers. Responsibilities:
   hydrate the live markets board on first paint (live updates after that
   arrive via the notifications socket)
 
-> **Note:** This service does not calculate odds. It is purely an ingestion and
+> Note: This service does not calculate odds. It is purely an ingestion and
 > normalisation layer over an external feed.
 
 ### FastAPI — Stats Service
@@ -166,7 +166,7 @@ Responsibilities:
   UTC day), `GET /stats/me/summary` (staked / win-rate / ROI / net P&L — both
   authed), and `GET /stats/leaderboard` (top players by ROI, public)
 
-The stats service owns its store and **never reads Core's or Odds' tables** —
+The stats service owns its store and never reads Core's or Odds' tables —
 the `BetSettledEvent` carries everything it needs (denormalized, incl. the
 player's display name). It starts empty and accrues forward; there is no
 backfill.
@@ -175,7 +175,7 @@ backfill.
 
 ## Inter-service Communication
 
-Cross-process traffic flows over RabbitMQ fanout exchanges with **JSON**
+Cross-process traffic flows over RabbitMQ fanout exchanges with JSON
 payloads — the schemas in `schemas/json/` serve as the contract (`events.json`
 for the pubsub messages, `rest.json` for the HTTP resource shapes), from which
 each service generates its bindings (Zod for TS, Pydantic for Python). The wallet
@@ -207,7 +207,7 @@ messages sent while no subscriber is connected are dropped.
 read model must not drop settlements, so it cannot ride the fire-and-forget
 `notifications` exchange.
 
-The browser's live odds updates do **not** flow over `odds.updated`: the Odds
+The browser's live odds updates do not flow over `odds.updated`: the Odds
 Service separately broadcasts an `oddsUpdated` `NotificationEvent` (empty
 `userId`) on the `notifications` exchange, which the Notifications service
 relays. `odds.updated` carries the raw `OddsUpdatedEvent` and currently has no
@@ -301,7 +301,7 @@ On Kubernetes, an optional Helm-installed platform lives in its own
 
 - **Metrics** — kube-prometheus-stack: Prometheus scrapes cluster/infra metrics
   (node-exporter, kube-state-metrics, cAdvisor), with Alertmanager for routing.
-- **Logs** — Loki (single-binary, filesystem) as the store, fed by **Alloy** (a
+- **Logs** — Loki (single-binary, filesystem) as the store, fed by Alloy (a
   DaemonSet) tailing every pod's logs.
 - **Dashboards** — Grafana, wired to both Prometheus and Loki, exposed on its own
   Ingress host.
