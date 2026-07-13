@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Claude">
   <diagram name="Architecture" id="arch1">
-    <mxGraphModel dx="1664" dy="915" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="566" dy="311" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -62,14 +62,8 @@
         <mxCell id="kc" parent="servicesGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Keycloak" vertex="1">
           <mxGeometry height="50" width="150" x="40" y="245" as="geometry" />
         </mxCell>
-        <mxCell id="oddsapi" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;boundedLbl=1;" value="The Odds API / API-Football" vertex="1">
+        <mxCell id="oddsapi" parent="1" style="shape=cylinder3;html=1;fillColor=#fff2cc;strokeColor=#d6b656;boundedLbl=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;whiteSpace=wrap;size=10.293310546874977;" value="The Odds API / API-Football" vertex="1">
           <mxGeometry height="70" width="165" x="580" y="680" as="geometry" />
-        </mxCell>
-        <mxCell id="pg" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="PostgreSQL" vertex="1">
-          <mxGeometry height="70" width="150" x="760" y="680" as="geometry" />
-        </mxCell>
-        <mxCell id="tb" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="TigerBeetle ledger" vertex="1">
-          <mxGeometry height="70" width="150" x="410" y="680" as="geometry" />
         </mxCell>
         <mxCell id="e1" edge="1" parent="1" source="browser" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="nginx">
           <mxGeometry relative="1" as="geometry" />
@@ -130,21 +124,27 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="Vqhqf5_8XMVjV51O78ap-1" edge="1" parent="1" source="pg" style="endArrow=classic;html=1;rounded=0;entryX=0.721;entryY=1.009;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;startArrow=classic;startFill=1;entryPerimeter=0;" target="servicesGroup" value="&lt;div&gt;schema per service&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;">
+        <mxCell id="Vqhqf5_8XMVjV51O78ap-1" edge="1" parent="1" source="Vqhqf5_8XMVjV51O78ap-7" style="endArrow=classic;html=1;rounded=0;entryX=0.721;entryY=1.009;entryDx=0;entryDy=0;exitX=0.47;exitY=0.004;exitDx=0;exitDy=0;exitPerimeter=0;startArrow=classic;startFill=1;entryPerimeter=0;" target="servicesGroup" value="&lt;div&gt;schema per service&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
             <Array as="points" />
-            <mxPoint x="740" y="370" as="sourcePoint" />
+            <mxPoint x="835" y="680" as="sourcePoint" />
             <mxPoint x="790" y="320" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="e20" edge="1" parent="1" source="core" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0.469;entryY=-0.016;entryDx=0;entryDy=0;entryPerimeter=0;" target="tb">
+        <mxCell id="e20" edge="1" parent="1" source="core" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0.469;entryY=-0.016;entryDx=0;entryDy=0;entryPerimeter=0;">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="680" y="360" />
               <mxPoint x="480" y="360" />
             </Array>
-            <mxPoint x="375" y="680" as="targetPoint" />
+            <mxPoint x="480.3499999999999" y="678.8799999999999" as="targetPoint" />
           </mxGeometry>
+        </mxCell>
+        <mxCell id="Vqhqf5_8XMVjV51O78ap-6" parent="1" style="shape=cylinder3;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;boundedLbl=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;whiteSpace=wrap;size=10.293310546874977;" value="&lt;div&gt;TigerBeetle ledger&lt;/div&gt;" vertex="1">
+          <mxGeometry height="70" width="165" x="400" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="Vqhqf5_8XMVjV51O78ap-7" parent="1" style="shape=cylinder3;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;boundedLbl=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;whiteSpace=wrap;size=10.293310546874977;" value="PostgreSQL" vertex="1">
+          <mxGeometry height="70" width="165" x="760" y="680" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
