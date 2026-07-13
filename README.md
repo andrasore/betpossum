@@ -1,5 +1,7 @@
 # BetPossum
 
+[![CI](https://github.com/andrasore/betpossum/actions/workflows/pr.yml/badge.svg?branch=main)](https://github.com/andrasore/betpossum/actions/workflows/pr.yml)
+
 > A distributed, event-driven sports-betting platform — four backend services
 > using Node.js and Python, and a Next.js frontend, wired together over a RabbitMQ
 > message bus with schema-validated contracts.
@@ -18,7 +20,11 @@ validated against a shared JSON Schema, and the whole stack sits behind a single
 Nginx origin so the browser never deals with CORS or runtime config injection.
 
 For the full design rationale — settlement semantics, durable channels, the
-canonical odds model, observability — see [ARCHITECTURE.md](ARCHITECTURE.md).
+canonical odds model, observability, and the known
+[production gaps & trade-offs](ARCHITECTURE.md#production-gaps--trade-offs) —
+see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+![The BetPossum dashboard: live markets, wallet balance, and recent bets](docs/Screenshot.jpg)
 
 ## Highlights
 

@@ -271,28 +271,20 @@ Shared infrastructure, used as the inter-service event bus (see
 
 ## Deployment
 
-Each service is intended to run as an independent Docker container. A
-`docker-compose.yml` at the repo root should wire up all services, RabbitMQ,
-PostgreSQL, and TigerBeetle for local development.
+Each service runs as an independent Docker container.
 
-Suggested repo structure:
-
-```
-/
-├── frontend/          # Next.js
-├── nginx/             # Edge proxy config
-├── services/
-│   ├── core/          # NestJS — includes wallet/TigerBeetle module
-│   ├── notifications/ # FastAPI + python-socketio (browser-facing WS)
-│   ├── odds/          # FastAPI
-│   └── stats/         # FastAPI — read model over settled bets
-├── schemas/           # Shared JSON Schema message definitions
-├── docker-compose.yml
-└── ARCHITECTURE.md
-```
-
-> Proto definitions live in a shared top-level `/proto` directory so all
-> services can reference the same schemas without duplication.
+- **Local** — `docker-compose.yml` wires up all services, Nginx, Keycloak,
+  RabbitMQ, PostgreSQL, and TigerBeetle. Variants activate explicitly via named
+  overlays (`docker-compose.dev.yml` / `.ci.yml` / `.e2e.yml`) — there is no
+  auto-loaded `override` file, and host ports stay unprivileged (Nginx on 8080).
+- **Kubernetes** — Kustomize manifests in `k8s/`: a shared `base/` with `local`
+  and `prod` overlays. Replica counts are deliberate per service — Core and
+  Nginx run at 2, while the odds poller and the notifications relay document in
+  their manifests why they run single-replica (see
+  "Production gaps & trade-offs" below).
+- **Images** — built and pushed to GHCR by CI only: the PR pipeline runs
+  `test → build images → e2e`, and on `main` the e2e-validated `:<sha>` images
+  are promoted to `:latest` by digest (a manifest copy, not a rebuild).
 
 ## Observability
 
@@ -309,3 +301,42 @@ On Kubernetes, an optional Helm-installed platform lives in its own
 This is infra-level only today; the app services do not yet export `/metrics`, so
 per-service instrumentation (prom-client / prometheus_client + ServiceMonitors) is
 a future step. See `k8s/observability/README.md`.
+
+---
+
+## Production gaps & trade-offs
+
+BetPossum is a demonstration system, and some corners are cut deliberately.
+These are the known gaps and what closing each one would look like:
+
+- **DB schema management** — Core runs TypeORM with `synchronize: true`, which
+  auto-syncs entities to tables on boot. Fine for a demo with disposable data;
+  production would use versioned migrations so schema changes are reviewed,
+  ordered, and reversible.
+- **No transactional outbox** — a settlement's Postgres write and its
+  `bets.settled` publish are two separate operations, so a crash between them
+  can produce a settled bet whose event was never published. The durable
+  queues + `betId`-keyed idempotent upserts make *redelivery* safe, but they
+  cannot recover a publish that never happened. Production fix: an outbox
+  table drained by a relay, or CDC.
+- **Secrets** — dev credentials (`betting_dev`, Keycloak admin/admin, the
+  `betting-core` client secret) live in plaintext in compose files and
+  manifests. Production needs a real secret store (External Secrets, SOPS,
+  or Vault) and rotated Keycloak client credentials.
+- **Single points of scale** — the odds poller and the notifications relay are
+  intentionally single-replica; their manifests (`k8s/base/31-odds.yaml`,
+  `32-notifications.yaml`) document exactly why and what scaling them would
+  take (partitioned/leader-elected polling; sticky routing or a socket.io
+  message-queue adapter). Postgres, RabbitMQ, and TigerBeetle each run as one
+  node — HA would mean a managed Postgres, quorum queues, and a TigerBeetle
+  replica cluster.
+- **Observability depth** — metrics and logs cover the cluster, not the app:
+  no per-service `/metrics`, no distributed tracing. Next steps are
+  prom-client / prometheus_client + ServiceMonitors, and OpenTelemetry trace
+  propagation across the RabbitMQ hops.
+- **Edge hardening** — Nginx does path routing only; there is no rate
+  limiting, request size policing beyond defaults, or WAF. Acceptable behind a
+  demo, not for an internet-facing betting API.
+- **Stats rebuilds** — the read model accrues forward from `bets.settled` and
+  has no backfill/replay path; rebuilding it after a bug or schema change
+  would need an event replay mechanism or a rebuild from Core's bet history.
