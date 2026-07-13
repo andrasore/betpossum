@@ -1,0 +1,152 @@
+<mxfile host="app.diagrams.net" agent="Claude">
+  <diagram name="Architecture" id="arch1">
+    <mxGraphModel dx="1664" dy="915" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="browser" parent="1" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Browser SPA" vertex="1">
+          <mxGeometry height="50" width="160" x="600" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="edgeGroup" parent="1" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1" value="Edge" vertex="1">
+          <mxGeometry height="110" width="320" x="520" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="nginx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Nginx · single origin :8080" vertex="1">
+          <mxGeometry height="50" width="240" x="560" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="servicesGroup" parent="1" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;recursiveResize=0;movable=0;resizable=1;" value="Services" vertex="1">
+          <mxGeometry height="330" width="700" x="330" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="servicesGroup" source="odds" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;exitX=0.144;exitY=0.006;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.243;entryY=0.996;entryDx=0;entryDy=0;entryPerimeter=0;" target="mq" value="notifications">
+          <mxGeometry relative="1" x="-0.1209" y="17" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points" />
+            <mxPoint x="450.0000000000002" y="60" as="sourcePoint" />
+            <mxPoint x="455" y="140" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Vqhqf5_8XMVjV51O78ap-2" edge="1" parent="servicesGroup" source="core" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;entryX=0.768;entryY=0.043;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.858;exitY=0.963;exitDx=0;exitDy=0;exitPerimeter=0;" target="mq" value="notifications">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="285" y="120" as="sourcePoint" />
+            <mxPoint x="338" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Vqhqf5_8XMVjV51O78ap-3" edge="1" parent="servicesGroup" source="mq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;entryX=0;entryY=1;entryDx=0;entryDy=0;exitX=0.116;exitY=0.28;exitDx=0;exitDy=0;exitPerimeter=0;" target="core" value="events.resolved">
+          <mxGeometry relative="1" x="0.049" y="-2" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="275" y="140" />
+            </Array>
+            <mxPoint x="290" y="30" as="sourcePoint" />
+            <mxPoint x="355" y="110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="stats" parent="servicesGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Stats · FastAPI" vertex="1">
+          <mxGeometry height="50" width="150" x="465" y="35" as="geometry" />
+        </mxCell>
+        <mxCell id="notif" parent="servicesGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Notifications · FastAPI + Socket.IO" vertex="1">
+          <mxGeometry height="50" width="150" x="465" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="odds" parent="servicesGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Odds · FastAPI" vertex="1">
+          <mxGeometry height="50" width="150" x="275" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="mq" parent="servicesGroup" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="RabbitMQ fanout" vertex="1">
+          <mxGeometry height="70" width="200" x="250" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="core" parent="servicesGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Core API · NestJS" vertex="1">
+          <mxGeometry height="50" width="150" x="275" y="35" as="geometry" />
+        </mxCell>
+        <mxCell id="fe" parent="servicesGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Next.js static export" vertex="1">
+          <mxGeometry height="50" width="150" x="40" y="35" as="geometry" />
+        </mxCell>
+        <mxCell id="kc" parent="servicesGroup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Keycloak" vertex="1">
+          <mxGeometry height="50" width="150" x="40" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="oddsapi" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;boundedLbl=1;" value="The Odds API / API-Football" vertex="1">
+          <mxGeometry height="70" width="165" x="580" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="pg" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="PostgreSQL" vertex="1">
+          <mxGeometry height="70" width="150" x="760" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="tb" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="TigerBeetle ledger" vertex="1">
+          <mxGeometry height="70" width="150" x="410" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="browser" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="nginx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e1l" connectable="0" parent="e1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="/ , /api , /odds , /stats , /kc , /socket.io" vertex="1">
+          <mxGeometry relative="1" x="-0.1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="nginx" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="servicesGroup" value="routes by path">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" edge="1" parent="1" source="notif" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;strokeColor=#b85450;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="browser" value="socket.io">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="odds" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" target="mq" value="odds.updated">
+          <mxGeometry relative="1" x="0.2727" y="-20" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="690" y="480" />
+              <mxPoint x="690" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="odds" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" target="mq" value="events.resolved">
+          <mxGeometry relative="1" x="-0.1708" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="710" y="535" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="core" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;" target="mq" value="bets.settled">
+          <mxGeometry relative="1" x="0.1899" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="525" y="333" />
+              <mxPoint x="525" y="415" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="mq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" target="stats" value="bets.settled">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="mq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" target="notif" value="notifications">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="745" y="440" />
+              <mxPoint x="1055" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e21" edge="1" parent="1" source="oddsapi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" target="odds">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="663" y="620" />
+              <mxPoint x="663" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Vqhqf5_8XMVjV51O78ap-1" edge="1" parent="1" source="pg" style="endArrow=classic;html=1;rounded=0;entryX=0.721;entryY=1.009;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;startArrow=classic;startFill=1;entryPerimeter=0;" target="servicesGroup" value="&lt;div&gt;schema per service&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points" />
+            <mxPoint x="740" y="370" as="sourcePoint" />
+            <mxPoint x="790" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e20" edge="1" parent="1" source="core" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0.469;entryY=-0.016;entryDx=0;entryDy=0;entryPerimeter=0;" target="tb">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="680" y="360" />
+              <mxPoint x="480" y="360" />
+            </Array>
+            <mxPoint x="375" y="680" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

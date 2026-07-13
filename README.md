@@ -74,41 +74,7 @@ see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    Browser([Browser SPA])
-
-    subgraph Edge
-        Nginx[Nginx · single origin :8080]
-    end
-
-    Browser -->|"/ , /api , /odds , /stats , /kc , /socket.io"| Nginx
-
-    Nginx -->|"/"| FE[Next.js static export]
-    Nginx -->|/api| Core[Core API · NestJS]
-    Nginx -->|/odds| Odds[Odds · FastAPI]
-    Nginx -->|/stats| Stats[Stats · FastAPI]
-    Nginx -->|/kc| KC[Keycloak]
-    Nginx -->|/socket.io| Notif[Notifications · FastAPI + Socket.IO]
-
-    Odds -- odds.updated --> MQ{{RabbitMQ fanout}}
-    Odds -- events.resolved --> MQ
-    Odds -- notifications --> MQ
-    Core -- bets.settled --> MQ
-    Core -- notifications --> MQ
-
-    MQ -- events.resolved --> Core
-    MQ -- bets.settled --> Stats
-    MQ -- notifications --> Notif
-
-    Core --> PG[(PostgreSQL)]
-    Odds --> PG
-    Stats --> PG
-    KC --> PG
-    Core --> TB[(TigerBeetle ledger)]
-
-    OddsAPI[(The Odds API / API-Football)] --> Odds
-```
+![BetPossum architecture](docs/architecture.drawio.svg)
 
 | Exchange          | Publisher           | Subscriber    | Payload              |
 |-------------------|---------------------|---------------|----------------------|
