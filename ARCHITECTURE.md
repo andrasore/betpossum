@@ -173,6 +173,47 @@ backfill.
 
 ---
 
+## Service boundaries — why the split needs no distributed transactions
+
+The services are deliberately carved along lines where **no single user action
+has to be committed across two services at once.** Every write path completes
+inside one service against one datastore; anything another service needs to know
+afterwards travels as an asynchronous message. There is no synchronous
+cross-service request in a write path, no two-phase commit, and no distributed
+transaction to coordinate or roll back — the only in-process coupling is the
+wallet living inside Core.
+
+The split follows a few rules:
+
+- **Each service owns its own state and writes only to it.** Core owns bets and
+  the ledger, Odds owns the odds tables, Stats owns its read model. No service
+  reaches into another's schema — a subscriber that needs data gets it from the
+  message payload (e.g. `BetSettledEvent` carries the player's display name so
+  Stats never queries Core).
+- **Money movement stays inside one transaction boundary.** The wallet is a Nest
+  module *inside* Core, invoked by the bets module via direct method calls, so a
+  bet and its debit/credit against TigerBeetle happen in-process — never a broker
+  hop, an RPC, or a saga that could half-commit.
+- **Cross-service coordination is one-way and asynchronous.** A service publishes
+  a fact about something it already committed ("event resolved", "bet settled")
+  and moves on; it never blocks on a downstream service, and downstream failure
+  can't roll the publisher back. Settlement is a good example: Core consumes
+  `events.resolved`, then settles held bets purely against its *own* Postgres and
+  TigerBeetle — the resolving service (Odds) is not in that path.
+- **Consistency is eventual, and that's acceptable here.** Because messages are
+  fire-and-forget, downstream state (the notifications a user sees, the Stats
+  dashboard) converges slightly after the authoritative write rather than
+  atomically with it. Durable queues + idempotent, `betId`-keyed upserts make
+  redelivery safe, so eventual convergence is the only guarantee any consumer
+  needs.
+
+The one seam this leaves open is the publish itself: a service's local write and
+its subsequent publish are two steps, so a crash between them can lose an event.
+That's the transactional-outbox gap called out under "Production gaps &
+trade-offs" — a conscious trade, not an accident of the split.
+
+---
+
 ## Inter-service Communication
 
 Cross-process traffic flows over RabbitMQ fanout exchanges with JSON
