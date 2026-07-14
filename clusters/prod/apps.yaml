@@ -1,0 +1,38 @@
+# Flux Kustomization for the BetPossum app.
+#
+# Reconciles the prod overlay (k8s/overlays/prod) from the bootstrap
+# GitRepository and rolls out whatever image tags image-automation.yaml commits
+# back into it. SOPS decryption unwraps the encrypted prod secrets; plaintext
+# resources pass through untouched, so this is a no-op until the secrets are
+# actually encrypted (see .sops.yaml and k8s/README.md).
+#
+# apiVersion is GA (kustomize.toolkit.fluxcd.io/v1). `flux bootstrap` creates the
+# `flux-system` GitRepository this references.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: betpossum
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  path: ./k8s/overlays/prod
+  prune: true
+  wait: true
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: core
+      namespace: betpossum
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: nginx
+      namespace: betpossum

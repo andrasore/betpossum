@@ -1,0 +1,207 @@
+# Flux image automation for the six custom BetPossum images.
+#
+# Flow: the CI promote job (post-e2e, push-to-main) stamps each image with a
+# sortable, immutable tag `main-<UTC ts>-<sha7>`. An ImageRepository scans GHCR,
+# an ImagePolicy selects the newest by the numeric <ts>, and one shared
+# ImageUpdateAutomation writes the resolved tags into the $imagepolicy setters in
+# k8s/overlays/prod/kustomization.yaml and commits to main. The commit carries
+# `[ci skip]` so it does not re-trigger the PR workflow (which would rebuild →
+# retag → re-commit in a loop).
+#
+# ImageRepositories authenticate to GHCR with the `ghcr-auth` secret (a
+# read:packages PAT), created out of band in flux-system.
+#
+# NOTE: image.toolkit.fluxcd.io API version — this uses v1beta2. Confirm it
+# matches the installed CRDs (`kubectl explain imageupdateautomation` /
+# `flux version`) after bootstrapping with
+# --components-extra=image-reflector-controller,image-automation-controller;
+# bump the apiVersion here if your Flux ships a newer served version.
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: core
+  namespace: flux-system
+spec:
+  image: ghcr.io/andrasore/betpossum/core
+  interval: 5m
+  secretRef:
+    name: ghcr-auth
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: odds
+  namespace: flux-system
+spec:
+  image: ghcr.io/andrasore/betpossum/odds
+  interval: 5m
+  secretRef:
+    name: ghcr-auth
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: notifications
+  namespace: flux-system
+spec:
+  image: ghcr.io/andrasore/betpossum/notifications
+  interval: 5m
+  secretRef:
+    name: ghcr-auth
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: stats
+  namespace: flux-system
+spec:
+  image: ghcr.io/andrasore/betpossum/stats
+  interval: 5m
+  secretRef:
+    name: ghcr-auth
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: frontend
+  namespace: flux-system
+spec:
+  image: ghcr.io/andrasore/betpossum/frontend
+  interval: 5m
+  secretRef:
+    name: ghcr-auth
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: keycloak
+  namespace: flux-system
+spec:
+  image: ghcr.io/andrasore/betpossum/keycloak
+  interval: 5m
+  secretRef:
+    name: ghcr-auth
+---
+# One ImagePolicy per repo. filterTags keeps only the CI release tags and
+# extracts the numeric timestamp; numerical asc → highest ts wins (newest).
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: core
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: core
+  filterTags:
+    pattern: '^main-(?P<ts>[0-9]+)-[0-9a-f]+$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: odds
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: odds
+  filterTags:
+    pattern: '^main-(?P<ts>[0-9]+)-[0-9a-f]+$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: notifications
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: notifications
+  filterTags:
+    pattern: '^main-(?P<ts>[0-9]+)-[0-9a-f]+$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: stats
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: stats
+  filterTags:
+    pattern: '^main-(?P<ts>[0-9]+)-[0-9a-f]+$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: frontend
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: frontend
+  filterTags:
+    pattern: '^main-(?P<ts>[0-9]+)-[0-9a-f]+$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: keycloak
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: keycloak
+  filterTags:
+    pattern: '^main-(?P<ts>[0-9]+)-[0-9a-f]+$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageUpdateAutomation
+metadata:
+  name: betpossum
+  namespace: flux-system
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        name: fluxcdbot
+        email: fluxcdbot@users.noreply.github.com
+      messageTemplate: |
+        chore(deploy): update image tags [ci skip]
+
+        Automated image update by Flux.
+        {{ range .Updated.Images -}}
+        - {{ . }}
+        {{ end -}}
+    push:
+      branch: main
+  update:
+    path: ./k8s/overlays/prod
+    strategy: Setters

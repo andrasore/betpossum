@@ -18,6 +18,26 @@ resources:
   - cluster-issuer.yaml
   - secrets.yaml
 
+# Image tags for the six custom images. Base pins :latest (env-agnostic); prod
+# overrides them here so Flux's image-automation writes the resolved, sortable
+# tag into THIS file only (via the $imagepolicy setters below), keeping base
+# clean. Each policy name (flux-system:<svc>) matches an ImagePolicy in
+# clusters/prod/image-automation.yaml. `frontend` is the nginx Deployment's
+# image. Until Flux runs, these stay :latest — identical to the base default.
+images:
+  - name: ghcr.io/andrasore/betpossum/core
+    newTag: latest # {"$imagepolicy": "flux-system:core:tag"}
+  - name: ghcr.io/andrasore/betpossum/odds
+    newTag: latest # {"$imagepolicy": "flux-system:odds:tag"}
+  - name: ghcr.io/andrasore/betpossum/notifications
+    newTag: latest # {"$imagepolicy": "flux-system:notifications:tag"}
+  - name: ghcr.io/andrasore/betpossum/stats
+    newTag: latest # {"$imagepolicy": "flux-system:stats:tag"}
+  - name: ghcr.io/andrasore/betpossum/frontend
+    newTag: latest # {"$imagepolicy": "flux-system:frontend:tag"}
+  - name: ghcr.io/andrasore/betpossum/keycloak
+    newTag: latest # {"$imagepolicy": "flux-system:keycloak:tag"}
+
 patches:
   # The shared Ingress (base/50-ingress.yaml) carries the routing + annotations
   # and already defaults to the prod host (betpossum.example.com — CHANGE_ME,

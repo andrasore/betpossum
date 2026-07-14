@@ -178,11 +178,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Promote staging images to latest
+      - name: Promote staging images to latest + sortable tag
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           repo="ghcr.io/${GITHUB_REPOSITORY,,}"
+          # Alongside the human-facing moving :latest tag, stamp an immutable,
+          # sortable release tag (main-<UTC timestamp>-<sha7>). Flux image
+          # automation ranks releases by the numeric <ts>, which a git SHA and
+          # the moving :latest can't provide. Registry-side copy — no rebuild.
+          sortable="main-$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
           for name in core odds notifications stats frontend keycloak; do
-            docker buildx imagetools create -t "$repo/$name:latest" "$repo/$name:$IMAGE_TAG"
+            docker buildx imagetools create \
+              -t "$repo/$name:latest" \
+              -t "$repo/$name:$sortable" \
+              "$repo/$name:$IMAGE_TAG"
           done

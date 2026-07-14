@@ -170,6 +170,103 @@ app deploy. Grafana gets its own Ingress on the same NGINX controller
 [`observability/README.md`](observability/README.md) for the install commands and
 verification steps.
 
+## Continuous delivery (Flux GitOps)
+
+The steps above are a one-shot manual deploy. For hands-off delivery, a Flux
+install on the cluster **pulls** from this repo and rolls out automatically —
+nothing needs inbound access to the cluster. The Flux resources live in
+[`clusters/prod/`](../clusters/prod); CI already publishes the images.
+
+**Flow.** The CI promote job (post-e2e, on push to `main`) stamps each
+e2e-validated image with a sortable, immutable tag `main-<UTC ts>-<sha7>` next to
+`:latest`. In-cluster, an `ImageRepository`/`ImagePolicy` per image picks the
+newest by `<ts>`, and a single `ImageUpdateAutomation` writes the resolved tag
+into the `$imagepolicy` setters in `overlays/prod/kustomization.yaml`, commits to
+`main` (with `[ci skip]` so it doesn't retrigger CI), and the `Kustomization`
+reconciles it onto the cluster. Rollback is `git revert` of that commit.
+
+```
+CI promote ──► GHCR :main-<ts>-<sha7>
+                     │  scan
+              ImageRepository/ImagePolicy (×6)
+                     │  newest tag
+              ImageUpdateAutomation ──commit [ci skip]──► git (overlays/prod)
+                     │
+              Kustomization ──reconcile──► cluster rolls out
+```
+
+### CD prerequisites (beyond the deploy prereqs above)
+
+- A **GitHub PAT** with `read:packages` (GHCR scanning) — and repo write for the
+  `flux bootstrap` call (bootstrap creates its own deploy key).
+- An **age keypair** for SOPS (`age-keygen -o age.agekey`). The private key never
+  goes in git.
+
+### 1. Encrypt the prod secrets with SOPS
+
+In a GitOps flow Flux re-applies whatever is in git, so the `CHANGE_ME`
+placeholders in `overlays/prod/secrets.yaml` must be replaced by real,
+**encrypted** values (the file header already recommends SOPS):
+
+```bash
+# Put your age *public* key in .sops.yaml (replace the CHANGE_ME recipient), then:
+cp k8s/overlays/prod/secrets.yaml k8s/overlays/prod/secrets.enc.yaml
+# fill in the real values, then encrypt in place (matches .sops.yaml rules):
+sops --encrypt --in-place k8s/overlays/prod/secrets.enc.yaml
+
+# point the overlay at the encrypted file and drop the plaintext one:
+#   overlays/prod/kustomization.yaml: resources: … secrets.yaml → secrets.enc.yaml
+git rm k8s/overlays/prod/secrets.yaml   # keep a secrets.example.yaml if you want docs
+
+# load the age *private* key so the cluster can decrypt:
+kubectl create namespace flux-system --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n flux-system create secret generic sops-age --from-file=age.agekey=age.agekey
+```
+
+`clusters/prod/apps.yaml` already declares `decryption: { provider: sops,
+secretRef: sops-age }`, so once the file is encrypted Flux decrypts it after
+`kustomize build`. (Plaintext resources pass through, so leaving it unencrypted
+just applies the `CHANGE_ME` placeholders — encrypt before going live.)
+
+### 2. GHCR scan secret
+
+```bash
+kubectl -n flux-system create secret docker-registry ghcr-auth \
+  --docker-server=ghcr.io --docker-username=<gh-user> --docker-password=<PAT>
+```
+
+### 3. Bootstrap Flux (installs the image-automation controllers too)
+
+```bash
+flux bootstrap github \
+  --owner=andrasore --repository=betpossum \
+  --branch=main --path=clusters/prod \
+  --components-extra=image-reflector-controller,image-automation-controller
+```
+
+This commits `clusters/prod/flux-system/` and starts reconciling everything
+already under `clusters/prod/` — the app `Kustomization`
+([`apps.yaml`](../clusters/prod/apps.yaml)) and the image automation
+([`image-automation.yaml`](../clusters/prod/image-automation.yaml)).
+
+> The committed image-automation manifests use `image.toolkit.fluxcd.io/v1beta2`.
+> Confirm that matches your installed CRDs (`kubectl explain imageupdateautomation`)
+> and bump the apiVersion if your Flux serves a newer version.
+
+### 4. Verify
+
+```bash
+flux check
+flux get sources git
+flux get kustomizations          # betpossum → Ready
+flux get images all              # policies show a main-* LatestImage
+```
+
+Push a trivial change to `main`: CI builds → promote stamps a new
+`main-<ts>-<sha7>` → `flux get image policy` picks it up → Flux commits the tag
+to `overlays/prod` (`[ci skip]`) → `kubectl -n betpossum get pods` shows the new
+image. `git revert` that commit to roll back.
+
 ## Local quickstart on k3s
 
 The local setup tries to mimic the prod as closely as possible.
