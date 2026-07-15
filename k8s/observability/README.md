@@ -4,11 +4,11 @@ A self-contained metrics + logs platform for the BetPossum cluster, installed
 with Helm (committed values files) into its own `observability` namespace —
 separate from the app, which keeps using `kubectl apply -k`.
 
-| Component | Chart | What it does |
-|-----------|-------|--------------|
+| Component             | Chart                                                 | What it does                                                                                           |
+|-----------------------|-------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
 | kube-prometheus-stack | `prometheus-community/kube-prometheus-stack` (87.2.1) | Prometheus (cluster/infra metrics: node-exporter, kube-state-metrics, cAdvisor), Alertmanager, Grafana |
-| Loki | `grafana/loki` (7.0.0) | Log store — SingleBinary + filesystem PVC |
-| Alloy | `grafana/alloy` (1.10.0) | DaemonSet collector — tails every pod's logs → Loki |
+| Loki                  | `grafana/loki` (7.0.0)                                | Log store — SingleBinary + filesystem PVC                                                              |
+| Alloy                 | `grafana/alloy` (1.10.0)                              | DaemonSet collector — tails every pod's logs → Loki                                                    |
 
 Scope is platform-only. The app services (core/odds/notifications/stats) do
 not expose `/metrics` yet, so there are no app-level metrics or ServiceMonitors —
