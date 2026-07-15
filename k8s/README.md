@@ -177,30 +177,34 @@ install on the cluster **pulls** from this repo and rolls out automatically —
 nothing needs inbound access to the cluster. The Flux resources live in
 [`clusters/prod/`](../clusters/prod); CI already publishes the images.
 
-**Flow.** The CI promote job (post-e2e, on push to `main`) stamps each
-e2e-validated image with a sortable, immutable tag `main-<UTC ts>-<sha7>` next to
-`:latest`. In-cluster, an `ImageRepository`/`ImagePolicy` per image picks the
-newest by `<ts>`, and a single `ImageUpdateAutomation` writes the resolved tag
-into the `$imagepolicy` setters in `overlays/prod/kustomization.yaml`, commits to
-`main` (with `[ci skip]` so it doesn't retrigger CI), and the `Kustomization`
-reconciles it onto the cluster. Rollback is `git revert` of that commit.
+**Flow.** Flux runs **read-only** against this repo. A `GitRepository` tracks
+`main`, and the `Kustomization` in [`apps.yaml`](../clusters/prod/apps.yaml)
+reconciles `overlays/prod` onto the cluster every 5m. The overlay pins `:latest`
+with the default `Always` pull policy, so once CI publishes new images a rollout
+picks them up. Flux never writes to the repo, and needs no credentials to read
+it — `andrasore/betpossum` is public.
 
 ```
-CI promote ──► GHCR :main-<ts>-<sha7>
-                     │  scan
-              ImageRepository/ImagePolicy (×6)
-                     │  newest tag
-              ImageUpdateAutomation ──commit [ci skip]──► git (overlays/prod)
-                     │
-              Kustomization ──reconcile──► cluster rolls out
+CI publishes ──► GHCR :latest
+                       │  Always pull policy
+git (main) ──read──► GitRepository ──► Kustomization ──reconcile──► cluster
 ```
+
+CI also stamps each e2e-validated image with a sortable, immutable
+`main-<UTC ts>-<sha7>` tag next to `:latest`. Wiring that tag into the cluster is
+what [`image-automation.yaml`](../clusters/prod/image-automation.yaml) does, and
+it requires granting Flux write access to this repo — see
+[What you give up](#what-you-give-up).
 
 ### CD prerequisites (beyond the deploy prereqs above)
 
-- A **GitHub PAT** with `read:packages` (GHCR scanning) — and repo write for the
-  `flux bootstrap` call (bootstrap creates its own deploy key).
+- The **Flux CLI** — `curl -s https://fluxcd.io/install.sh | sudo bash`, or
+  `flux-bin` from the AUR.
 - An **age keypair** for SOPS (`age-keygen -o age.agekey`). The private key never
   goes in git.
+
+No GitHub PAT and no deploy key: the `GitRepository` clones this public repo
+anonymously, and nothing scans GHCR.
 
 ### 1. Encrypt the prod secrets with SOPS
 
@@ -228,44 +232,71 @@ secretRef: sops-age }`, so once the file is encrypted Flux decrypts it after
 `kustomize build`. (Plaintext resources pass through, so leaving it unencrypted
 just applies the `CHANGE_ME` placeholders — encrypt before going live.)
 
-### 2. GHCR scan secret
+### 2. Install Flux (read-only)
+
+`flux install` puts the controllers on the cluster and does nothing else. The
+alternative, `flux bootstrap github`, additionally commits a
+`clusters/prod/flux-system/` directory, pushes it to `main`, and registers a
+deploy key — that is what makes bootstrap need repo write *and* admin. This flow
+skips all of it.
 
 ```bash
-kubectl -n flux-system create secret docker-registry ghcr-auth \
-  --docker-server=ghcr.io --docker-username=<gh-user> --docker-password=<PAT>
+# Controllers only — no commit, no deploy key, no PAT. Note the absence of
+# --components-extra: the image-automation controllers stay out (see below).
+flux install
+
+# Public repo, so no auth. Name it `flux-system` in ns `flux-system`: that is
+# the sourceRef apps.yaml already references, so it resolves unchanged.
+flux create source git flux-system \
+  --url=https://github.com/andrasore/betpossum \
+  --branch=main \
+  --interval=1m
+
+# Reads the local file; writes nothing back to the repo.
+kubectl apply -f clusters/prod/apps.yaml
 ```
 
-### 3. Bootstrap Flux (installs the image-automation controllers too)
+`apps.yaml` declares `decryption.secretRef: sops-age`, so the secret from step 1
+must exist before you apply it, or the `Kustomization` fails to reconcile. For a
+first trial, apply a scratch copy with the `decryption` block stripped instead.
 
-```bash
-flux bootstrap github \
-  --owner=andrasore --repository=betpossum \
-  --branch=main --path=clusters/prod \
-  --components-extra=image-reflector-controller,image-automation-controller
-```
+Do **not** apply [`image-automation.yaml`](../clusters/prod/image-automation.yaml)
+in this flow. Committing resolved tags back to `overlays/prod` is the entire
+function of an `ImageUpdateAutomation`, so it cannot be made read-only: it needs
+a read-write deploy key (`flux bootstrap --read-write-key` — bootstrap's key is
+read-only by default, and without the flag the controller silently never pushes)
+plus a `read:packages` PAT in a `ghcr-auth` secret for the `ImageRepository`
+scans. The manifest is kept for that path and is inert unless applied.
 
-This commits `clusters/prod/flux-system/` and starts reconciling everything
-already under `clusters/prod/` — the app `Kustomization`
-([`apps.yaml`](../clusters/prod/apps.yaml)) and the image automation
-([`image-automation.yaml`](../clusters/prod/image-automation.yaml)).
-
-> The committed image-automation manifests use `image.toolkit.fluxcd.io/v1beta2`.
-> Confirm that matches your installed CRDs (`kubectl explain imageupdateautomation`)
-> and bump the apiVersion if your Flux serves a newer version.
-
-### 4. Verify
+### 3. Verify
 
 ```bash
 flux check
-flux get sources git
+flux get sources git             # flux-system → Ready
 flux get kustomizations          # betpossum → Ready
-flux get images all              # policies show a main-* LatestImage
+kubectl -n betpossum get pods
 ```
 
-Push a trivial change to `main`: CI builds → promote stamps a new
-`main-<ts>-<sha7>` → `flux get image policy` picks it up → Flux commits the tag
-to `overlays/prod` (`[ci skip]`) → `kubectl -n betpossum get pods` shows the new
-image. `git revert` that commit to roll back.
+### What you give up
+
+- **Image tags stay `:latest`.** That matches the base default, and the `Always`
+  pull policy means the cluster still picks up whatever CI last published. What
+  is lost is the pinned, sortable `main-<ts>-<sha7>` tag and, with it, `git
+  revert` as rollback: a deploy becomes "whatever `:latest` resolved to at pod
+  start", which is exactly the ambiguity the tag stamping exists to remove. Fine
+  for a trial cluster, not for real prod.
+- **Rollouts are not tied to a git commit.** With `:latest` on both sides nothing
+  in git changes when the image does, so `flux get kustomizations` cannot tell
+  you which build is running — only the pod's image digest can.
+- **Flux does not manage its own upgrades.** Upgrading means re-running
+  `flux install` at a newer CLI version, rather than bumping `gotk-components.yaml`
+  in a commit.
+
+To get tag automation back *without* granting write on this repo, the usual
+answer is a separate fleet repo: bootstrap into e.g. `betpossum-fleet` holding
+`clusters/prod` and the prod overlay, with this repo as a second, read-only
+`GitRepository`. That means moving `overlays/prod` out of here — a restructuring,
+not a flag change.
 
 ## Local quickstart on k3s
 
