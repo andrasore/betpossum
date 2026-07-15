@@ -178,19 +178,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Promote staging images to latest + sortable tag
+      - name: Promote staging images to latest + semver release tag
         env:
           IMAGE_TAG: ${{ github.sha }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
           repo="ghcr.io/${GITHUB_REPOSITORY,,}"
-          # Alongside the human-facing moving :latest tag, stamp an immutable,
-          # sortable release tag (main-<UTC timestamp>-<sha7>). Flux image
-          # automation ranks releases by the numeric <ts>, which a git SHA and
-          # the moving :latest can't provide. Registry-side copy — no rebuild.
-          sortable="main-$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          # Alongside the human-facing moving :latest tag, stamp an immutable
+          # semver release tag. Keel ranks releases by semver precedence, so the
+          # tag has to parse as semver for its update policies to order builds
+          # at all. run_number is monotonic and never resets, so a higher patch
+          # is always a newer build (it also counts PR runs, leaving gaps in the
+          # series — ordering is what matters, not density).
+          #
+          # Bump the 0.1 series here by hand; nothing derives it from a
+          # package.json, as no single root version exists to derive it from.
+          #
+          # The git sha is deliberately absent: a tag cannot carry semver build
+          # metadata (docker forbids '+'), and a '-<sha7>' suffix would instead
+          # make it a PRERELEASE, which sorts *before* the plain version and
+          # inverts the ordering. The :<sha> staging tag on this same digest
+          # carries that traceability instead.
+          #
+          # Registry-side copy — no rebuild.
+          release="0.1.${RUN_NUMBER}"
           for name in core odds notifications stats frontend keycloak; do
             docker buildx imagetools create \
               -t "$repo/$name:latest" \
-              -t "$repo/$name:$sortable" \
+              -t "$repo/$name:$release" \
               "$repo/$name:$IMAGE_TAG"
           done

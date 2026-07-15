@@ -19,26 +19,53 @@ resources:
   - secrets.yaml
 
 # Image tags for the six custom images. Base pins :latest (env-agnostic); prod
-# overrides them here so Flux's image-automation writes the resolved, sortable
-# tag into THIS file only (via the $imagepolicy setters below), keeping base
-# clean. Each policy name (flux-system:<svc>) matches an ImagePolicy in
-# clusters/prod/image-automation.yaml. `frontend` is the nginx Deployment's
-# image. Until Flux runs, these stay :latest — identical to the base default.
+# overrides them here so the manifest names one identifiable build. `:latest`
+# cannot be used in prod: Keel decides what "newer" means by parsing the tag on
+# the live Deployment as semver, and `latest` gives it nothing to compare.
+# `frontend` is the nginx Deployment's image.
+#
+# CI stamps all six images with the same tag in one promote step, so the six
+# tags below move together.
+#
+# CHANGE_ME: set these to a semver tag CI has actually published — a tag that
+# does not exist in GHCR lands the pods in ImagePullBackOff. See ../../README.md
+# → "Continuous delivery" for finding the newest one. Keel owns these tags
+# in-cluster after the first apply, so expect git to fall behind the cluster;
+# the README covers what re-applying this overlay does.
 images:
   - name: ghcr.io/andrasore/betpossum/core
-    newTag: latest # {"$imagepolicy": "flux-system:core:tag"}
+    newTag: 0.1.0
   - name: ghcr.io/andrasore/betpossum/odds
-    newTag: latest # {"$imagepolicy": "flux-system:odds:tag"}
+    newTag: 0.1.0
   - name: ghcr.io/andrasore/betpossum/notifications
-    newTag: latest # {"$imagepolicy": "flux-system:notifications:tag"}
+    newTag: 0.1.0
   - name: ghcr.io/andrasore/betpossum/stats
-    newTag: latest # {"$imagepolicy": "flux-system:stats:tag"}
+    newTag: 0.1.0
   - name: ghcr.io/andrasore/betpossum/frontend
-    newTag: latest # {"$imagepolicy": "flux-system:frontend:tag"}
+    newTag: 0.1.0
   - name: ghcr.io/andrasore/betpossum/keycloak
-    newTag: latest # {"$imagepolicy": "flux-system:keycloak:tag"}
+    newTag: 0.1.0
 
 patches:
+  # Hand the six CI-built images to Keel: it polls GHCR and patches the newest
+  # published semver straight onto the live Deployment. `major` means "accept any
+  # newer semver" — it is not limited to major bumps. `patch` would also work
+  # while every release is a 0.1.x bump, but it silently ignores anything outside
+  # the series, so a hand-bump to 0.2.0 would stop deploys with no error.
+  #
+  # This targets every Deployment in the stack, which is exactly the six CI-built
+  # ones — postgres/rabbitmq/tigerbeetle are StatefulSets on upstream tags, so
+  # they are untouched. A third-party Deployment added later would need excluding
+  # here. Annotations are created wholesale because no base Deployment sets any.
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          keel.sh/policy: major
+          keel.sh/trigger: poll
+          keel.sh/pollSchedule: "@every 5m"
   # The shared Ingress (base/50-ingress.yaml) carries the routing + annotations
   # and already defaults to the prod host (betpossum.example.com — CHANGE_ME,
   # must match PUBLIC_HOST and the tls host below). Prod adds TLS: cert-manager

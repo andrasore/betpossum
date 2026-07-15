@@ -170,133 +170,105 @@ app deploy. Grafana gets its own Ingress on the same NGINX controller
 [`observability/README.md`](observability/README.md) for the install commands and
 verification steps.
 
-## Continuous delivery (Flux GitOps)
+## Continuous delivery (Keel)
 
-The steps above are a one-shot manual deploy. For hands-off delivery, a Flux
-install on the cluster **pulls** from this repo and rolls out automatically —
-nothing needs inbound access to the cluster. The Flux resources live in
-[`clusters/prod/`](../clusters/prod); CI already publishes the images.
-
-**Flow.** Flux runs **read-only** against this repo. A `GitRepository` tracks
-`main`, and the `Kustomization` in [`apps.yaml`](../clusters/prod/apps.yaml)
-reconciles `overlays/prod` onto the cluster every 5m. The overlay pins `:latest`
-with the default `Always` pull policy, so once CI publishes new images a rollout
-picks them up. Flux never writes to the repo, and needs no credentials to read
-it — `andrasore/betpossum` is public.
+The steps above are a one-shot manual deploy. [Keel](https://keel.sh) closes the
+loop on the image half: it runs **in the cluster**, polls GHCR, and patches newer
+image tags onto the Deployments. It pulls, so nothing needs inbound access to the
+cluster, and it never touches this repo — no deploy key, no PAT, and no bot
+commits on a public repo.
 
 ```
-CI publishes ──► GHCR :latest
-                       │  Always pull policy
-git (main) ──read──► GitRepository ──► Kustomization ──reconcile──► cluster
+CI promote ──► GHCR :0.1.<run>
+                     │  Keel polls every 5m
+                     ▼
+              Keel (in-cluster) ──patch──► Deployment tag ──► rollout
 ```
 
-CI also stamps each e2e-validated image with a sortable, immutable
-`main-<UTC ts>-<sha7>` tag next to `:latest`. Wiring that tag into the cluster is
-what [`image-automation.yaml`](../clusters/prod/image-automation.yaml) does, and
-it requires granting Flux write access to this repo — see
-[What you give up](#what-you-give-up).
+**Scope: images only.** Keel updates image tags and nothing else. Every other
+manifest change — replicas, env, Ingress, secrets — is still `kubectl apply -k
+k8s/overlays/prod` by hand. That is the trade for not running GitOps: no
+controller reconciles git onto the cluster, so nothing detects or corrects drift.
+
+**How "newest" is decided.** The CI promote job stamps every e2e-validated image
+with `0.1.<run number>` (see [`pr.yml`](../.github/workflows/pr.yml)). Keel parses
+that as semver and compares it against the tag on the live Deployment, so a higher
+run number is always a newer release — `run_number` is monotonic and never resets.
+The `keel.sh/policy: major` annotation in `overlays/prod` means "accept any newer
+semver"; it is not limited to major bumps.
+
+The git sha is deliberately **not** in the release tag: a docker tag cannot carry
+semver build metadata (`+` is illegal), and a `-<sha7>` suffix would make the tag
+a *prerelease*, which sorts before the plain version and inverts the ordering. To
+map a release back to a commit, open CI run `#<run number>` in the Actions UI; the
+`:<sha>` staging tag on the same digest carries the same mapping.
 
 ### CD prerequisites (beyond the deploy prereqs above)
 
-- The **Flux CLI** — `curl -s https://fluxcd.io/install.sh | sudo bash`, or
-  `flux-bin` from the AUR.
-- An **age keypair** for SOPS (`age-keygen -o age.agekey`). The private key never
-  goes in git.
+**Helm**, and nothing else. The `ghcr.io/andrasore/betpossum/*` packages are
+public, so Keel polls them anonymously — no `imagePullSecret`, no `read:packages`
+PAT.
 
-No GitHub PAT and no deploy key: the `GitRepository` clones this public repo
-anonymously, and nothing scans GHCR.
+### 1. Pin a tag that actually exists
 
-### 1. Encrypt the prod secrets with SOPS
-
-In a GitOps flow Flux re-applies whatever is in git, so the `CHANGE_ME`
-placeholders in `overlays/prod/secrets.yaml` must be replaced by real,
-**encrypted** values (the file header already recommends SOPS):
+`overlays/prod/kustomization.yaml` ships `newTag: 0.1.0` as a placeholder, and
+**that tag does not exist** — applying it as-is lands the pods in
+`ImagePullBackOff`. Keel needs a real semver on the Deployment to compare against,
+so set the six tags to a published one first. All six images get the same tag from
+a single promote step, so one value covers them all:
 
 ```bash
-# Put your age *public* key in .sops.yaml (replace the CHANGE_ME recipient), then:
-cp k8s/overlays/prod/secrets.yaml k8s/overlays/prod/secrets.enc.yaml
-# fill in the real values, then encrypt in place (matches .sops.yaml rules):
-sops --encrypt --in-place k8s/overlays/prod/secrets.enc.yaml
-
-# point the overlay at the encrypted file and drop the plaintext one:
-#   overlays/prod/kustomization.yaml: resources: … secrets.yaml → secrets.enc.yaml
-git rm k8s/overlays/prod/secrets.yaml   # keep a secrets.example.yaml if you want docs
-
-# load the age *private* key so the cluster can decrypt:
-kubectl create namespace flux-system --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n flux-system create secret generic sops-age --from-file=age.agekey=age.agekey
+tok=$(curl -s "https://ghcr.io/token?scope=repository:andrasore/betpossum/core:pull&service=ghcr.io" | jq -r .token)
+curl -s -H "Authorization: Bearer $tok" \
+  https://ghcr.io/v2/andrasore/betpossum/core/tags/list | jq -r '.tags[]' | grep '^0\.'
 ```
 
-`clusters/prod/apps.yaml` already declares `decryption: { provider: sops,
-secretRef: sops-age }`, so once the file is encrypted Flux decrypts it after
-`kustomize build`. (Plaintext resources pass through, so leaving it unencrypted
-just applies the `CHANGE_ME` placeholders — encrypt before going live.)
-
-### 2. Install Flux (read-only)
-
-`flux install` puts the controllers on the cluster and does nothing else. The
-alternative, `flux bootstrap github`, additionally commits a
-`clusters/prod/flux-system/` directory, pushes it to `main`, and registers a
-deploy key — that is what makes bootstrap need repo write *and* admin. This flow
-skips all of it.
+### 2. Install Keel
 
 ```bash
-# Controllers only — no commit, no deploy key, no PAT. Note the absence of
-# --components-extra: the image-automation controllers stay out (see below).
-flux install
-
-# Public repo, so no auth. Name it `flux-system` in ns `flux-system`: that is
-# the sourceRef apps.yaml already references, so it resolves unchanged.
-flux create source git flux-system \
-  --url=https://github.com/andrasore/betpossum \
-  --branch=main \
-  --interval=1m
-
-# Reads the local file; writes nothing back to the repo.
-kubectl apply -f clusters/prod/apps.yaml
+helm repo add keel https://charts.keel.sh && helm repo update
+helm install keel keel/keel -n keel --create-namespace
 ```
 
-`apps.yaml` declares `decryption.secretRef: sops-age`, so the secret from step 1
-must exist before you apply it, or the `Kustomization` fails to reconcile. For a
-first trial, apply a scratch copy with the `decryption` block stripped instead.
-
-Do **not** apply [`image-automation.yaml`](../clusters/prod/image-automation.yaml)
-in this flow. Committing resolved tags back to `overlays/prod` is the entire
-function of an `ImageUpdateAutomation`, so it cannot be made read-only: it needs
-a read-write deploy key (`flux bootstrap --read-write-key` — bootstrap's key is
-read-only by default, and without the flag the controller silently never pushes)
-plus a `read:packages` PAT in a `ghcr-auth` secret for the `ImageRepository`
-scans. The manifest is kept for that path and is inert unless applied.
-
-### 3. Verify
+### 3. Apply and verify
 
 ```bash
-flux check
-flux get sources git             # flux-system → Ready
-flux get kustomizations          # betpossum → Ready
-kubectl -n betpossum get pods
+kubectl apply -k k8s/overlays/prod
+
+kubectl -n keel logs deploy/keel -f   # poll decisions land here
+# what is actually running (Keel edits the live object, so this drifts from git):
+kubectl -n betpossum get deploy -o wide   # IMAGES column
 ```
 
 ### What you give up
 
-- **Image tags stay `:latest`.** That matches the base default, and the `Always`
-  pull policy means the cluster still picks up whatever CI last published. What
-  is lost is the pinned, sortable `main-<ts>-<sha7>` tag and, with it, `git
-  revert` as rollback: a deploy becomes "whatever `:latest` resolved to at pod
-  start", which is exactly the ambiguity the tag stamping exists to remove. Fine
-  for a trial cluster, not for real prod.
-- **Rollouts are not tied to a git commit.** With `:latest` on both sides nothing
-  in git changes when the image does, so `flux get kustomizations` cannot tell
-  you which build is running — only the pod's image digest can.
-- **Flux does not manage its own upgrades.** Upgrading means re-running
-  `flux install` at a newer CLI version, rather than bumping `gotk-components.yaml`
-  in a commit.
+- **Re-applying the overlay rolls the cluster backwards.** Keel writes the new tag
+  onto the live Deployment; git still holds the old one. `kubectl apply -k`
+  re-asserts git, so an unrelated manifest change reverts *every* image to the
+  pinned tag until Keel's next poll (≤5m) rolls it forward again. If the pinned
+  tag has since been deleted from GHCR, that window is an `ImagePullBackOff`
+  instead. Refresh the `newTag` values when they drift far behind.
+- **Rollback is a cluster operation, not `git revert`.** `kubectl rollout undo` or
+  `kubectl set image` only hold until Keel's next poll rolls them forward again.
+  Keel has no "pause" policy, so a deliberate pin means dropping the annotation
+  first and restoring it afterwards:
 
-To get tag automation back *without* granting write on this repo, the usual
-answer is a separate fleet repo: bootstrap into e.g. `betpossum-fleet` holding
-`clusters/prod` and the prod overlay, with this repo as a second, read-only
-`GitRepository`. That means moving `overlays/prod` out of here — a restructuring,
-not a flag change.
+  ```bash
+  kubectl -n betpossum annotate deploy/core keel.sh/policy-      # Keel lets go
+  kubectl -n betpossum set image deploy/core core=ghcr.io/andrasore/betpossum/core:0.1.41
+  kubectl -n betpossum annotate deploy/core keel.sh/policy=major # hand it back
+  ```
+- **Secrets are manual.** Flux's kustomize-controller was the only thing
+  decrypting SOPS in-cluster, so `.sops.yaml` went with it.
+  `overlays/prod/secrets.yaml` keeps its `CHANGE_ME` placeholders — same posture
+  as the `keycloak-realm` ConfigMap. Note that it is a *tracked* file on a public
+  repo and the overlay lists it under `resources`, so it must exist for
+  `kustomize build`: either keep real values out of git
+  (`git update-index --skip-worktree`) or drop it from `resources` and create the
+  Secret out of band with `kubectl create secret`.
+- **No drift detection.** Nothing reconciles the cluster back to git, so a manual
+  `kubectl edit` sticks until someone re-applies.
+- **Keel does not manage its own upgrades** — that is `helm upgrade`.
 
 ## Local quickstart on k3s
 
