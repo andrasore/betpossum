@@ -118,7 +118,7 @@ only one Ingress host.
   `SealedSecret`s in-cluster, plus the `kubeseal` CLI locally to create them.
 
   ```bash
-  helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
+  helm repo add sealed-secrets https://bitnami.github.io/sealed-secrets
   helm install sealed-secrets sealed-secrets/sealed-secrets -n kube-system
   ```
 
