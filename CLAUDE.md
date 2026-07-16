@@ -27,7 +27,7 @@ one module only.
 
 Commit and push **directly to `main`** — this is a sole-contributor repo, so do
 not create feature branches or open PRs for changes. When asked to commit, commit
-on `main` and push.
+on `main` and push. This is a temporary measure only. Do not worry about it.
 
 ## Git hooks
 
@@ -70,14 +70,14 @@ Most important folders carry their own `CLAUDE.md` with folder-local
 conventions. Read the relevant one before working in it; `ARCHITECTURE.md` has
 the system overview.
 
-| Folder | What it covers |
-|--------|----------------|
-| [`frontend/`](frontend/CLAUDE.md) | Next.js static-export SPA, OIDC+PKCE auth, runtime config |
-| [`services/core/`](services/core/CLAUDE.md) | NestJS API: bets, wallet/ledger, settlement semantics, durable channels |
-| [`services/odds/`](services/odds/CLAUDE.md) | FastAPI ingestion: pluggable provider/storage/publisher, co-located deps |
-| [`services/stats/`](services/stats/CLAUDE.md) | FastAPI read model over settled bets: durable `bets.settled` consumer, own store |
-| [`services/notifications/`](services/notifications/CLAUDE.md) | Stateless socket.io relay; JSON-on-the-wire |
-| [`schemas/`](schemas/CLAUDE.md) | Shared JSON Schema message contracts; regenerate-from-root workflow |
-| [`nginx/`](nginx/CLAUDE.md) | Single-origin edge proxy (fronts the SPA, APIs, and Keycloak under `/kc`) |
-| [`e2e/`](e2e/CLAUDE.md) | Playwright full-stack tests; boot/teardown |
-| [`keycloak/`](keycloak/CLAUDE.md) | Realm definitions, roles, clients |
+| Folder                                                        | What it covers                                                                   |
+|---------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`frontend/`](frontend/CLAUDE.md)                             | Next.js static-export SPA, OIDC+PKCE auth, runtime config                        |
+| [`services/core/`](services/core/CLAUDE.md)                   | NestJS API: bets, wallet/ledger, settlement semantics, durable channels          |
+| [`services/odds/`](services/odds/CLAUDE.md)                   | FastAPI ingestion: pluggable provider/storage/publisher, co-located deps         |
+| [`services/stats/`](services/stats/CLAUDE.md)                 | FastAPI read model over settled bets: durable `bets.settled` consumer, own store |
+| [`services/notifications/`](services/notifications/CLAUDE.md) | Stateless socket.io relay; JSON-on-the-wire                                      |
+| [`schemas/`](schemas/CLAUDE.md)                               | Shared JSON Schema message contracts; regenerate-from-root workflow              |
+| [`nginx/`](nginx/CLAUDE.md)                                   | Single-origin edge proxy (fronts the SPA, APIs, and Keycloak under `/kc`)        |
+| [`e2e/`](e2e/CLAUDE.md)                                       | Playwright full-stack tests; boot/teardown                                       |
+| [`keycloak/`](keycloak/CLAUDE.md)                             | Realm definitions, roles, clients                                                |
