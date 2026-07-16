@@ -175,7 +175,6 @@ TODO - create a prod overlay for values modified in base/
 - `base/02-config.yaml` — `PUBLIC_HOST` and `KEYCLOAK_ISSUER_URL` → your domain.
 - the Ingress host — `base/50-ingress.yaml` (`rules` host) and the matching
   tls host in `overlays/prod/kustomization.yaml`.
-- Image references — `ghcr.io/andrasore/...` → your registry, in the `base/` manifests.
 
 The local overlay needs no edits — its secrets are committed dev values.
 
@@ -184,79 +183,38 @@ The local overlay needs no edits — its secrets are committed dev values.
 Generate the sealed file the prod overlay expects but does not ship — see
 [Secrets](#secrets-why-none-are-committed-for-prod) for why it is not in git.
 
-Pick the passwords first. Each one is used **twice** — once inside a connection
-URL that the apps read, once as a discrete var that the server reads — so set
-them as shell vars rather than typing them twice and risking a mismatch. Use only
-`[A-Za-z0-9._~-]`: they are interpolated into URLs and into `postgres-init`'s SQL,
-and anything else needs escaping that would make the two copies disagree.
-
-```bash
-DB_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
-MQ_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
-KC_DB_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
-KC_ADMIN_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
-# betting-core's confidential client secret: Keycloak admin console →
-# clients → betting-core → Credentials (or set it in realm.prod.json first).
-CORE_CLIENT_SECRET=...
-```
-
-Then seal all four Secrets into one file. `kubectl ... --dry-run=client` builds
+[`seal-secrets.sh`](seal-secrets.sh) does this. It picks the four passwords —
+each used **twice**, once inside a connection URL the apps read and once as a
+discrete var the server reads — and generates them from `[A-Za-z0-9]` so the two
+copies always match (they are interpolated into URLs and into `postgres-init`'s
+SQL, where other characters would need escaping that makes the copies disagree).
+It then builds all four app/infra Secrets, seals them into one file with
+`kubeseal`, and appends the TLS Secret. `kubectl ... --dry-run=client` builds
 each Secret without sending it anywhere; only the encrypted output is written to
 disk.
 
-```bash
-OUT=k8s/overlays/prod/sealed-secrets.yaml
-SEAL=(kubeseal --format yaml --controller-name sealed-secrets --controller-namespace kube-system)
-
-kubectl create secret generic betpossum-app-secrets -n betpossum \
-  --from-literal=DATABASE_URL="postgresql://betting:${DB_PASSWORD}@postgres:5432/betting" \
-  --from-literal=RABBITMQ_URL="amqp://betting:${MQ_PASSWORD}@rabbitmq:5672" \
-  --from-literal=KEYCLOAK_ADMIN_CLIENT_SECRET="${CORE_CLIENT_SECRET}" \
-  --from-literal=THE_ODDS_API_KEY="" \
-  --from-literal=APIFOOTBALL_API_KEY="" \
-  --dry-run=client -o yaml | "${SEAL[@]}" > "$OUT"
-
-printf -- '---\n' >> "$OUT"
-kubectl create secret generic postgres-secret -n betpossum \
-  --from-literal=POSTGRES_DB=betting \
-  --from-literal=POSTGRES_USER=betting \
-  --from-literal=POSTGRES_PASSWORD="${DB_PASSWORD}" \
-  --dry-run=client -o yaml | "${SEAL[@]}" >> "$OUT"
-
-printf -- '---\n' >> "$OUT"
-kubectl create secret generic rabbitmq-secret -n betpossum \
-  --from-literal=RABBITMQ_DEFAULT_USER=betting \
-  --from-literal=RABBITMQ_DEFAULT_PASS="${MQ_PASSWORD}" \
-  --dry-run=client -o yaml | "${SEAL[@]}" >> "$OUT"
-
-printf -- '---\n' >> "$OUT"
-kubectl create secret generic keycloak-secret -n betpossum \
-  --from-literal=KC_DB_PASSWORD="${KC_DB_PASSWORD}" \
-  --from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=admin \
-  --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD="${KC_ADMIN_PASSWORD}" \
-  --dry-run=client -o yaml | "${SEAL[@]}" >> "$OUT"
-```
-
-Seal the TLS cert the Ingress serves into the same file. Obtain a cert and
-private key for your domain (from your own CA, or an origin cert from whatever
-CDN / load balancer fronts the cluster), save them as `tls.crt` / `tls.key`, then
-seal a `kubernetes.io/tls` Secret named `betpossum-tls` — the name the Ingress
-`tls` block references:
+You must supply `CORE_CLIENT_SECRET` — betting-core's confidential client secret
+from the Keycloak admin console (clients → betting-core → Credentials, or set it
+in `realm.prod.json` first). Obtain a cert and private key for your domain (from
+your own CA, or an origin cert from whatever CDN / load balancer fronts the
+cluster) and save them as `tls.crt` / `tls.key`; the script seals them into a
+`kubernetes.io/tls` Secret named `betpossum-tls` — the name the Ingress `tls`
+block references — and warns if they are absent.
 
 ```bash
-printf -- '---\n' >> "$OUT"
-kubectl create secret tls betpossum-tls -n betpossum \
-  --cert=tls.crt --key=tls.key \
-  --dry-run=client -o yaml | "${SEAL[@]}" >> "$OUT"
+CORE_CLIENT_SECRET=... ./k8s/seal-secrets.sh
 ```
 
-Nothing renews this cert in-cluster; re-seal this block when you rotate it.
+Passwords are generated unless you export them, so re-run with a single value set
+(e.g. `DB_PASSWORD=... CORE_CLIENT_SECRET=... ./k8s/seal-secrets.sh`) to rotate
+just that one. Nothing renews the TLS cert in-cluster; re-run when you rotate it.
 
 `THE_ODDS_API_KEY` / `APIFOOTBALL_API_KEY` only matter if `ODDS_PROVIDERS` names
-those providers; leave them empty otherwise. `KC_DB_PASSWORD` is the single source
-for the `keycloak` DB role — `postgres-init` creates the role with it and Keycloak
-connects with it; there is no separate keycloak-db Secret, since one Postgres
-hosts both databases. To rotate any value, re-run the relevant block and re-apply.
+those providers; they default to empty, so export them before running only if you
+need them set. `KC_DB_PASSWORD` is the single source for the `keycloak` DB role —
+`postgres-init` creates the role with it and Keycloak connects with it; there is
+no separate keycloak-db Secret, since one Postgres hosts both databases. To rotate
+any value, re-run the script with that value exported and re-apply.
 
 > **Back up the sealing key.** It lives only in the cluster, so losing the cluster
 > means `sealed-secrets.yaml` can never be decrypted again and every credential has
