@@ -2,7 +2,7 @@
 # keycloak-realm ConfigMap; those are inherently per-environment and live in the
 # overlays (overlays/local, overlays/prod). The shared Ingress lives here too
 # (50-ingress.yaml): its annotations and routing are identical across envs, so
-# the overlays only patch the host (local) and add TLS/cert-manager (prod). The
+# the overlays only patch the host (local) and add the TLS block (prod). The
 # shared values here default to the production shape (https issuer, KC_HOSTNAME
 # scheme, prod host); the local overlay patches the spots that differ.
 apiVersion: kustomize.config.k8s.io/v1beta1

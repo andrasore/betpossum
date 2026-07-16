@@ -7,10 +7,10 @@ app tier and nginx edge run as Deployments; an Ingress fronts nginx.
 A shared base holds the env-agnostic manifests; two overlays carry the
 differences:
 
-| Overlay          | Entry point             | TLS          | Secrets                        | Realm                         |
-|------------------|-------------------------|--------------|--------------------------------|-------------------------------|
-| `overlays/local` | `http://localhost:8080` | none         | committed dev creds            | `keycloak/realm.json` (as-is) |
-| `overlays/prod`  | `https://<your-domain>` | cert-manager | sealed via kubeseal (step 4)   | `keycloak/realm.prod.json`    |
+| Overlay          | Entry point             | TLS                    | Secrets                        | Realm                         |
+|------------------|-------------------------|------------------------|--------------------------------|-------------------------------|
+| `overlays/local` | `http://localhost:8080` | none                   | committed dev creds            | `keycloak/realm.json` (as-is) |
+| `overlays/prod`  | `https://<your-domain>` | sealed cert you provide | sealed via kubeseal (step 4)   | `keycloak/realm.prod.json`    |
 
 ```bash
 kubectl apply -k k8s/overlays/local   # local HTTP stack
@@ -50,7 +50,7 @@ k8s/
   base/            # env-agnostic; defaults to the prod shape. Not applied directly.
   overlays/
     local/         # plain HTTP, dev secrets, single replicas
-    prod/          # HTTPS via Ingress + cert-manager, sealed secrets
+    prod/          # HTTPS via Ingress (sealed TLS cert), sealed secrets
 ```
 
 `base/` is intentionally not appliable on its own — it carries no Secrets,
@@ -62,7 +62,7 @@ overlay patches the two values that differ from the base default: the config
 
 ```
             client
-               │  http://localhost:8080 (local)  /  https://<domain> (prod, TLS via cert-manager)
+               │  http://localhost:8080 (local)  /  https://<domain> (prod, TLS from betpossum-tls)
         ┌──────▼──────┐
         │   Ingress   │  (NGINX Inc controller, ingressClassName: nginx)
         └──────┬──────┘
@@ -108,8 +108,12 @@ only one Ingress host.
     port to 8080 (`controller.service.httpPort.port`); on k3s the klipper
     service-LB then binds host `:8080` straight to the controller. On kind, map
     it instead via `extraPortMappings` 8080→ingress (or use `minikube tunnel`).
-- **cert-manager** (prod only) for automatic TLS. Skip if terminating TLS
-  elsewhere — drop the TLS patch in `overlays/prod/kustomization.yaml`.
+- **A TLS certificate** (prod only) for your domain, which the Ingress controller
+  serves from the `betpossum-tls` Secret (sealed in step 4). Where the cert comes
+  from is up to your deployment — your own CA, or an origin cert from whatever
+  CDN / load balancer fronts the cluster. No in-cluster issuer is needed. To
+  terminate TLS entirely upstream instead, drop the TLS patch in
+  `overlays/prod/kustomization.yaml`.
 - **Sealed Secrets** (prod only) — the controller decrypts the prod overlay's
   `SealedSecret`s in-cluster, plus the `kubeseal` CLI locally to create them.
 
@@ -166,9 +170,11 @@ kubectl -n betpossum create configmap keycloak-realm \
 
 ## 3. (prod) Fill in placeholders
 
+TODO - create a prod overlay for values modified in base/
+
 - `base/02-config.yaml` — `PUBLIC_HOST` and `KEYCLOAK_ISSUER_URL` → your domain.
 - the Ingress host — `base/50-ingress.yaml` (`rules` host) and the matching
-  tls host in `overlays/prod/kustomization.yaml`; `cluster-issuer.yaml` — the ACME `email`.
+  tls host in `overlays/prod/kustomization.yaml`.
 - Image references — `ghcr.io/andrasore/...` → your registry, in the `base/` manifests.
 
 The local overlay needs no edits — its secrets are committed dev values.
@@ -231,6 +237,21 @@ kubectl create secret generic keycloak-secret -n betpossum \
   --dry-run=client -o yaml | "${SEAL[@]}" >> "$OUT"
 ```
 
+Seal the TLS cert the Ingress serves into the same file. Obtain a cert and
+private key for your domain (from your own CA, or an origin cert from whatever
+CDN / load balancer fronts the cluster), save them as `tls.crt` / `tls.key`, then
+seal a `kubernetes.io/tls` Secret named `betpossum-tls` — the name the Ingress
+`tls` block references:
+
+```bash
+printf -- '---\n' >> "$OUT"
+kubectl create secret tls betpossum-tls -n betpossum \
+  --cert=tls.crt --key=tls.key \
+  --dry-run=client -o yaml | "${SEAL[@]}" >> "$OUT"
+```
+
+Nothing renews this cert in-cluster; re-seal this block when you rotate it.
+
 `THE_ODDS_API_KEY` / `APIFOOTBALL_API_KEY` only matter if `ODDS_PROVIDERS` names
 those providers; leave them empty otherwise. `KC_DB_PASSWORD` is the single source
 for the `keycloak` DB role — `postgres-init` creates the role with it and Keycloak
@@ -263,10 +284,10 @@ exist, then stabilizes.
 ## 6. Reach it
 
 - **local:** browse `http://localhost:8080`.
-- **prod:** point your domain at the NGINX Ingress Controller's external IP
-  (`kubectl -n nginx-ingress get svc nginx-ingress`); once DNS resolves,
-  cert-manager completes the HTTP-01 challenge and issues the cert into
-  `betpossum-tls`.
+- **prod:** point your domain's DNS at the NGINX Ingress Controller's external IP
+  (`kubectl -n nginx-ingress get svc nginx-ingress`) — or at whatever CDN / load
+  balancer fronts it. The controller serves the sealed cert from `betpossum-tls`
+  for the domain.
 
 ## 7. (optional) Observability
 

@@ -22,7 +22,7 @@ any ServiceMonitors added later, in any namespace.
 k8s/observability/
   kube-prometheus-stack.values.yaml        # shared: Prometheus/Alertmanager/Grafana + Loki datasource
   kube-prometheus-stack.local.values.yaml  # Grafana Ingress: grafana.localhost, no TLS
-  kube-prometheus-stack.prod.values.yaml   # Grafana Ingress: grafana.<domain> + cert-manager TLS
+  kube-prometheus-stack.prod.values.yaml   # Grafana Ingress: grafana.<domain> + sealed TLS cert
   loki.values.yaml                         # SingleBinary + filesystem
   alloy.values.yaml                        # DaemonSet + log-collection config
 ```
@@ -64,8 +64,9 @@ default StorageClass — already a prereq for the app (k3s ships `local-path`).
 
 For prod, swap step 2's env file for `kube-prometheus-stack.prod.values.yaml`
 and first fill in its `CHANGE_ME`s (Grafana admin password + the `grafana.<domain>`
-host, which must match the TLS host). It reuses the `letsencrypt-prod`
-ClusterIssuer from `../overlays/prod/cluster-issuer.yaml`.
+host, which must match the TLS host). TLS follows the same model as the app: seal
+a cert you provide into a `grafana-tls` Secret (see the app's `../README.md` →
+step 4).
 
 ## Reach it
 
@@ -75,8 +76,8 @@ ClusterIssuer from `../overlays/prod/cluster-issuer.yaml`.
     `.localhost` resolves to loopback in modern browsers; otherwise add
     `127.0.0.1 grafana.localhost` to `/etc/hosts`. Login `admin` /
     `betting_dev` (the committed dev password).
-  - prod: `https://grafana.<domain>` once DNS points at the controller and
-    cert-manager has issued `grafana-tls`.
+  - prod: `https://grafana.<domain>` once DNS points at the controller and the
+    sealed `grafana-tls` cert is applied.
 - **Prometheus / Alertmanager** — operational, not exposed; use port-forward:
   ```bash
   kubectl -n observability port-forward svc/kube-prometheus-stack-prometheus 9090

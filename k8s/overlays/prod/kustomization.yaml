@@ -1,6 +1,13 @@
-# Production overlay: HTTPS via Ingress + cert-manager, secrets sealed against
-# the cluster's Sealed Secrets key. Base already carries the prod values (https
-# issuer, KC_HOSTNAME scheme), so no config/keycloak patch is needed here.
+# Production overlay: HTTPS via Ingress, secrets sealed against the cluster's
+# Sealed Secrets key. Base already carries the prod values (https issuer,
+# KC_HOSTNAME scheme), so no config/keycloak patch is needed here.
+#
+# TLS model: the controller serves a TLS cert you provide, sealed into the
+# betpossum-tls Secret alongside the app secrets (see ../../README.md → "3. (prod)
+# Seal the secrets"). Where that cert comes from is deployment-specific — a cert
+# from your own CA, or an origin cert issued by whatever CDN / load balancer
+# fronts the cluster. No cert-manager / ACME is involved; nothing provisions the
+# cert in-cluster.
 #
 #   kubectl apply -k k8s/overlays/prod
 #
@@ -21,7 +28,6 @@ kind: Kustomization
 namespace: betpossum
 resources:
   - ../../base
-  - cluster-issuer.yaml
   - sealed-secrets.yaml
 
 # Image tags for the six custom images. Base pins :latest (env-agnostic); prod
@@ -74,17 +80,16 @@ patches:
           keel.sh/pollSchedule: "@every 5m"
   # The shared Ingress (base/50-ingress.yaml) carries the routing + annotations
   # and already defaults to the prod host (betpossum.example.com — CHANGE_ME,
-  # must match PUBLIC_HOST and the tls host below). Prod adds TLS: cert-manager
-  # watches this Ingress via the cluster-issuer annotation and provisions the
-  # cert into the betpossum-tls Secret.
+  # must match PUBLIC_HOST and the tls host below). Prod adds TLS: the controller
+  # serves the cert from the betpossum-tls Secret, which you populate yourself
+  # (sealed) — there is no cert-manager annotation because nothing provisions
+  # this cert in-cluster.
   - patch: |-
       apiVersion: networking.k8s.io/v1
       kind: Ingress
       metadata:
         name: betpossum
         namespace: betpossum
-        annotations:
-          cert-manager.io/cluster-issuer: letsencrypt-prod
       spec:
         tls:
           - hosts:

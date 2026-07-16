@@ -3,9 +3,9 @@
 # Ingress host is enough. Shared by both overlays; only the per-environment
 # bits live in the overlays:
 #   - local → patches the host to `localhost` (plain HTTP, no TLS).
-#   - prod  → keeps the host below and adds the cert-manager TLS block +
-#             cluster-issuer annotation (see overlays/prod/kustomization.yaml
-#             and overlays/prod/cluster-issuer.yaml).
+#   - prod  → keeps the host below and adds a TLS block pointing at the
+#             betpossum-tls Secret, which holds a cert you provide and seal
+#             (see overlays/prod/kustomization.yaml).
 #
 # Assumes the NGINX Ingress Controller (nginx/nginx-ingress, the F5/NGINX Inc
 # project — https://hub.docker.com/r/nginx/nginx-ingress/) is installed. The
