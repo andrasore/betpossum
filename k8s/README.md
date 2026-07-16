@@ -19,7 +19,29 @@ kubectl apply -k k8s/overlays/prod    # production HTTPS stack
 
 > Prod is a starting point, not a turnkey production system. Read the per-file
 > comments — several services are pinned to a single replica for correctness
-> reasons, and all prod credentials are `CHANGE_ME` placeholders.
+> reasons, and prod carries no credentials at all (see below).
+
+## Secrets (why none are committed for prod)
+
+This is a **public demo repo**, and it is meant to stay independent of any
+concrete deployment. Two consequences that explain what you find here:
+
+- **Local commits its secrets on purpose.** `overlays/local/secrets.yaml` holds
+  real values (`betting_dev`, Keycloak `admin`/`admin`) because they are
+  throwaway dev credentials for a stack that only ever answers on `localhost`.
+  Committing them is what keeps the local path a single `kubectl apply -k` with
+  nothing to fill in. Never reuse them anywhere reachable.
+- **Prod commits nothing.** There is no `secrets.yaml` and no encrypted file in
+  the prod overlay. Sealed Secrets ciphertext would be safe to publish — that is
+  the point of the tool — but it is sealed against one specific cluster's key, so
+  committing it would pin this repo to somebody's actual deployment. Instead
+  `overlays/prod/sealed-secrets.yaml` is gitignored and you generate it against
+  your own cluster in [step 4](#4-prod-seal-the-secrets).
+
+The trade-off is that a fresh clone cannot build the prod overlay: the
+kustomization lists `sealed-secrets.yaml` under `resources`, so `kustomize build`
+fails until you have sealed your own. That is deliberate — a demo repo that
+shipped a working prod secret would either be leaking one or pretending to.
 
 ## Layout
 
@@ -153,10 +175,8 @@ The local overlay needs no edits — its secrets are committed dev values.
 
 ## 4. (prod) Seal the secrets
 
-The prod overlay lists `sealed-secrets.yaml` under `resources` but no such file
-is checked in, so `kubectl apply -k` fails until you generate it. It is
-gitignored: a `SealedSecret` is encrypted against one specific cluster's key, and
-this repo stays independent of any concrete deployment.
+Generate the sealed file the prod overlay expects but does not ship — see
+[Secrets](#secrets-why-none-are-committed-for-prod) for why it is not in git.
 
 Pick the passwords first. Each one is used **twice** — once inside a connection
 URL that the apps read, once as a discrete var that the server reads — so set
