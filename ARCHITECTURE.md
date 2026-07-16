@@ -361,9 +361,12 @@ These are the known gaps and what closing each one would look like:
   cannot recover a publish that never happened. Production fix: an outbox
   table drained by a relay, or CDC.
 - **Secrets** — dev credentials (`betting_dev`, Keycloak admin/admin, the
-  `betting-core` client secret) live in plaintext in compose files and
-  manifests. Production needs a real secret store (External Secrets, SOPS,
-  or Vault) and rotated Keycloak client credentials.
+  `betting-core` client secret) live in plaintext in compose files and the local
+  overlay. The prod overlay seals its Secrets with Sealed Secrets (`k8s/README.md`
+  → step 4), which keeps ciphertext out of the repo but offers no rotation, no
+  audit trail, and no dynamic credentials — once decrypted they are ordinary
+  Secrets in etcd. A deployment needing those wants External Secrets over a cloud
+  store, or Vault; either way, rotated Keycloak client credentials.
 - **Single points of scale** — the odds poller and the notifications relay are
   intentionally single-replica; their manifests (`k8s/base/31-odds.yaml`,
   `32-notifications.yaml`) document exactly why and what scaling them would

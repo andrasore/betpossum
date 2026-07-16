@@ -1,8 +1,14 @@
-# Production overlay: HTTPS via Ingress + cert-manager, CHANGE_ME secrets filled
-# out of band. Base already carries the prod values (https issuer, KC_HOSTNAME
-# scheme), so no config/keycloak patch is needed here.
+# Production overlay: HTTPS via Ingress + cert-manager, secrets sealed against
+# the cluster's Sealed Secrets key. Base already carries the prod values (https
+# issuer, KC_HOSTNAME scheme), so no config/keycloak patch is needed here.
 #
 #   kubectl apply -k k8s/overlays/prod
+#
+# sealed-secrets.yaml is generated locally by kubeseal and is gitignored: it is
+# sealed against one specific cluster's key, and this repo stays independent of
+# any concrete deployment. It is listed under `resources`, so `kustomize build`
+# fails until you generate it — see ../../README.md → "3. (prod) Seal the
+# secrets".
 #
 # Before applying, create the keycloak-realm ConfigMap out of band from a
 # production realm (copy keycloak/realm.json -> realm.prod.json and swap the
@@ -16,7 +22,7 @@ namespace: betpossum
 resources:
   - ../../base
   - cluster-issuer.yaml
-  - secrets.yaml
+  - sealed-secrets.yaml
 
 # Image tags for the six custom images. Base pins :latest (env-agnostic); prod
 # overrides them here so the manifest names one identifiable build. `:latest`

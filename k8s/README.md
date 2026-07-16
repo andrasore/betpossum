@@ -10,7 +10,7 @@ differences:
 | Overlay          | Entry point             | TLS          | Secrets                        | Realm                         |
 |------------------|-------------------------|--------------|--------------------------------|-------------------------------|
 | `overlays/local` | `http://localhost:8080` | none         | committed dev creds            | `keycloak/realm.json` (as-is) |
-| `overlays/prod`  | `https://<your-domain>` | cert-manager | `CHANGE_ME` (fill out of band) | `keycloak/realm.prod.json`    |
+| `overlays/prod`  | `https://<your-domain>` | cert-manager | sealed via kubeseal (step 4)   | `keycloak/realm.prod.json`    |
 
 ```bash
 kubectl apply -k k8s/overlays/local   # local HTTP stack
@@ -28,7 +28,7 @@ k8s/
   base/            # env-agnostic; defaults to the prod shape. Not applied directly.
   overlays/
     local/         # plain HTTP, dev secrets, single replicas
-    prod/          # HTTPS via Ingress + cert-manager, CHANGE_ME secrets
+    prod/          # HTTPS via Ingress + cert-manager, sealed secrets
 ```
 
 `base/` is intentionally not appliable on its own — it carries no Secrets,
@@ -88,6 +88,16 @@ only one Ingress host.
     it instead via `extraPortMappings` 8080→ingress (or use `minikube tunnel`).
 - **cert-manager** (prod only) for automatic TLS. Skip if terminating TLS
   elsewhere — drop the TLS patch in `overlays/prod/kustomization.yaml`.
+- **Sealed Secrets** (prod only) — the controller decrypts the prod overlay's
+  `SealedSecret`s in-cluster, plus the `kubeseal` CLI locally to create them.
+
+  ```bash
+  helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
+  helm install sealed-secrets sealed-secrets/sealed-secrets -n kube-system
+  ```
+
+  The chart's release name sets the controller name that `kubeseal` looks for;
+  `sealed-secrets` in `kube-system` is what step 4 assumes.
 - A cluster with a default StorageClass (or set `storageClassName` in each
   StatefulSet's `volumeClaimTemplates`).
 - The cluster must be able to reach `ghcr.io` to pull the app images (they are
@@ -134,8 +144,6 @@ kubectl -n betpossum create configmap keycloak-realm \
 
 ## 3. (prod) Fill in placeholders
 
-- `overlays/prod/secrets.yaml` — every `CHANGE_ME` (keep the URL/password pairs
-  in sync; see the consistency rule in the file header).
 - `base/02-config.yaml` — `PUBLIC_HOST` and `KEYCLOAK_ISSUER_URL` → your domain.
 - the Ingress host — `base/50-ingress.yaml` (`rules` host) and the matching
   tls host in `overlays/prod/kustomization.yaml`; `cluster-issuer.yaml` — the ACME `email`.
@@ -143,7 +151,87 @@ kubectl -n betpossum create configmap keycloak-realm \
 
 The local overlay needs no edits — its secrets are committed dev values.
 
-## 4. Apply
+## 4. (prod) Seal the secrets
+
+The prod overlay lists `sealed-secrets.yaml` under `resources` but no such file
+is checked in, so `kubectl apply -k` fails until you generate it. It is
+gitignored: a `SealedSecret` is encrypted against one specific cluster's key, and
+this repo stays independent of any concrete deployment.
+
+Pick the passwords first. Each one is used **twice** — once inside a connection
+URL that the apps read, once as a discrete var that the server reads — so set
+them as shell vars rather than typing them twice and risking a mismatch. Use only
+`[A-Za-z0-9._~-]`: they are interpolated into URLs and into `postgres-init`'s SQL,
+and anything else needs escaping that would make the two copies disagree.
+
+```bash
+DB_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
+MQ_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
+KC_DB_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
+KC_ADMIN_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
+# betting-core's confidential client secret: Keycloak admin console →
+# clients → betting-core → Credentials (or set it in realm.prod.json first).
+CORE_CLIENT_SECRET=...
+```
+
+Then seal all four Secrets into one file. `kubectl ... --dry-run=client` builds
+each Secret without sending it anywhere; only the encrypted output is written to
+disk.
+
+```bash
+OUT=k8s/overlays/prod/sealed-secrets.yaml
+SEAL=(kubeseal --format yaml --controller-name sealed-secrets --controller-namespace kube-system)
+
+kubectl create secret generic betpossum-app-secrets -n betpossum \
+  --from-literal=DATABASE_URL="postgresql://betting:${DB_PASSWORD}@postgres:5432/betting" \
+  --from-literal=RABBITMQ_URL="amqp://betting:${MQ_PASSWORD}@rabbitmq:5672" \
+  --from-literal=KEYCLOAK_ADMIN_CLIENT_SECRET="${CORE_CLIENT_SECRET}" \
+  --from-literal=THE_ODDS_API_KEY="" \
+  --from-literal=APIFOOTBALL_API_KEY="" \
+  --dry-run=client -o yaml | "${SEAL[@]}" > "$OUT"
+
+printf -- '---\n' >> "$OUT"
+kubectl create secret generic postgres-secret -n betpossum \
+  --from-literal=POSTGRES_DB=betting \
+  --from-literal=POSTGRES_USER=betting \
+  --from-literal=POSTGRES_PASSWORD="${DB_PASSWORD}" \
+  --dry-run=client -o yaml | "${SEAL[@]}" >> "$OUT"
+
+printf -- '---\n' >> "$OUT"
+kubectl create secret generic rabbitmq-secret -n betpossum \
+  --from-literal=RABBITMQ_DEFAULT_USER=betting \
+  --from-literal=RABBITMQ_DEFAULT_PASS="${MQ_PASSWORD}" \
+  --dry-run=client -o yaml | "${SEAL[@]}" >> "$OUT"
+
+printf -- '---\n' >> "$OUT"
+kubectl create secret generic keycloak-secret -n betpossum \
+  --from-literal=KC_DB_PASSWORD="${KC_DB_PASSWORD}" \
+  --from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+  --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD="${KC_ADMIN_PASSWORD}" \
+  --dry-run=client -o yaml | "${SEAL[@]}" >> "$OUT"
+```
+
+`THE_ODDS_API_KEY` / `APIFOOTBALL_API_KEY` only matter if `ODDS_PROVIDERS` names
+those providers; leave them empty otherwise. `KC_DB_PASSWORD` is the single source
+for the `keycloak` DB role — `postgres-init` creates the role with it and Keycloak
+connects with it; there is no separate keycloak-db Secret, since one Postgres
+hosts both databases. To rotate any value, re-run the relevant block and re-apply.
+
+> **Back up the sealing key.** It lives only in the cluster, so losing the cluster
+> means `sealed-secrets.yaml` can never be decrypted again and every credential has
+> to be regenerated. Export it once and store it offline — this file *is* the
+> private key, so treat it like root credentials and never commit it:
+>
+> ```bash
+> kubectl -n kube-system get secret \
+>   -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > sealed-secrets-key.yaml
+> ```
+>
+> Restore it into a rebuilt cluster (`kubectl apply -f`, then restart the
+> controller) and the existing sealed file keeps working; otherwise re-seal from
+> scratch.
+
+## 5. Apply
 
 ```bash
 kubectl apply -k k8s/overlays/local    # or .../prod
@@ -152,7 +240,7 @@ kubectl apply -k k8s/overlays/local    # or .../prod
 nginx may `CrashLoopBackOff` for a few seconds until the upstream Services
 exist, then stabilizes.
 
-## 5. Reach it
+## 6. Reach it
 
 - **local:** browse `http://localhost:8080`.
 - **prod:** point your domain at the NGINX Ingress Controller's external IP
@@ -160,7 +248,7 @@ exist, then stabilizes.
   cert-manager completes the HTTP-01 challenge and issues the cert into
   `betpossum-tls`.
 
-## 6. (optional) Observability
+## 7. (optional) Observability
 
 A Helm-based metrics + logs platform — kube-prometheus-stack (Prometheus +
 Grafana + Alertmanager), Loki (log store), and Alloy (log collector) — installs
@@ -258,14 +346,11 @@ kubectl -n betpossum get deploy -o wide   # IMAGES column
   kubectl -n betpossum set image deploy/core core=ghcr.io/andrasore/betpossum/core:0.1.41
   kubectl -n betpossum annotate deploy/core keel.sh/policy=major # hand it back
   ```
-- **Secrets are manual.** Flux's kustomize-controller was the only thing
-  decrypting SOPS in-cluster, so `.sops.yaml` went with it.
-  `overlays/prod/secrets.yaml` keeps its `CHANGE_ME` placeholders — same posture
-  as the `keycloak-realm` ConfigMap. Note that it is a *tracked* file on a public
-  repo and the overlay lists it under `resources`, so it must exist for
-  `kustomize build`: either keep real values out of git
-  (`git update-index --skip-worktree`) or drop it from `resources` and create the
-  Secret out of band with `kubectl create secret`.
+- **Secrets are sealed locally, not in git.** The Sealed Secrets controller
+  decrypts in-cluster, but nothing generates `sealed-secrets.yaml` for you — it is
+  gitignored (sealed to one cluster's key), so a fresh clone cannot
+  `kustomize build` the prod overlay until you run step 4. Same posture as the
+  `keycloak-realm` ConfigMap: cluster-specific, created out of band.
 - **No drift detection.** Nothing reconciles the cluster back to git, so a manual
   `kubectl edit` sticks until someone re-applies.
 - **Keel does not manage its own upgrades** — that is `helm upgrade`.
