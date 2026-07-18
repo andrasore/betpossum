@@ -86,7 +86,7 @@ jobs:
         if: github.ref != 'refs/heads/main'
         run: >
           docker compose -f docker-compose.yml -f docker-compose.ci.yml
-          build core odds notifications stats nginx keycloak
+          build core odds notifications stats nginx keycloak bots
 
       - name: Log in to GHCR
         if: github.ref == 'refs/heads/main'
@@ -109,8 +109,8 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.push.yml build core odds notifications stats nginx keycloak
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.push.yml push core odds notifications stats nginx keycloak
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.push.yml build core odds notifications stats nginx keycloak bots
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml -f docker-compose.push.yml push core odds notifications stats nginx keycloak bots
 
   # Boot the full stack from the just-built images and drive it with Playwright.
   # global-setup runs `compose up -d --build`; with CI set it layers in
@@ -202,7 +202,7 @@ jobs:
           #
           # Registry-side copy — no rebuild.
           release="0.1.${RUN_NUMBER}"
-          for name in core odds notifications stats frontend keycloak; do
+          for name in core odds notifications stats frontend keycloak bots; do
             docker buildx imagetools create \
               -t "$repo/$name:latest" \
               -t "$repo/$name:$release" \

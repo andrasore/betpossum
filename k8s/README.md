@@ -131,16 +131,22 @@ only one Ingress host.
 
 ## 1. Images
 
-The six app images (`core`, `odds`, `notifications`, `stats`, `frontend`,
-`keycloak`) are built and published to `ghcr.io/andrasore/betpossum/*`
+The seven app images (`core`, `odds`, `notifications`, `stats`, `frontend`,
+`keycloak`, `bots`) are built and published to `ghcr.io/andrasore/betpossum/*`
 automatically by CI on the PR flow — there is nothing to build or push by
 hand for a deploy. The manifests reference the `:latest` tag with the default
 `Always` pull policy, so the cluster pulls the current published image.
 
 The images come from the root multi-stage `Dockerfile` targets (`core`, `odds`,
-`notifications`, `stats`, `frontend`) and `keycloak/Dockerfile`. You can build them
-locally for inspection (`docker build --target core -t betpossum-core .`), but
-publishing is CI-owned — don't `docker push` them manually.
+`notifications`, `stats`, `frontend`, `bots`) and `keycloak/Dockerfile`. You can
+build them locally for inspection (`docker build --target core -t betpossum-core .`),
+but publishing is CI-owned — don't `docker push` them manually.
+
+`bots` is the synthetic play-data generator (`k8s/base/34-bots.yaml`): it
+provisions bot users via the Keycloak admin API, funds them through the app
+admin (`bob`), and places bets through the nginx origin so the leaderboard stays
+active. Its master-admin creds come from the `keycloak-secret` Secret; keep it at
+`replicas: 1` (it is not horizontally scalable).
 
 ## 2. Create the keycloak-realm ConfigMap
 
@@ -301,8 +307,8 @@ PAT.
 `overlays/prod/kustomization.yaml` ships `newTag: 0.1.0` as a placeholder, and
 **that tag does not exist** — applying it as-is lands the pods in
 `ImagePullBackOff`. Keel needs a real semver on the Deployment to compare against,
-so set the six tags to a published one first. All six images get the same tag from
-a single promote step, so one value covers them all:
+so set the seven tags to a published one first. All seven images get the same tag
+from a single promote step, so one value covers them all:
 
 ```bash
 tok=$(curl -s "https://ghcr.io/token?scope=repository:andrasore/betpossum/core:pull&service=ghcr.io" | jq -r .token)

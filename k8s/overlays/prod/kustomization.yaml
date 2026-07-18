@@ -30,14 +30,14 @@ resources:
   - ../../base
   - sealed-secrets.yaml
 
-# Image tags for the six custom images. Base pins :latest (env-agnostic); prod
+# Image tags for the seven custom images. Base pins :latest (env-agnostic); prod
 # overrides them here so the manifest names one identifiable build. `:latest`
 # cannot be used in prod: Keel decides what "newer" means by parsing the tag on
 # the live Deployment as semver, and `latest` gives it nothing to compare.
 # `frontend` is the nginx Deployment's image.
 #
-# CI stamps all six images with the same tag in one promote step, so the six
-# tags below move together.
+# CI stamps all seven images with the same tag in one promote step, so the tags
+# below move together.
 #
 # CHANGE_ME: set these to a semver tag CI has actually published — a tag that
 # does not exist in GHCR lands the pods in ImagePullBackOff. See ../../README.md
@@ -57,15 +57,17 @@ images:
     newTag: 0.1.0
   - name: ghcr.io/andrasore/betpossum/keycloak
     newTag: 0.1.0
+  - name: ghcr.io/andrasore/betpossum/bots
+    newTag: 0.1.0
 
 patches:
-  # Hand the six CI-built images to Keel: it polls GHCR and patches the newest
+  # Hand the seven CI-built images to Keel: it polls GHCR and patches the newest
   # published semver straight onto the live Deployment. `major` means "accept any
   # newer semver" — it is not limited to major bumps. `patch` would also work
   # while every release is a 0.1.x bump, but it silently ignores anything outside
   # the series, so a hand-bump to 0.2.0 would stop deploys with no error.
   #
-  # This targets every Deployment in the stack, which is exactly the six CI-built
+  # This targets every Deployment in the stack, which is exactly the seven CI-built
   # ones — postgres/rabbitmq/tigerbeetle are StatefulSets on upstream tags, so
   # they are untouched. A third-party Deployment added later would need excluding
   # here. Annotations are created wholesale because no base Deployment sets any.

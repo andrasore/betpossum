@@ -19,5 +19,6 @@ resources:
   - 31-odds.yaml
   - 32-notifications.yaml
   - 33-stats.yaml
+  - 34-bots.yaml
   - 40-nginx.yaml
   - 50-ingress.yaml

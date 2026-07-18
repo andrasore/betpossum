@@ -1,0 +1,59 @@
+# Dev-data generator. Provisions bot users through the Keycloak admin API, funds
+# them via the app admin (bob), and places random bets forever through the
+# single nginx origin so the leaderboard/stats have live activity. It only
+# places bets — real providers resolve events.
+#
+# MUST NOT scale: unlike the app services, bots is stateful at boot — each
+# replica independently provisions its own bot pool and would create duplicate
+# users and double the bet volume. Keep replicas: 1.
+#
+# No Service and no probes: bots exposes no inbound port (outbound HTTP only), so
+# nothing routes to it. It self-gates on stack readiness at startup and, like the
+# compose service, relies on restartPolicy: Always to recover from failure.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bots
+  namespace: betpossum
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bots
+  template:
+    metadata:
+      labels:
+        app: bots
+    spec:
+      containers:
+        - name: bots
+          image: ghcr.io/andrasore/betpossum/bots:latest   # Dockerfile target: bots
+          # Explicit env (not the shared betpossum-config/-app-secrets envFrom):
+          # the bot vars are disjoint from what those carry.
+          env:
+            - name: BOT_BASE_URL
+              value: http://nginx           # in-cluster nginx Service (:80); exposes /api, /odds, /kc
+            - name: ADMIN_USER
+              value: bob
+            - name: ADMIN_PASSWORD
+              value: password               # must match bob in keycloak/realm.json (committed dev cred)
+            - name: BOT_COUNT
+              value: "10"
+            # Keycloak master admin, reused from the keycloak-secret Secret
+            # (committed dev values locally, sealed random password in prod).
+            - name: KC_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KC_BOOTSTRAP_ADMIN_USERNAME
+            - name: KC_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KC_BOOTSTRAP_ADMIN_PASSWORD
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
