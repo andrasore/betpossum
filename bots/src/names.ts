@@ -1,5 +1,8 @@
-// Randomized, readable handles so a freshly-provisioned pool of bots shows up on
-// the leaderboard with varied names rather than bot01/bot02/…
+// Bot identities. The Keycloak username/email are deterministic (bot0, bot1, …)
+// so the service re-attaches to the same users on restart instead of
+// provisioning a fresh pool (which would orphan the old bots and mint new play
+// money). The display first/last name stays a random silly handle — it's fixed
+// in Keycloak at first creation, so restarts keep whatever each bot was born as.
 
 const ADJECTIVES = [
   "Lucky",
@@ -42,17 +45,12 @@ export interface GeneratedName {
   email: string;
 }
 
-// `suffix` (e.g. the bot's index) keeps usernames/emails unique within a run
-// even if the adjective/animal pair repeats.
-export function generateName(suffix: number): GeneratedName {
-  const firstName = pick(ADJECTIVES);
-  const lastName = pick(ANIMALS);
-  const rand = Math.floor(Math.random() * 1000);
-  const username = `${firstName}${lastName}${suffix}${rand}`.toLowerCase();
+export function generateName(index: number): GeneratedName {
+  const username = `bot${index}`;
   return {
     username,
-    firstName,
-    lastName,
+    firstName: pick(ADJECTIVES),
+    lastName: pick(ANIMALS),
     email: `${username}@bots.betpossum.local`,
   };
 }

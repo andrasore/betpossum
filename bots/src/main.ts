@@ -7,9 +7,9 @@ import { getBalance, getOdds, setBalance } from "./api.js";
 import { Bot } from "./bot.js";
 import { type Config, loadConfig } from "./config.js";
 import {
-  createBotUser,
   decodeSub,
   ensureBotsClient,
+  ensureBotUser,
   getMasterToken,
   login,
   type Session,
@@ -29,9 +29,11 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
-// Create a bot user, sign it in, lazily create its Core user/wallet (the warm-up
-// balance read), then fund it. Order matters: the wallet must exist before the
-// admin can set its balance.
+// Ensure a bot user exists, sign it in, lazily create its Core user/wallet (the
+// warm-up balance read), then fund it. Order matters: the wallet must exist
+// before the admin can set its balance. Fund only freshly-created bots — on a
+// restart existing bots are reused and keep their current balance (setBalance is
+// absolute), so restarts neither reset play money nor mint more.
 async function provisionBot(
   cfg: Config,
   masterToken: string,
@@ -39,13 +41,21 @@ async function provisionBot(
   index: number,
 ): Promise<Bot> {
   const name = generateName(index);
-  await createBotUser(cfg, masterToken, name);
+  const created = await ensureBotUser(cfg, masterToken, name);
   const session = await login(cfg, name.username, cfg.botPassword);
   const sub = decodeSub(session.accessToken);
   // Warm-up: first authed call lazily creates the user + TigerBeetle wallet.
-  await getBalance(cfg, session.accessToken);
-  await setBalance(cfg, adminToken, sub, cfg.startingBalance);
-  return new Bot(name.username, sub, session, cfg.startingBalance);
+  const balance = await getBalance(cfg, session.accessToken);
+  if (created) {
+    await setBalance(cfg, adminToken, sub, cfg.startingBalance);
+  }
+  const startingBalance = created ? cfg.startingBalance : balance;
+  console.log(
+    created
+      ? `provisioned ${name.username} (funded $${cfg.startingBalance})`
+      : `reused ${name.username} ($${balance.toFixed(2)})`,
+  );
+  return new Bot(name.username, sub, session, startingBalance);
 }
 
 async function betTick(cfg: Config, bots: Bot[]): Promise<void> {
@@ -106,7 +116,6 @@ async function main(): Promise<void> {
       i,
     );
     bots.push(bot);
-    console.log(`provisioned ${bot.username} (funded $${cfg.startingBalance})`);
   }
 
   let running = true;

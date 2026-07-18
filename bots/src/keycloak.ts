@@ -104,13 +104,28 @@ export async function ensureBotsClient(
   }
 }
 
-// Create one enabled realm user with an inline (non-temporary) password. The
-// realm's default-roles-betting already grants the `user` role.
-export async function createBotUser(
+// Idempotently create one enabled realm user with an inline (non-temporary)
+// password. Returns true if it created the user, false if it already existed, so
+// a restart reuses the same bots instead of minting a fresh pool. The realm's
+// default-roles-betting already grants the `user` role.
+export async function ensureBotUser(
   cfg: Config,
   masterToken: string,
   name: GeneratedName,
-): Promise<void> {
+): Promise<boolean> {
+  const lookup = await fetch(
+    `${adminBase(cfg)}/users?username=${encodeURIComponent(name.username)}&exact=true`,
+    { headers: { Authorization: `Bearer ${masterToken}` } },
+  );
+  if (!lookup.ok) {
+    throw new Error(
+      `User lookup failed (${lookup.status}): ${await lookup.text()}`,
+    );
+  }
+  const existing = (await lookup.json()) as unknown[];
+  if (existing.length > 0) {
+    return false;
+  }
   const res = await fetch(`${adminBase(cfg)}/users`, {
     method: "POST",
     headers: {
@@ -132,6 +147,7 @@ export async function createBotUser(
   if (!res.ok) {
     throw new Error(`User create failed (${res.status}): ${await res.text()}`);
   }
+  return true;
 }
 
 export async function login(
