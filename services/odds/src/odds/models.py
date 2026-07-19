@@ -63,7 +63,7 @@ class CanonicalEvent(BaseModel):
     home_team_key: str | None = None
     away_team_key: str | None = None
 
-    # Canonical display names, populated on the read path (GET /odds) by joining
+    # Canonical display names, populated on the read path (GET /odds/events) by joining
     # the linked sport/league/team rows. None when an entity link is unresolved;
     # callers fall back to the raw `sport`/`home_team`/`away_team`. `league_name`
     # above doubles as the canonical league name on reads. Not persisted here.
@@ -82,7 +82,7 @@ class CanonicalEvent(BaseModel):
 class CanonicalSport(BaseModel):
     """A canonical sport: its stable slug and human-readable title.
 
-    `slug` is what GET /odds filters on (`?sport=<slug>`, matched against
+    `slug` is what GET /odds/events filters on (`?sport=<slug>`, matched against
     `odds_current.sport_slug`); `title` is the display label.
     """
 
@@ -93,7 +93,7 @@ class CanonicalSport(BaseModel):
 class CanonicalLeague(BaseModel):
     """A canonical league: its stable id, name, and the sport it belongs to.
 
-    `id` is what GET /odds filters on (`?league=<id>`, matched against
+    `id` is what GET /odds/events filters on (`?league=<id>`, matched against
     `odds_current.league_id`); `name` is the display label. `sport_slug` ties
     the league to its parent sport (a league belongs to exactly one sport).
     """

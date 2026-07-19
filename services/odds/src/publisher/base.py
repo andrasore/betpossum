@@ -62,7 +62,7 @@ class OddsPublisher:
             return
         home_odds, away_odds, draw_odds = projected
         # The wire event is a delta: just the changing odds, keyed by event id.
-        # Static identity and canonical names ride the GET /odds hydrate; the
+        # Static identity and canonical names ride the GET /odds/events hydrate; the
         # frontend merges this tick onto the already-hydrated event.
         odds_updated = OddsUpdatedEvent(
             eventId=event.event_id,

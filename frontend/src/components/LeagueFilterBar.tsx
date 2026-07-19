@@ -13,7 +13,7 @@ type LeagueFilterBarProps = {
 
 // Single-select chips that filter the dashboard by canonical league, sitting
 // under the sport bar. The "All" chip clears the filter; selecting a chip emits
-// the whole league (what GET /odds filters on is its id) so the dashboard can
+// the whole league (what GET /odds/events filters on is its id) so the dashboard can
 // also auto-select the league's parent sport. The chip label is the league name.
 export function LeagueFilterBar({
   leagues,

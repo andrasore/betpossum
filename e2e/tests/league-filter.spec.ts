@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // The dashboard league filter bar, driven anonymously (public — no auth, no
 // socket). It sits under the sport bar. This spec covers the integration
-// boundary: selecting a league re-hydrates GET /odds?sport=<slug>&league=<id>
+// boundary: selecting a league re-hydrates GET /odds/events?sport=<slug>&league=<id>
 // server-side, and switching the sport re-scopes the league bar to that sport's
 // leagues (a server fetch). The pure client auto-sync of the chips' pressed
 // state is covered by useDashboardFilters.test.ts.
@@ -21,7 +21,7 @@ test("anonymous visitor filters by league and the sport bar auto-syncs", async (
   await page.goto("/dashboard");
   await page.waitForURL("**/dashboard");
 
-  // The bar hydrates from /odds/leagues and the board from /odds.
+  // The bar hydrates from /odds/leagues and the board from /odds/events.
   await expect(page.getByTestId("league-filter-bar")).toBeVisible({
     timeout: 15_000,
   });

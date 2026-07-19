@@ -12,8 +12,8 @@ type SportFilterBarProps = {
 };
 
 // Single-select chips that filter the dashboard by canonical sport. The "All"
-// chip clears the filter; selecting a chip emits its sport slug (what GET /odds
-// filters on), while the chip label is the sport's display name.
+// chip clears the filter; selecting a chip emits its sport slug (what GET
+// /odds/events filters on), while the chip label is the sport's display name.
 export function SportFilterBar({
   sports,
   selected,

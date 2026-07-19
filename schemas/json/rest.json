@@ -11,7 +11,7 @@
     },
     "OddsEvent": {
       "title": "OddsEvent",
-      "description": "Odds Service -> Frontend (GET /odds). A market with its head-to-head odds plus the canonical identity/display names from the entity join. This is the hydrate the live `OddsUpdatedEvent` delta is merged onto.",
+      "description": "Odds Service -> Frontend (GET /odds/events). A market with its head-to-head odds plus the canonical identity/display names from the entity join. This is the hydrate the live `OddsUpdatedEvent` delta is merged onto.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -73,7 +73,7 @@
         "leagueId": {
           "type": ["integer", "null"],
           "minimum": 1,
-          "description": "Canonical league id (what GET /odds filters on, `?league=<id>`); null/absent when the league link is unresolved."
+          "description": "Canonical league id (what GET /odds/events filters on, `?league=<id>`); null/absent when the league link is unresolved."
         },
         "leagueName": {
           "type": ["string", "null"],
@@ -91,7 +91,7 @@
     },
     "Sport": {
       "title": "Sport",
-      "description": "Odds Service -> Frontend (GET /odds/sports). A canonical sport for the dashboard filter bar: `slug` is what GET /odds filters on (`?sport=<slug>`); `name` is the chip label.",
+      "description": "Odds Service -> Frontend (GET /odds/sports). A canonical sport for the dashboard filter bar: `slug` is what GET /odds/events filters on (`?sport=<slug>`); `name` is the chip label.",
       "type": "object",
       "additionalProperties": false,
       "required": ["slug", "name"],
@@ -102,7 +102,7 @@
     },
     "League": {
       "title": "League",
-      "description": "Odds Service -> Frontend (GET /odds/leagues). A canonical league for the dashboard's league filter bar: `id` is what GET /odds filters on (`?league=<id>`); `name` is the chip label; `sportSlug` ties the league to its parent sport.",
+      "description": "Odds Service -> Frontend (GET /odds/leagues). A canonical league for the dashboard's league filter bar: `id` is what GET /odds/events filters on (`?league=<id>`); `name` is the chip label; `sportSlug` ties the league to its parent sport.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "name", "sportSlug"],

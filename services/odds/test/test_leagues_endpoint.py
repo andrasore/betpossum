@@ -87,7 +87,7 @@ async def test_odds_filtered_by_league_id(storage: PostgresStorage) -> None:
     async with _client(storage) as client:
         leagues = (await client.get("/odds/leagues")).json()
         epl_id = next(lg["id"] for lg in leagues if lg["name"] == "Premier League")
-        resp = await client.get("/odds", params={"league": epl_id})
+        resp = await client.get("/odds/events", params={"league": epl_id})
 
     assert resp.status_code == 200
     events = resp.json()

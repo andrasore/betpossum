@@ -59,7 +59,9 @@ async def test_resolve_mock_event_succeeds(storage: PostgresStorage) -> None:
     await storage.record(_event("mock"))
     publisher = FakePublisher()
     async with _client(storage, publisher) as client:
-        resp = await client.post("/odds/mock:e1/result", json={"outcome": "home"})
+        resp = await client.post(
+            "/odds/events/mock:e1/result", json={"outcome": "home"}
+        )
 
     assert resp.status_code == 201
     assert resp.json()["outcome"] == "home"
@@ -76,7 +78,9 @@ async def test_resolve_non_mock_event_rejected(
     await storage.record(_event(origin))
     publisher = FakePublisher()
     async with _client(storage, publisher) as client:
-        resp = await client.post(f"/odds/{origin}:e1/result", json={"outcome": "home"})
+        resp = await client.post(
+            f"/odds/events/{origin}:e1/result", json={"outcome": "home"}
+        )
 
     assert resp.status_code == 409
     # Nothing recorded, nothing published.
@@ -88,7 +92,9 @@ async def test_resolve_non_mock_event_rejected(
 async def test_resolve_missing_event_404(storage: PostgresStorage) -> None:
     publisher = FakePublisher()
     async with _client(storage, publisher) as client:
-        resp = await client.post("/odds/mock:gone/result", json={"outcome": "home"})
+        resp = await client.post(
+            "/odds/events/mock:gone/result", json={"outcome": "home"}
+        )
 
     assert resp.status_code == 404
     assert publisher.published == []

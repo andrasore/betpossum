@@ -34,7 +34,7 @@ function authHeaders(token: string): Record<string, string> {
 }
 
 export async function getOdds(cfg: Config): Promise<OddsEvent[]> {
-  const res = await fetch(`${cfg.baseUrl}/odds`);
+  const res = await fetch(`${cfg.baseUrl}/odds/events`);
   if (!res.ok) {
     throw await asError("Fetch odds failed", res);
   }

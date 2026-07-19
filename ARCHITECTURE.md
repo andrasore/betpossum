@@ -146,7 +146,7 @@ external providers. Responsibilities:
 - Persists current odds to Postgres (the flexible model as JSONB, plus the
   projected 3-way columns the wire/HTTP contract reads)
 - Publishes `OddsUpdatedEvent` messages to the `odds.updated` fanout exchange
-- Serves the public `GET /odds` HTTP endpoint used by the frontend to
+- Serves the public `GET /odds/events` HTTP endpoint used by the frontend to
   hydrate the live markets board on first paint (live updates after that
   arrive via the notifications socket)
 
@@ -227,7 +227,7 @@ The frontend talks to Core and Odds over HTTP and to Notifications over a
 socket.io connection — all through the Nginx proxy on a single origin.
 Authenticated calls go to `/api/*` (proxied to Core) with the Keycloak
 access token attached client-side as `Authorization: Bearer …` from the
-SPA's in-memory store. The `/odds` hydrate is public and hits the gateway
+SPA's in-memory store. The `/odds/events` hydrate is public and hits the gateway
 without auth.
 
 Each exchange is a `fanout` type. Subscribers declare their own anonymous

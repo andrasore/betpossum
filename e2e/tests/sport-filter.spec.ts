@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // The dashboard sport filter bar, driven anonymously (it's public — no auth, no
 // socket). This spec covers the integration boundary only: selecting a chip
-// re-hydrates GET /odds?sport=<canonical-slug> on the server and replaces the
+// re-hydrates GET /odds/events?sport=<canonical-slug> on the server and replaces the
 // board. The chips' pressed-state bookkeeping is covered by
 // SportFilterBar.test.tsx; here we assert on which canonical mock fixtures are
 // present rather than on brittle exact counts. The mock provider seeds three
@@ -18,7 +18,7 @@ test("anonymous visitor filters the dashboard board by canonical sport", async (
   await page.goto("/dashboard");
   await page.waitForURL("**/dashboard");
 
-  // The bar hydrates from /odds/sports and the board from /odds.
+  // The bar hydrates from /odds/sports and the board from /odds/events.
   await expect(page.getByTestId("sport-filter-bar")).toBeVisible({
     timeout: 15_000,
   });

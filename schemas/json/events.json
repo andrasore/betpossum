@@ -5,7 +5,7 @@
   "$defs": {
     "OddsUpdatedEvent": {
       "title": "OddsUpdatedEvent",
-      "description": "Odds Service -> Notifications. A live odds tick: the delta for one event, correlated by `eventId`. Static identity (sport, teams, origin) and canonical display names live on the GET /odds hydrate, not here — the frontend merges this onto the already-hydrated event.",
+      "description": "Odds Service -> Notifications. A live odds tick: the delta for one event, correlated by `eventId`. Static identity (sport, teams, origin) and canonical display names live on the GET /odds/events hydrate, not here — the frontend merges this onto the already-hydrated event.",
       "type": "object",
       "additionalProperties": false,
       "required": [

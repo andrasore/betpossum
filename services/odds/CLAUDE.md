@@ -29,7 +29,7 @@ a fake one. `schema:gen` regenerates `src/generated` (Pydantic models) from
 Ingests odds from one or more external providers (each on its own asyncio poll
 loop), normalises them into a provider-agnostic common model, persists current
 odds to Postgres, and publishes `OddsUpdatedEvent` / `EventResolvedEvent` (JSON)
-to RabbitMQ. Also serves the public `GET /odds` hydrate endpoint. It does **not**
+to RabbitMQ. Also serves the public `GET /odds/events` hydrate endpoint. It does **not**
 calculate odds — ingestion + normalisation only.
 
 ### Common model & multi-provider
@@ -45,7 +45,7 @@ calculate odds — ingestion + normalisation only.
 - Canonical id is `f"{origin}:{source_event_id}"`. `odds_current.origin` records
   the producing provider; the `event_source_map` table links the canonical id
   back to each provider's original ids.
-- **Manual resolution is mock-only.** `POST /odds/{id}/result` returns 409 unless
+- **Manual resolution is mock-only.** `POST /odds/events/{id}/result` returns 409 unless
   the event's `origin == "mock"` (404 if unknown). Real-provider events are never
   auto-resolved — this keeps settlement single-sourced.
 - The wire schema (`OddsUpdatedEvent`/`EventResolvedEvent`) stays 3-way and

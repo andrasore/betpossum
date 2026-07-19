@@ -18,22 +18,12 @@ from .schemas import (
 router = APIRouter(prefix="/odds", tags=["odds"])
 
 
-@router.get("")
-async def list_odds(
-    storage: StorageDep, sport: str | None = None, league: int | None = None
-) -> list[dict[str, object]]:
-    events = await storage.list_current(sport, league)
-    return [event_to_response(e).model_dump() for e in events]
-
-
-# Declared before `/{event_id}` so "sports" isn't captured as an event id.
 @router.get("/sports")
 async def list_sports(storage: StorageDep) -> list[dict[str, object]]:
     sports = await storage.list_sports()
     return [sport_to_response(s).model_dump() for s in sports]
 
 
-# Declared before `/{event_id}` so "leagues" isn't captured as an event id.
 @router.get("/leagues")
 async def list_leagues(
     storage: StorageDep, sport: str | None = None
@@ -42,7 +32,15 @@ async def list_leagues(
     return [league_to_response(lg).model_dump() for lg in leagues]
 
 
-@router.get("/{event_id}")
+@router.get("/events")
+async def list_odds(
+    storage: StorageDep, sport: str | None = None, league: int | None = None
+) -> list[dict[str, object]]:
+    events = await storage.list_current(sport, league)
+    return [event_to_response(e).model_dump() for e in events]
+
+
+@router.get("/events/{event_id}")
 async def get_odds(event_id: str, storage: StorageDep) -> dict[str, object]:
     event = await storage.get_current(event_id)
     if event is None:
@@ -53,7 +51,7 @@ async def get_odds(event_id: str, storage: StorageDep) -> dict[str, object]:
 # Admin action: resolve an event and fan out the result. Auth is enforced via
 # a Keycloak access token requiring the `admin` realm role.
 @router.post(
-    "/{event_id}/result",
+    "/events/{event_id}/result",
     status_code=201,
     dependencies=[Depends(require_admin)],
 )

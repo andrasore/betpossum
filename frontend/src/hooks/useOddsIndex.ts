@@ -7,7 +7,7 @@ import type { OddsEvent } from "@/types";
 
 // A static lookup of every event keyed by `eventId`, used to enrich a user's
 // bets (which carry only `eventId`) with team/league/sport names. The unfiltered
-// GET /odds returns all events including resolved ones — resolved events stay in
+// GET /odds/events returns all events including resolved ones — resolved events stay in
 // the odds store — so historical bets resolve too. Unlike `useOdds`, this is a
 // plain SWR fetch with no live socket subscription: history doesn't tick.
 export function useOddsIndex(

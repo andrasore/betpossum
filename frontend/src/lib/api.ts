@@ -73,7 +73,7 @@ export async function fetchOdds(
     params.set("league", String(league));
   }
   const query = params.toString();
-  const res = await fetch(`/odds${query ? `?${query}` : ""}`);
+  const res = await fetch(`/odds/events${query ? `?${query}` : ""}`);
   if (!res.ok) {
     throw new Error("Failed to fetch odds");
   }
@@ -163,7 +163,7 @@ export async function resolveAdminEvent(
   eventId: string,
   outcome: Outcome,
 ): Promise<void> {
-  const res = await authedFetch(`/odds/${eventId}/result`, {
+  const res = await authedFetch(`/odds/events/${eventId}/result`, {
     method: "POST",
     body: JSON.stringify({ outcome }),
   });

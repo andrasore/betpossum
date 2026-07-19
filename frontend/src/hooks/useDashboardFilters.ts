@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { League } from "@/generated/events";
 
 export type DashboardFilters = {
-  // The selected sport slug (what GET /odds filters on), or null for "All".
+  // The selected sport slug (what GET /odds/events filters on), or null for "All".
   selectedSport: string | null;
   // The selected league id, or null for "All".
   selectedLeague: number | null;

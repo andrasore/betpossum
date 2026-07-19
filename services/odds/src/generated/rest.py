@@ -55,7 +55,7 @@ class OddsEvent(BaseModel):
     )
     leagueId: conint(ge=1) | None = Field(
         None,
-        description='Canonical league id (what GET /odds filters on, `?league=<id>`); null/absent when the league link is unresolved.',
+        description='Canonical league id (what GET /odds/events filters on, `?league=<id>`); null/absent when the league link is unresolved.',
     )
     leagueName: str | None = Field(
         None, description='Canonical league display name; null/absent when unresolved.'
