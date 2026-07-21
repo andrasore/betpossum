@@ -11,7 +11,7 @@
 ## Overview
 
 BetPossum is a demonstration sports-betting application built as a small
-polyglot microservice system. A NestJS core handles bets and the wallet, two
+Node.js/Python microservice system. A NestJS core handles bets and the wallet, two
 FastAPI services ingest odds and serve a stats read model, a FastAPI + Socket.IO
 service fans real-time events out to browsers, and a Next.js SPA is served as a
 pure static export. Services never call each other's databases — they
@@ -156,7 +156,9 @@ into the Nginx image. The `compose:dev` overlay points Nginx at your host's
 `pnpm dev` server, so HMR works through the same `:8080` origin.
 
 Prerequisites: Docker + Docker Compose, Node 25, [pnpm](https://pnpm.io) 11
-(version is pinned via `packageManager`), Python 3.14.
+(version is pinned via `packageManager`), Python 3.14, and
+[uv](https://docs.astral.sh/uv/) (creates each Python service's `.venv` from
+its committed `uv.lock`).
 
 > This repo is pnpm-only, and build/typecheck/test scripts are meant to be run
 > from the repo root (Turbo coordinates the workspaces).

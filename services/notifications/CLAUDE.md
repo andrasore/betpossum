@@ -6,7 +6,7 @@ Guidance for working in `services/notifications`. See the root `CLAUDE.md` and
 ## Commands
 
 ```bash
-pnpm --filter @betting/notifications run init       # .venv + pip install -e .[dev]
+pnpm --filter @betting/notifications run init       # uv sync --extra dev (.venv from uv.lock)
 pnpm --filter @betting/notifications run typecheck   # pyright (strict)
 pnpm --filter @betting/notifications run lint         # ruff
 ```

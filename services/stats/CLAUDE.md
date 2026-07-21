@@ -9,7 +9,7 @@ This repo uses **pnpm** for orchestration; the service itself is Python in a
 local `.venv`.
 
 ```bash
-pnpm --filter @betting/stats run init    # create .venv + install (.[dev])
+pnpm --filter @betting/stats run init    # uv sync --extra dev (.venv from uv.lock)
 ```
 
 Typecheck, build, test, and schema:gen from the **repo root** (`pnpm typecheck`

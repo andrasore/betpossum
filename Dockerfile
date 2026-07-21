@@ -29,7 +29,7 @@ COPY nginx/nginx.conf /etc/nginx/nginx.conf
 FROM node:25-alpine AS core
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 COPY --chown=appuser:appgroup --from=builder-node /app/services/core/pruned/ ./
 USER appuser
 CMD ["node", "./dist/main.js"]
@@ -38,31 +38,34 @@ CMD ["node", "./dist/main.js"]
 FROM python:3.14-alpine AS odds
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY services/odds/pyproject.toml .
-RUN python -m venv .venv && mkdir -p ./src &&  .venv/bin/pip install -e .
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
+COPY services/odds/pyproject.toml services/odds/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 COPY services/odds/src/ ./src/
 USER appuser
-CMD ["/app/.venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn app:app --app-dir src --host 0.0.0.0 --port ${PORT:-8000}"]
 
 # Stage 5: Notifications service runtime — FastAPI + python-socketio (ASGI).
 FROM python:3.14-alpine AS notifications
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY services/notifications/pyproject.toml .
-RUN python -m venv .venv && mkdir -p ./src && .venv/bin/pip install -e .
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
+COPY services/notifications/pyproject.toml services/notifications/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 COPY services/notifications/src/ ./src/
 USER appuser
-CMD ["/app/.venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn app:app --app-dir src --host 0.0.0.0 --port ${PORT:-8000}"]
 
 # Stage 6: Stats service runtime — FastAPI read model + durable consumer.
 FROM python:3.14-alpine AS stats
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY services/stats/pyproject.toml .
-RUN python -m venv .venv && mkdir -p ./src && .venv/bin/pip install -e .
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
+COPY services/stats/pyproject.toml services/stats/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 COPY services/stats/src/ ./src/
 USER appuser
-CMD ["/app/.venv/bin/uvicorn", "app:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn app:app --app-dir src --host 0.0.0.0 --port ${PORT:-8000}"]
 
 # Stage 7: Bots — dev-only play-data daemon, run straight from TS via tsx. Not
 # part of the e2e stack (excluded there via a compose profile).

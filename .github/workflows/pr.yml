@@ -27,6 +27,10 @@ jobs:
         with:
           python-version: '3.14'
 
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.11.30'
+
       - name: Cache node_modules
         id: cache-node
         uses: actions/cache@v4
@@ -45,7 +49,7 @@ jobs:
             services/odds/.venv
             services/notifications/.venv
             services/stats/.venv
-          key: venv-${{ runner.os }}-py3.14-v2-${{ hashFiles('services/*/pyproject.toml', 'services/*/requirements.txt') }}
+          key: venv-${{ runner.os }}-py3.14-v3-${{ hashFiles('services/*/pyproject.toml', 'services/*/uv.lock') }}
 
       - name: Cache turbo
         uses: actions/cache@v4

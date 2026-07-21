@@ -9,7 +9,7 @@ Driven by pnpm scripts that wrap the venv; run from the **repo root** where
 possible:
 
 ```bash
-pnpm --filter @betting/odds run init      # create .venv, pip install -e .[dev]
+pnpm --filter @betting/odds run init      # uv sync --extra dev (creates .venv from uv.lock)
 pnpm --filter @betting/odds run typecheck  # pyright (strict)
 pnpm --filter @betting/odds run lint        # ruff check + format --check
 pnpm --filter @betting/odds run test        # pytest (test/ dir; asyncio auto-mode)

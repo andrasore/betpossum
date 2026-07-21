@@ -119,10 +119,12 @@ async function main(): Promise<void> {
   }
 
   let running = true;
-  process.on("SIGINT", () => {
-    console.log("\nstopping…");
-    running = false;
-  });
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, () => {
+      console.log("\nstopping…");
+      running = false;
+    });
+  }
 
   console.log("entering bet loop");
   while (running) {

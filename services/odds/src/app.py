@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     finally:
         for worker in workers:
             worker.cancel()
+        await asyncio.gather(*workers, return_exceptions=True)
         await close_publisher()
         await close_storage()
 
