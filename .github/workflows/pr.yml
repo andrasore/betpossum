@@ -189,11 +189,11 @@ jobs:
         run: |
           repo="ghcr.io/${GITHUB_REPOSITORY,,}"
           # Alongside the human-facing moving :latest tag, stamp an immutable
-          # semver release tag. Keel ranks releases by semver precedence, so the
-          # tag has to parse as semver for its update policies to order builds
-          # at all. run_number is monotonic and never resets, so a higher patch
-          # is always a newer build (it also counts PR runs, leaving gaps in the
-          # series — ordering is what matters, not density).
+          # semver release tag. Flux's ImagePolicy (semver range) ranks releases
+          # by semver precedence, so the tag has to parse as semver for it to
+          # order builds at all. run_number is monotonic and never resets, so a
+          # higher patch is always a newer build (it also counts PR runs, leaving
+          # gaps in the series — ordering is what matters, not density).
           #
           # Bump the 0.1 series here by hand; nothing derives it from a
           # package.json, as no single root version exists to derive it from.

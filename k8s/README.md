@@ -7,10 +7,10 @@ app tier and nginx edge run as Deployments; an Ingress fronts nginx.
 A shared base holds the env-agnostic manifests; two overlays carry the
 differences:
 
-| Overlay          | Entry point             | TLS                    | Secrets                        | Realm                         |
-|------------------|-------------------------|------------------------|--------------------------------|-------------------------------|
-| `overlays/local` | `http://localhost:8080` | none                   | committed dev creds            | `keycloak/realm.json` (as-is) |
-| `overlays/prod`  | `https://<your-domain>` | sealed cert you provide | sealed via kubeseal (step 4)   | `keycloak/realm.prod.json`    |
+| Overlay          | Entry point             | TLS                    | Secrets                              | Realm                         |
+|------------------|-------------------------|------------------------|--------------------------------------|-------------------------------|
+| `overlays/local` | `http://localhost:8080` | none                   | committed dev creds                  | `keycloak/realm.json` (as-is) |
+| `overlays/prod`  | `https://<your-domain>` | cert you provide       | deployment-specific (step 4)         | `keycloak/realm.prod.json`    |
 
 ```bash
 kubectl apply -k k8s/overlays/local   # local HTTP stack
@@ -31,16 +31,17 @@ concrete deployment. Two consequences that explain what you find here:
   throwaway dev credentials for a stack that only ever answers on `localhost`.
   Committing them is what keeps the local path a single `kubectl apply -k` with
   nothing to fill in. Never reuse them anywhere reachable.
-- **Prod commits nothing.** There is no `secrets.yaml` and no encrypted file in
-  the prod overlay. Sealed Secrets ciphertext would be safe to publish — that is
-  the point of the tool — but it is sealed against one specific cluster's key, so
-  committing it would pin this repo to somebody's actual deployment. Instead
-  `overlays/prod/sealed-secrets.yaml` is gitignored and you generate it against
-  your own cluster in [step 4](#4-prod-seal-the-secrets).
+- **Prod commits nothing.** `overlays/prod` carries no secrets at all — no
+  `secrets.yaml`, no encrypted file. It is a deployment-independent example: it
+  builds cleanly (Deployments + Ingress + config) but the pods need secrets you
+  supply. Where those come from is deployment-specific — a private config repo
+  that layers SOPS-encrypted Secrets on top (see
+  [Continuous delivery](#continuous-delivery-flux-gitops--private-config-repo)),
+  or created out of band with `kubectl create secret` — so nothing here pins the
+  repo to somebody's actual cluster.
 
-The trade-off is that a fresh clone cannot build the prod overlay: the
-kustomization lists `sealed-secrets.yaml` under `resources`, so `kustomize build`
-fails until you have sealed your own. That is deliberate — a demo repo that
+Unlike `overlays/local`, then, applying `overlays/prod` alone leaves the pods
+without credentials until you provide them. That is deliberate — a demo repo that
 shipped a working prod secret would either be leaking one or pretending to.
 
 ## Layout
@@ -50,7 +51,7 @@ k8s/
   base/            # env-agnostic; defaults to the prod shape. Not applied directly.
   overlays/
     local/         # plain HTTP, dev secrets, single replicas
-    prod/          # HTTPS via Ingress (sealed TLS cert), sealed secrets
+    prod/          # HTTPS via Ingress (TLS cert you provide); no secrets (supplied per deployment)
 ```
 
 `base/` is intentionally not appliable on its own — it carries no Secrets,
@@ -114,16 +115,11 @@ only one Ingress host.
   CDN / load balancer fronts the cluster. No in-cluster issuer is needed. To
   terminate TLS entirely upstream instead, drop the TLS patch in
   `overlays/prod/kustomization.yaml`.
-- **Sealed Secrets** (prod only) — the controller decrypts the prod overlay's
-  `SealedSecret`s in-cluster, plus the `kubeseal` CLI locally to create them.
-
-  ```bash
-  helm repo add sealed-secrets https://bitnami.github.io/sealed-secrets
-  helm install sealed-secrets sealed-secrets/sealed-secrets -n kube-system
-  ```
-
-  The chart's release name sets the controller name that `kubeseal` looks for;
-  `sealed-secrets` in `kube-system` is what step 4 assumes.
+- **Prod secrets** (prod only) — the prod overlay ships none; you supply them per
+  deployment. The recommended path is a private config repo whose overlay adds
+  SOPS-encrypted Secrets that Flux decrypts in-cluster (see
+  [Continuous delivery](#continuous-delivery-flux-gitops--private-config-repo));
+  the minimal path is `kubectl create secret` out of band (see [step 4](#4-prod-supply-the-secrets)).
 - A cluster with a default StorageClass (or set `storageClassName` in each
   StatefulSet's `volumeClaimTemplates`).
 - The cluster must be able to reach `ghcr.io` to pull the app images (they are
@@ -184,57 +180,48 @@ TODO - create a prod overlay for values modified in base/
 
 The local overlay needs no edits — its secrets are committed dev values.
 
-## 4. (prod) Seal the secrets
+## 4. (prod) Supply the secrets
 
-Generate the sealed file the prod overlay expects but does not ship — see
-[Secrets](#secrets-why-none-are-committed-for-prod) for why it is not in git.
+The prod overlay ships no secrets (see
+[Secrets](#secrets-why-none-are-committed-for-prod)), so you provide them. Two
+paths:
 
-[`seal-secrets.sh`](seal-secrets.sh) does this. It picks the four passwords —
-each used **twice**, once inside a connection URL the apps read and once as a
-discrete var the server reads — and generates them from `[A-Za-z0-9]` so the two
-copies always match (they are interpolated into URLs and into `postgres-init`'s
-SQL, where other characters would need escaping that makes the copies disagree).
-It then builds all four app/infra Secrets, seals them into one file with
-`kubeseal`, and appends the TLS Secret. `kubectl ... --dry-run=client` builds
-each Secret without sending it anywhere; only the encrypted output is written to
-disk.
+- **GitOps (recommended).** A private config repo layers SOPS-encrypted Secrets
+  onto this overlay and Flux decrypts them in-cluster — see
+  [Continuous delivery](#continuous-delivery-flux-gitops--private-config-repo).
+  That is where the reusable secret-generation recipe lives.
+- **Out of band (minimal).** Create the five Secrets directly, before applying:
 
-You must supply `CORE_CLIENT_SECRET` — betting-core's confidential client secret
-from the Keycloak admin console (clients → betting-core → Credentials, or set it
-in `realm.prod.json` first). Obtain a cert and private key for your domain (from
-your own CA, or an origin cert from whatever CDN / load balancer fronts the
-cluster) and save them as `tls.crt` / `tls.key`; the script seals them into a
-`kubernetes.io/tls` Secret named `betpossum-tls` — the name the Ingress `tls`
-block references — and warns if they are absent.
+  ```bash
+  kubectl create namespace betpossum
+  DB=...; MQ=...        # each of these appears twice below and the copies must match
+  kubectl -n betpossum create secret generic betpossum-app-secrets \
+    --from-literal=DATABASE_URL="postgresql://betting:${DB}@postgres:5432/betting" \
+    --from-literal=RABBITMQ_URL="amqp://betting:${MQ}@rabbitmq:5672" \
+    --from-literal=KEYCLOAK_ADMIN_CLIENT_SECRET=...  # betting-core client credential \
+    --from-literal=THE_ODDS_API_KEY= --from-literal=APIFOOTBALL_API_KEY=
+  kubectl -n betpossum create secret generic postgres-secret \
+    --from-literal=POSTGRES_DB=betting --from-literal=POSTGRES_USER=betting \
+    --from-literal=POSTGRES_PASSWORD="${DB}"
+  kubectl -n betpossum create secret generic rabbitmq-secret \
+    --from-literal=RABBITMQ_DEFAULT_USER=betting --from-literal=RABBITMQ_DEFAULT_PASS="${MQ}"
+  kubectl -n betpossum create secret generic keycloak-secret \
+    --from-literal=KC_DB_PASSWORD=... \
+    --from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=admin --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD=...
+  kubectl -n betpossum create secret tls betpossum-tls --cert=tls.crt --key=tls.key
+  ```
 
-```bash
-CORE_CLIENT_SECRET=... ./k8s/seal-secrets.sh
-```
-
-Passwords are generated unless you export them, so re-run with a single value set
-(e.g. `DB_PASSWORD=... CORE_CLIENT_SECRET=... ./k8s/seal-secrets.sh`) to rotate
-just that one. Nothing renews the TLS cert in-cluster; re-run when you rotate it.
-
-`THE_ODDS_API_KEY` / `APIFOOTBALL_API_KEY` only matter if `ODDS_PROVIDERS` names
-those providers; they default to empty, so export them before running only if you
-need them set. `KC_DB_PASSWORD` is the single source for the `keycloak` DB role —
-`postgres-init` creates the role with it and Keycloak connects with it; there is
-no separate keycloak-db Secret, since one Postgres hosts both databases. To rotate
-any value, re-run the script with that value exported and re-apply.
-
-> **Back up the sealing key.** It lives only in the cluster, so losing the cluster
-> means `sealed-secrets.yaml` can never be decrypted again and every credential has
-> to be regenerated. Export it once and store it offline — this file *is* the
-> private key, so treat it like root credentials and never commit it:
->
-> ```bash
-> kubectl -n kube-system get secret \
->   -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > sealed-secrets-key.yaml
-> ```
->
-> Restore it into a rebuilt cluster (`kubectl apply -f`, then restart the
-> controller) and the existing sealed file keeps working; otherwise re-seal from
-> scratch.
+`KEYCLOAK_ADMIN_CLIENT_SECRET` is betting-core's confidential client secret
+(Keycloak admin console → clients → betting-core → Credentials, or set it in
+`realm.prod.json` first). `DB`/`MQ` each appear twice — once inside a connection
+URL the apps read and once as the discrete var the server reads — so the copies
+must match; generate them from `[A-Za-z0-9]` to avoid URL/SQL escaping. `KC_DB_PASSWORD`
+is the single source for the `keycloak` DB role (`postgres-init` creates it, Keycloak
+connects with it — one Postgres hosts both databases). `THE_ODDS_API_KEY` /
+`APIFOOTBALL_API_KEY` only matter if `ODDS_PROVIDERS` names those providers.
+`betpossum-tls` holds a cert + key for your domain (your own CA, or an origin cert
+from whatever CDN / load balancer fronts the cluster); nothing renews it
+in-cluster, so re-create it when you rotate.
 
 ## 5. Apply
 
@@ -263,52 +250,134 @@ app deploy. Grafana gets its own Ingress on the same NGINX controller
 [`observability/README.md`](observability/README.md) for the install commands and
 verification steps.
 
-## Continuous delivery (Keel)
+## Continuous delivery (Flux GitOps + private config repo)
 
-The steps above are a one-shot manual deploy. [Keel](https://keel.sh) closes the
-loop on the image half: it runs **in the cluster**, polls GHCR, and patches newer
-image tags onto the Deployments. It pulls, so nothing needs inbound access to the
-cluster, and it never touches this repo — no deploy key, no PAT, and no bot
-commits on a public repo.
+The steps above are a one-shot manual deploy. For hands-off delivery,
+[Flux](https://fluxcd.io) reconciles the cluster from git and writes newer image
+tags back — but its image automation must **commit** to a repo, which a public
+repo cannot grant safely. So the deployment lives in a **separate, private config
+repo** (`andrasore/betpossum-prod`); Flux reconciles that, and pulls the reusable
+manifests from *this* public repo read-only.
 
 ```
-CI promote ──► GHCR :0.1.<run>
-                     │  Keel polls every 5m
-                     ▼
-              Keel (in-cluster) ──patch──► Deployment tag ──► rollout
+PUBLIC  andrasore/betpossum              PRIVATE  andrasore/betpossum-prod
+  k8s/base/          (reusable)            clusters/prod/   Flux: sources, Kustomization, image-automation
+  k8s/overlays/prod/ (generic example)     overlays/prod/   real host + SOPS secrets + image $pins
+        ▲                                        │
+        │  GitRepository .spec.include           │ Flux reconciles (pull) ──► cluster
+        └── fromPath: k8s  toPath: upstream ─────┘ ImageUpdateAutomation commits resolved tags back
 ```
 
-**Scope: images only.** Keel updates image tags and nothing else. Every other
-manifest change — replicas, env, Ingress, secrets — is still `kubectl apply -k
-k8s/overlays/prod` by hand. That is the trade for not running GitOps: no
-controller reconciles git onto the cluster, so nothing detects or corrects drift.
+The private overlay lists `../../upstream/overlays/prod` as its base: Flux's
+`GitRepository.spec.include` copies this repo's whole `k8s/` tree into the private
+artifact under `upstream/`, so the public `overlays/prod` (and the `../../base` it
+references) resolve locally. Only the private repo needs a credential — a
+read-write deploy key `flux bootstrap` registers, also used to push tag bumps. The
+public repo and the public `ghcr.io/andrasore/betpossum/*` packages are pulled
+anonymously (no PAT, no `imagePullSecret`).
+
+**What Flux gives back over a manual deploy:** pinned semver tags (not `:latest`),
+`git revert` in the private repo as rollback, and drift reconciliation — a manual
+`kubectl edit` is corrected on the next interval.
 
 **How "newest" is decided.** The CI promote job stamps every e2e-validated image
-with `0.1.<run number>` (see [`pr.yml`](../.github/workflows/pr.yml)). Keel parses
-that as semver and compares it against the tag on the live Deployment, so a higher
-run number is always a newer release — `run_number` is monotonic and never resets.
-The `keel.sh/policy: major` annotation in `overlays/prod` means "accept any newer
-semver"; it is not limited to major bumps.
-
-The git sha is deliberately **not** in the release tag: a docker tag cannot carry
-semver build metadata (`+` is illegal), and a `-<sha7>` suffix would make the tag
-a *prerelease*, which sorts before the plain version and inverts the ordering. To
-map a release back to a commit, open CI run `#<run number>` in the Actions UI; the
-`:<sha>` staging tag on the same digest carries the same mapping.
+with `0.1.<run number>` (see [`pr.yml`](../.github/workflows/pr.yml)); an
+`ImagePolicy` with `semver.range: '>=0.1.0'` selects the highest. `run_number` is
+monotonic and never resets, so a higher patch is always a newer build. The git sha
+is deliberately absent from the tag (docker forbids the `+` of semver build
+metadata, and a `-<sha7>` suffix would sort as a *prerelease*, before the plain
+version); the `:<sha>` staging tag on the same digest carries that mapping, as
+does CI run `#<run number>`.
 
 ### CD prerequisites (beyond the deploy prereqs above)
 
-**Helm**, and nothing else. The `ghcr.io/andrasore/betpossum/*` packages are
-public, so Keel polls them anonymously — no `imagePullSecret`, no `read:packages`
-PAT.
+- The **Flux CLI** — `curl -s https://fluxcd.io/install.sh | sudo bash`, or
+  `flux-bin` from the AUR.
+- **SOPS + age** (`sops`, `age`) to encrypt the prod Secrets the private overlay
+  carries. The age *private* key never goes in git — it is loaded as a cluster
+  Secret that Flux's kustomize-controller decrypts with.
+- A **GitHub PAT** with `repo` scope for `flux bootstrap` (one-time).
 
-### 1. Pin a tag that actually exists
+The rest of this section is the concrete setup for `betpossum-prod`, which ends up
+laid out like this:
 
-`overlays/prod/kustomization.yaml` ships `newTag: 0.1.0` as a placeholder, and
-**that tag does not exist** — applying it as-is lands the pods in
-`ImagePullBackOff`. Keel needs a real semver on the Deployment to compare against,
-so set the seven tags to a published one first. All seven images get the same tag
-from a single promote step, so one value covers them all:
+```
+betpossum-prod/
+  .sops.yaml
+  clusters/prod/
+    flux-system/            # created by `flux bootstrap`
+    betpossum-source.yaml   # GitRepository → this public repo
+    apps.yaml               # Kustomization (SOPS decryption)
+    image-automation.yaml   # 7× ImageRepository/ImagePolicy + one ImageUpdateAutomation
+  overlays/prod/
+    kustomization.yaml      # base: ../../upstream/overlays/prod; image $pins; host patch
+    secrets.enc.yaml        # SOPS-encrypted Secrets
+```
+
+### 1. age key + `.sops.yaml`
+
+```bash
+age-keygen -o age.agekey            # keep the PRIVATE key out of git
+# note the "# public key: age1..." line it prints
+git clone git@github.com:andrasore/betpossum-prod.git && cd betpossum-prod
+mkdir -p clusters/prod overlays/prod
+```
+
+`.sops.yaml` (repo root) — encrypt only the Secret payloads, with your *public* key:
+
+```yaml
+creation_rules:
+  - path_regex: overlays/prod/secrets\.enc\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    age: age1...        # your PUBLIC key from age-keygen
+```
+
+### 2. `overlays/prod/kustomization.yaml`
+
+The thin real overlay: the public `overlays/prod` as base (via `include`, below),
+plus the SOPS secrets, the image pins Flux writes, and the real host.
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: betpossum
+resources:
+  - ../../upstream/overlays/prod   # public base+prod, pulled in via GitRepository .include
+  - secrets.enc.yaml
+images:                            # Flux writes resolved tags into the setters below
+  - name: ghcr.io/andrasore/betpossum/core
+    newTag: 0.1.0 # {"$imagepolicy": "flux-system:core:tag"}
+  - name: ghcr.io/andrasore/betpossum/odds
+    newTag: 0.1.0 # {"$imagepolicy": "flux-system:odds:tag"}
+  - name: ghcr.io/andrasore/betpossum/notifications
+    newTag: 0.1.0 # {"$imagepolicy": "flux-system:notifications:tag"}
+  - name: ghcr.io/andrasore/betpossum/stats
+    newTag: 0.1.0 # {"$imagepolicy": "flux-system:stats:tag"}
+  - name: ghcr.io/andrasore/betpossum/frontend
+    newTag: 0.1.0 # {"$imagepolicy": "flux-system:frontend:tag"}
+  - name: ghcr.io/andrasore/betpossum/keycloak
+    newTag: 0.1.0 # {"$imagepolicy": "flux-system:keycloak:tag"}
+  - name: ghcr.io/andrasore/betpossum/bots
+    newTag: 0.1.0 # {"$imagepolicy": "flux-system:bots:tag"}
+patches:
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata: { name: betpossum-config, namespace: betpossum }
+      data:
+        PUBLIC_HOST: <your-domain>
+        KEYCLOAK_ISSUER_URL: https://<your-domain>/kc/realms/betting
+  - target: { kind: Ingress, name: betpossum }
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: <your-domain>
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: <your-domain>
+```
+
+Pin the seven `newTag`s to a published tag (`0.1.<run>`); find the newest with:
 
 ```bash
 tok=$(curl -s "https://ghcr.io/token?scope=repository:andrasore/betpossum/core:pull&service=ghcr.io" | jq -r .token)
@@ -316,49 +385,175 @@ curl -s -H "Authorization: Bearer $tok" \
   https://ghcr.io/v2/andrasore/betpossum/core/tags/list | jq -r '.tags[]' | grep '^0\.'
 ```
 
-### 2. Install Keel
+### 3. `overlays/prod/secrets.enc.yaml`
+
+Build the five Secrets — four passwords, each reused where it appears twice (a
+connection URL the apps read, and the discrete var the server reads), so the copies
+always match — then SOPS-encrypt in place:
 
 ```bash
-helm repo add keel https://charts.keel.sh && helm repo update
-helm install keel keel/keel -n keel --create-namespace
+gen() { LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32; }
+DB=$(gen); MQ=$(gen); KCDB=$(gen); KCADMIN=$(gen)
+: "${CORE_CLIENT_SECRET:?betting-core client credential}"
+{
+  kubectl create secret generic betpossum-app-secrets -n betpossum \
+    --from-literal=DATABASE_URL="postgresql://betting:${DB}@postgres:5432/betting" \
+    --from-literal=RABBITMQ_URL="amqp://betting:${MQ}@rabbitmq:5672" \
+    --from-literal=KEYCLOAK_ADMIN_CLIENT_SECRET="${CORE_CLIENT_SECRET}" \
+    --from-literal=THE_ODDS_API_KEY="${THE_ODDS_API_KEY:-}" \
+    --from-literal=APIFOOTBALL_API_KEY="${APIFOOTBALL_API_KEY:-}" --dry-run=client -o yaml
+  echo ---
+  kubectl create secret generic postgres-secret -n betpossum \
+    --from-literal=POSTGRES_DB=betting --from-literal=POSTGRES_USER=betting \
+    --from-literal=POSTGRES_PASSWORD="${DB}" --dry-run=client -o yaml
+  echo ---
+  kubectl create secret generic rabbitmq-secret -n betpossum \
+    --from-literal=RABBITMQ_DEFAULT_USER=betting \
+    --from-literal=RABBITMQ_DEFAULT_PASS="${MQ}" --dry-run=client -o yaml
+  echo ---
+  kubectl create secret generic keycloak-secret -n betpossum \
+    --from-literal=KC_DB_PASSWORD="${KCDB}" --from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+    --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD="${KCADMIN}" --dry-run=client -o yaml
+  echo ---
+  kubectl create secret tls betpossum-tls -n betpossum \
+    --cert=tls.crt --key=tls.key --dry-run=client -o yaml
+} > overlays/prod/secrets.enc.yaml
+sops --encrypt --in-place overlays/prod/secrets.enc.yaml   # committing this is safe: private repo + encrypted
 ```
 
-### 3. Apply and verify
+`tls.crt`/`tls.key` are the cert + key for your domain (your own CA, or an origin
+cert from whatever CDN / load balancer fronts the cluster); nothing renews them
+in-cluster, so re-seal when you rotate.
+
+### 4. `clusters/prod/` — the Flux resources
+
+`betpossum-source.yaml` — this public repo, pulled anonymously:
+
+```yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata: { name: betpossum-source, namespace: flux-system }
+spec:
+  interval: 5m
+  url: https://github.com/andrasore/betpossum
+  ref: { branch: main }
+```
+
+`apps.yaml` — the Kustomization that reconciles the private overlay and decrypts
+its Secrets:
+
+```yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: { name: betpossum, namespace: flux-system }
+spec:
+  interval: 5m
+  retryInterval: 1m
+  path: ./overlays/prod
+  prune: true
+  wait: true
+  sourceRef: { kind: GitRepository, name: flux-system }   # the private repo (self)
+  decryption:
+    provider: sops
+    secretRef: { name: sops-age }
+  # Gate Ready on every Deployment that serves user requests: nginx (edge), core
+  # (API), odds/stats/notifications (proxied under /odds, /stats, /socket.io), and
+  # keycloak (auth under /kc). Only bots is left out — it is the synthetic
+  # play-data generator, not on any request path, so a slow/failed bots rollout
+  # must not hold back or fail the app's Ready status. (Postgres/RabbitMQ/
+  # TigerBeetle are StatefulSets; the serving Deployments won't go Available
+  # without them.)
+  healthChecks:
+    - { apiVersion: apps/v1, kind: Deployment, name: nginx, namespace: betpossum }
+    - { apiVersion: apps/v1, kind: Deployment, name: core, namespace: betpossum }
+    - { apiVersion: apps/v1, kind: Deployment, name: odds, namespace: betpossum }
+    - { apiVersion: apps/v1, kind: Deployment, name: stats, namespace: betpossum }
+    - { apiVersion: apps/v1, kind: Deployment, name: notifications, namespace: betpossum }
+    - { apiVersion: apps/v1, kind: Deployment, name: keycloak, namespace: betpossum }
+```
+
+`image-automation.yaml` — one `ImageRepository` + `ImagePolicy` per image (7:
+core, odds, notifications, stats, frontend, keycloak, bots), and one shared
+`ImageUpdateAutomation` that commits resolved tags back to this private repo.
+Pattern per image, then the updater:
+
+```yaml
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata: { name: core, namespace: flux-system }
+spec:
+  image: ghcr.io/andrasore/betpossum/core
+  interval: 5m            # public package — no secretRef
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata: { name: core, namespace: flux-system }
+spec:
+  imageRepositoryRef: { name: core }
+  policy: { semver: { range: '>=0.1.0' } }
+---
+# ... repeat the pair for odds, notifications, stats, frontend, keycloak, bots ...
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageUpdateAutomation
+metadata: { name: betpossum, namespace: flux-system }
+spec:
+  interval: 5m
+  sourceRef: { kind: GitRepository, name: flux-system }
+  git:
+    checkout: { ref: { branch: main } }
+    commit:
+      author: { name: fluxcdbot, email: fluxcdbot@users.noreply.github.com }
+      messageTemplate: 'chore(deploy): update image tags'
+    push: { branch: main }
+  update: { path: ./overlays/prod, strategy: Setters }
+```
+
+(No `[ci skip]` needed — the private repo has no CI.) Confirm the
+`image.toolkit.fluxcd.io` version matches your installed CRDs after bootstrap.
+
+### 5. Bootstrap Flux
 
 ```bash
-kubectl apply -k k8s/overlays/prod
+export GITHUB_TOKEN=<PAT with repo scope>
+flux bootstrap github \
+  --owner=andrasore --repository=betpossum-prod --private --personal \
+  --path=clusters/prod \
+  --components-extra=image-reflector-controller,image-automation-controller
 
-kubectl -n keel logs deploy/keel -f   # poll decisions land here
-# what is actually running (Keel edits the live object, so this drifts from git):
-kubectl -n betpossum get deploy -o wide   # IMAGES column
+# age private key so the cluster can decrypt the SOPS secrets:
+kubectl -n flux-system create secret generic sops-age --from-file=age.agekey=age.agekey
 ```
 
-### What you give up
+Bootstrap commits `clusters/prod/flux-system/` and registers a read-write deploy
+key. Add the `.spec.include` block to the generated `GitRepository` (in
+`clusters/prod/flux-system/gotk-sync.yaml`), so it copies this repo's `k8s/` tree
+into the artifact under `upstream/`:
 
-- **Re-applying the overlay rolls the cluster backwards.** Keel writes the new tag
-  onto the live Deployment; git still holds the old one. `kubectl apply -k`
-  re-asserts git, so an unrelated manifest change reverts *every* image to the
-  pinned tag until Keel's next poll (≤5m) rolls it forward again. If the pinned
-  tag has since been deleted from GHCR, that window is an `ImagePullBackOff`
-  instead. Refresh the `newTag` values when they drift far behind.
-- **Rollback is a cluster operation, not `git revert`.** `kubectl rollout undo` or
-  `kubectl set image` only hold until Keel's next poll rolls them forward again.
-  Keel has no "pause" policy, so a deliberate pin means dropping the annotation
-  first and restoring it afterwards:
+```yaml
+  include:
+    - repository: { name: betpossum-source }
+      fromPath: k8s
+      toPath: upstream
+```
 
-  ```bash
-  kubectl -n betpossum annotate deploy/core keel.sh/policy-      # Keel lets go
-  kubectl -n betpossum set image deploy/core core=ghcr.io/andrasore/betpossum/core:0.1.41
-  kubectl -n betpossum annotate deploy/core keel.sh/policy=major # hand it back
-  ```
-- **Secrets are sealed locally, not in git.** The Sealed Secrets controller
-  decrypts in-cluster, but nothing generates `sealed-secrets.yaml` for you — it is
-  gitignored (sealed to one cluster's key), so a fresh clone cannot
-  `kustomize build` the prod overlay until you run step 4. Same posture as the
-  `keycloak-realm` ConfigMap: cluster-specific, created out of band.
-- **No drift detection.** Nothing reconciles the cluster back to git, so a manual
-  `kubectl edit` sticks until someone re-applies.
-- **Keel does not manage its own upgrades** — that is `helm upgrade`.
+Commit everything (the files from steps 1–4 plus this edit) and push.
+
+### 6. Verify
+
+```bash
+flux check
+flux get sources git             # flux-system + betpossum-source → Ready
+flux get kustomizations          # betpossum → Ready (SOPS decrypt succeeded)
+flux get images all              # 7 policies resolve to the latest 0.1.<run>
+kubectl -n betpossum get deploy -o wide   # IMAGES show the pinned tag, not :latest
+```
+
+Within an interval the `ImageUpdateAutomation` commits a tag bump to
+`betpossum-prod`; `git revert` that commit and Flux rolls the cluster back.
+Out-of-band prereqs still apply — the `keycloak-realm` ConfigMap (from
+`realm.prod.json`), the NGINX Inc ingress controller, a default StorageClass, and
+DNS pointed at the controller's external IP.
 
 ## Local quickstart on k3s
 
