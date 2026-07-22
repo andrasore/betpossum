@@ -10,7 +10,7 @@ differences:
 | Overlay          | Entry point             | TLS                    | Secrets                              | Realm                         |
 |------------------|-------------------------|------------------------|--------------------------------------|-------------------------------|
 | `overlays/local` | `http://localhost:8080` | none                   | committed dev creds                  | `keycloak/realm.json` (as-is) |
-| `overlays/prod`  | `https://<your-domain>` | cert you provide       | deployment-specific (step 4)         | `keycloak/realm.prod.json`    |
+| `overlays/prod`  | `https://<your-domain>` | cert you provide       | deployment-specific (you supply)     | `keycloak/realm.prod.json`    |
 
 ```bash
 kubectl apply -k k8s/overlays/local   # local HTTP stack
@@ -19,30 +19,7 @@ kubectl apply -k k8s/overlays/prod    # production HTTPS stack
 
 > Prod is a starting point, not a turnkey production system. Read the per-file
 > comments — several services are pinned to a single replica for correctness
-> reasons, and prod carries no credentials at all (see below).
-
-## Secrets (why none are committed for prod)
-
-This is a **public demo repo**, and it is meant to stay independent of any
-concrete deployment. Two consequences that explain what you find here:
-
-- **Local commits its secrets on purpose.** `overlays/local/secrets.yaml` holds
-  real values (`betting_dev`, Keycloak `admin`/`admin`) because they are
-  throwaway dev credentials for a stack that only ever answers on `localhost`.
-  Committing them is what keeps the local path a single `kubectl apply -k` with
-  nothing to fill in. Never reuse them anywhere reachable.
-- **Prod commits nothing.** `overlays/prod` carries no secrets at all — no
-  `secrets.yaml`, no encrypted file. It is a deployment-independent example: it
-  builds cleanly (Deployments + Ingress + config) but the pods need secrets you
-  supply. Where those come from is deployment-specific — a private config repo
-  that layers SOPS-encrypted Secrets on top (see
-  [Continuous delivery](#continuous-delivery-flux-gitops--private-config-repo)),
-  or created out of band with `kubectl create secret` — so nothing here pins the
-  repo to somebody's actual cluster.
-
-Unlike `overlays/local`, then, applying `overlays/prod` alone leaves the pods
-without credentials until you provide them. That is deliberate — a demo repo that
-shipped a working prod secret would either be leaking one or pretending to.
+> reasons, and prod carries no credentials at all (you supply them).
 
 ## Layout
 
@@ -84,49 +61,6 @@ overlay patches the two values that differ from the base default: the config
 Keycloak is fronted by nginx under `/kc`, so there is a single origin and
 only one Ingress host.
 
-## Prerequisites
-
-- **NGINX Ingress Controller** (`nginx/nginx-ingress`, the F5/NGINX Inc
-  project — <https://hub.docker.com/r/nginx/nginx-ingress/>) installed. The
-  Ingress annotations use its `nginx.org/*` prefix, including
-  `nginx.org/websocket-services` to keep `/socket.io` upgrading (this controller
-  does not enable WebSocket by default). Install it via the project's Helm chart
-  (note: this is not the community `ingress-nginx` chart — that one ignores
-  the `nginx.org/*` annotations):
-
-  ```bash
-  helm repo add nginx-stable https://helm.nginx.com/stable
-  helm repo update
-  helm install nginx-ingress nginx-stable/nginx-ingress \
-    -n nginx-ingress --create-namespace \
-    -f k8s/overlays/local/nginx-ingress-values.yaml   # local: expose on :8080
-  ```
-
-  - **local:** the controller must be reachable on host `:8080`, because the
-    issuer is `http://localhost:8080/kc/realms/betting` and the browser URL must
-    be exactly `http://localhost:8080`. The committed
-    `overlays/local/nginx-ingress-values.yaml` sets the controller Service's HTTP
-    port to 8080 (`controller.service.httpPort.port`); on k3s the klipper
-    service-LB then binds host `:8080` straight to the controller. On kind, map
-    it instead via `extraPortMappings` 8080→ingress (or use `minikube tunnel`).
-- **A TLS certificate** (prod only) for your domain, which the Ingress controller
-  serves from the `betpossum-tls` Secret (sealed in step 4). Where the cert comes
-  from is up to your deployment — your own CA, or an origin cert from whatever
-  CDN / load balancer fronts the cluster. No in-cluster issuer is needed. To
-  terminate TLS entirely upstream instead, drop the TLS patch in
-  `overlays/prod/kustomization.yaml`.
-- **Prod secrets** (prod only) — the prod overlay ships none; you supply them per
-  deployment. The recommended path is a private config repo whose overlay adds
-  SOPS-encrypted Secrets that Flux decrypts in-cluster (see
-  [Continuous delivery](#continuous-delivery-flux-gitops--private-config-repo));
-  the minimal path is `kubectl create secret` out of band (see [step 4](#4-prod-supply-the-secrets)).
-- A cluster with a default StorageClass (or set `storageClassName` in each
-  StatefulSet's `volumeClaimTemplates`).
-- The cluster must be able to reach `ghcr.io` to pull the app images (they are
-  public — no pull secret needed).
-
-## 1. Images
-
 The seven app images (`core`, `odds`, `notifications`, `stats`, `frontend`,
 `keycloak`, `bots`) are built and published to `ghcr.io/andrasore/betpossum/*`
 automatically by CI on the PR flow — there is nothing to build or push by
@@ -144,119 +78,121 @@ admin (`bob`), and places bets through the nginx origin so the leaderboard stays
 active. Its master-admin creds come from the `keycloak-secret` Secret; keep it at
 `replicas: 1` (it is not horizontally scalable).
 
-## 2. Create the keycloak-realm ConfigMap
+## Prerequisites
 
-The realm is imported on first boot and must carry the right URLs for the
-environment. Kustomize cannot generate it from a file outside the overlay
-directory, so create it out of band (its name, `keycloak-realm`, is what the
-Keycloak Deployment mounts):
+Shared by both deployment paths:
 
-```bash
-kubectl create namespace betpossum    # or apply the overlay first, then create
+- **NGINX Ingress Controller** (`nginx/nginx-ingress`, the F5/NGINX Inc
+  project — <https://hub.docker.com/r/nginx/nginx-ingress/>) installed. The
+  Ingress annotations use its `nginx.org/*` prefix, including
+  `nginx.org/websocket-services` to keep `/socket.io` upgrading (this controller
+  does not enable WebSocket by default). Install it via the project's Helm chart
+  (note: this is not the community `ingress-nginx` chart — that one ignores
+  the `nginx.org/*` annotations).
+- A cluster with a default StorageClass (or set `storageClassName` in each
+  StatefulSet's `volumeClaimTemplates`).
+- The cluster must be able to reach `ghcr.io` to pull the app images (they are
+  public — no pull secret needed).
 
-# local — the committed dev realm already points at http://localhost:8080
-kubectl -n betpossum create configmap keycloak-realm \
-  --from-file=realm.json=keycloak/realm.json
+## Local deployment
 
-# prod — copy realm.json to realm.prod.json first and change the betting-frontend
-# client to your domain: redirectUris https://<domain>/auth/callback (+ /silent),
-# webOrigins https://<domain>, post.logout.redirect.uris https://<domain>/*
-kubectl -n betpossum create configmap keycloak-realm \
-  --from-file=realm.json=keycloak/realm.prod.json
-```
+Plain HTTP on `http://localhost:8080`. The local overlay commits throwaway dev
+secrets (`betting_dev`, Keycloak `admin`/`admin`), so there is nothing to fill in
+— never reuse them anywhere reachable. The steps:
+
+- **Install the NGINX Ingress Controller, published on host `:8080`.** The issuer
+  is `http://localhost:8080/kc/realms/betting` and the browser URL must be exactly
+  `http://localhost:8080`, so the controller has to answer on that host port. The
+  committed `overlays/local/nginx-ingress-values.yaml` sets the controller
+  Service's HTTP port to 8080 (`controller.service.httpPort.port`):
+
+  ```bash
+  helm repo add nginx-stable https://helm.nginx.com/stable && helm repo update
+  helm install nginx-ingress nginx-stable/nginx-ingress \
+    -n nginx-ingress --create-namespace \
+    -f k8s/overlays/local/nginx-ingress-values.yaml
+  ```
+
+  On k3s the klipper service-LB then binds host `:8080` straight to the
+  controller. On kind, map it instead via `extraPortMappings` 8080→ingress (or
+  use `minikube tunnel`).
+
+- **Create the `keycloak-realm` ConfigMap** from the committed dev realm (already
+  points at `http://localhost:8080`). Kustomize cannot generate it from a file
+  outside the overlay directory, so create it out of band — its name,
+  `keycloak-realm`, is what the Keycloak Deployment mounts:
+
+  ```bash
+  kubectl create namespace betpossum
+  kubectl -n betpossum create configmap keycloak-realm \
+    --from-file=realm.json=keycloak/realm.json
+  ```
+
+- **Apply the local overlay.** nginx may `CrashLoopBackOff` for a few seconds
+  until the upstream Services exist, then stabilizes:
+
+  ```bash
+  kubectl apply -k k8s/overlays/local
+  kubectl -n betpossum rollout status deploy/nginx
+  ```
+
+- **Reach it** — browse `http://localhost:8080`. Register/log in (exercises the
+  `http://localhost:8080` Keycloak issuer + PKCE) and place a bet (exercises the
+  `/socket.io` live channel). Once CI publishes a newer image, force a fresh
+  `Always` pull with `kubectl -n betpossum rollout restart deploy/core` (or
+  whichever service).
 
 > `--import-realm` only imports a realm that doesn't already exist. To change the
 > realm after first boot, edit it via the Keycloak admin API/console, or drop the
 > `keycloak` database in the shared Postgres (wiping the postgres PVC would also
 > destroy app data, since one Postgres hosts both databases).
 
-## 3. (prod) Fill in placeholders
+### On k3s
 
-TODO - create a prod overlay for values modified in base/
+The local setup tries to mimic prod as closely as possible, and k3s is a quick
+way to exercise the `local` overlay end to end. Two k3s specifics:
 
-- `base/02-config.yaml` — `PUBLIC_HOST` and `KEYCLOAK_ISSUER_URL` → your domain.
-- the Ingress host — `base/50-ingress.yaml` (`rules` host) and the matching
-  tls host in `overlays/prod/kustomization.yaml`.
-
-The local overlay needs no edits — its secrets are committed dev values.
-
-## 4. (prod) Supply the secrets
-
-The prod overlay ships no secrets (see
-[Secrets](#secrets-why-none-are-committed-for-prod)), so you provide them. Two
-paths:
-
-- **GitOps (recommended).** A private config repo layers SOPS-encrypted Secrets
-  onto this overlay and Flux decrypts them in-cluster — see
-  [Continuous delivery](#continuous-delivery-flux-gitops--private-config-repo).
-  That is where the reusable secret-generation recipe lives.
-- **Out of band (minimal).** Create the five Secrets directly, before applying:
-
-  ```bash
-  kubectl create namespace betpossum
-  DB=...; MQ=...        # each of these appears twice below and the copies must match
-  kubectl -n betpossum create secret generic betpossum-app-secrets \
-    --from-literal=DATABASE_URL="postgresql://betting:${DB}@postgres:5432/betting" \
-    --from-literal=RABBITMQ_URL="amqp://betting:${MQ}@rabbitmq:5672" \
-    --from-literal=KEYCLOAK_ADMIN_CLIENT_SECRET=...  # betting-core client credential \
-    --from-literal=THE_ODDS_API_KEY= --from-literal=APIFOOTBALL_API_KEY=
-  kubectl -n betpossum create secret generic postgres-secret \
-    --from-literal=POSTGRES_DB=betting --from-literal=POSTGRES_USER=betting \
-    --from-literal=POSTGRES_PASSWORD="${DB}"
-  kubectl -n betpossum create secret generic rabbitmq-secret \
-    --from-literal=RABBITMQ_DEFAULT_USER=betting --from-literal=RABBITMQ_DEFAULT_PASS="${MQ}"
-  kubectl -n betpossum create secret generic keycloak-secret \
-    --from-literal=KC_DB_PASSWORD=... \
-    --from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=admin --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD=...
-  kubectl -n betpossum create secret tls betpossum-tls --cert=tls.crt --key=tls.key
-  ```
-
-`KEYCLOAK_ADMIN_CLIENT_SECRET` is betting-core's confidential client secret
-(Keycloak admin console → clients → betting-core → Credentials, or set it in
-`realm.prod.json` first). `DB`/`MQ` each appear twice — once inside a connection
-URL the apps read and once as the discrete var the server reads — so the copies
-must match; generate them from `[A-Za-z0-9]` to avoid URL/SQL escaping. `KC_DB_PASSWORD`
-is the single source for the `keycloak` DB role (`postgres-init` creates it, Keycloak
-connects with it — one Postgres hosts both databases). `THE_ODDS_API_KEY` /
-`APIFOOTBALL_API_KEY` only matter if `ODDS_PROVIDERS` names those providers.
-`betpossum-tls` holds a cert + key for your domain (your own CA, or an origin cert
-from whatever CDN / load balancer fronts the cluster); nothing renews it
-in-cluster, so re-create it when you rotate.
-
-## 5. Apply
+- **k3s ships Traefik** — but the local overlay's Ingress targets
+  `ingressClassName: nginx` (NGINX-Inc `nginx.org/*` annotations). Install with
+  `--disable traefik`, then install the NGINX-Inc controller with the local
+  values file so its Service publishes on `:8080` — k3s' klipper service-LB
+  binds that host port straight to the controller.
+- **Images are pulled from the registry** — the app images are public on
+  `ghcr.io/andrasore/betpossum/*` and published automatically by CI. The default
+  `Always` pull policy is correct: k3s pulls them directly, no containerd import
+  or pull secret needed.
 
 ```bash
-kubectl apply -k k8s/overlays/local    # or .../prod
+# 1. k3s without Traefik (it would otherwise grab :80/:443)
+curl -sfL https://get.k3s.io | sh -s - --disable traefik
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml          # or copy to ~/.kube/config
+
+# 2. NGINX-Inc ingress controller, published on host :8080 (see Prerequisites)
+helm repo add nginx-stable https://helm.nginx.com/stable && helm repo update
+helm install nginx-ingress nginx-stable/nginx-ingress \
+  -n nginx-ingress --create-namespace \
+  -f k8s/overlays/local/nginx-ingress-values.yaml
+
+# 3. Realm ConfigMap + apply the local overlay (images come from ghcr via CI)
+kubectl create namespace betpossum
+kubectl -n betpossum create configmap keycloak-realm \
+  --from-file=realm.json=keycloak/realm.json
+kubectl apply -k k8s/overlays/local
+kubectl -n betpossum rollout status deploy/nginx
 ```
 
-nginx may `CrashLoopBackOff` for a few seconds until the upstream Services
-exist, then stabilizes.
+## Prod deployment (Flux GitOps)
 
-## 6. Reach it
+Prod is HTTPS via Ingress (TLS cert you provide) and ships **no secrets** — the
+`overlays/prod` you see here is a deployment-independent example that builds
+cleanly but leaves the pods without credentials until you supply them.
 
-- **local:** browse `http://localhost:8080`.
-- **prod:** point your domain's DNS at the NGINX Ingress Controller's external IP
-  (`kubectl -n nginx-ingress get svc nginx-ingress`) — or at whatever CDN / load
-  balancer fronts it. The controller serves the sealed cert from `betpossum-tls`
-  for the domain.
-
-## 7. (optional) Observability
-
-A Helm-based metrics + logs platform — kube-prometheus-stack (Prometheus +
-Grafana + Alertmanager), Loki (log store), and Alloy (log collector) — installs
-into a separate `observability` namespace, independent of the `kubectl apply -k`
-app deploy. Grafana gets its own Ingress on the same NGINX controller
-(`grafana.localhost` locally, `grafana.<domain>` + TLS in prod). See
-[`observability/README.md`](observability/README.md) for the install commands and
-verification steps.
-
-## Continuous delivery (Flux GitOps + private config repo)
-
-The steps above are a one-shot manual deploy. For hands-off delivery,
-[Flux](https://fluxcd.io) reconciles the cluster from git and writes newer image
-tags back — but its image automation must **commit** to a repo, which a public
-repo cannot grant safely. So the deployment lives in a **separate, private config
-repo** (`andrasore/betpossum-prod`); Flux reconciles that, and pulls the reusable
+The recommended path is **GitOps**: [Flux](https://fluxcd.io) reconciles the
+cluster from git and writes newer image tags back — but its image automation must
+**commit** to a repo, which a public repo cannot grant safely. So the deployment
+lives in a **separate, private config repo** (`andrasore/betpossum-prod`) that
+layers your real host, image pins, and SOPS-encrypted Secrets onto this repo's
+`overlays/prod`; Flux reconciles that private repo and pulls the reusable
 manifests from *this* public repo read-only.
 
 ```
@@ -276,21 +212,24 @@ read-write deploy key `flux bootstrap` registers, also used to push tag bumps. T
 public repo and the public `ghcr.io/andrasore/betpossum/*` packages are pulled
 anonymously (no PAT, no `imagePullSecret`).
 
-**What Flux gives back over a manual deploy:** pinned semver tags (not `:latest`),
+**What Flux gives back over a manual apply:** pinned semver tags (not `:latest`),
 `git revert` in the private repo as rollback, and drift reconciliation — a manual
 `kubectl edit` is corrected on the next interval.
 
-**How "newest" is decided.** The CI promote job stamps every e2e-validated image
-with `0.1.<run number>` (see [`pr.yml`](../.github/workflows/pr.yml)); an
-`ImagePolicy` with `semver.range: '>=0.1.0'` selects the highest. `run_number` is
-monotonic and never resets, so a higher patch is always a newer build. The git sha
-is deliberately absent from the tag (docker forbids the `+` of semver build
-metadata, and a `-<sha7>` suffix would sort as a *prerelease*, before the plain
-version); the `:<sha>` staging tag on the same digest carries that mapping, as
-does CI run `#<run number>`.
+> Prefer a one-shot deploy without Flux? See
+> [Manual prod apply](#manual-prod-apply-without-flux) at the end of this section.
 
-### CD prerequisites (beyond the deploy prereqs above)
+### Prod prerequisites (beyond the shared ones)
 
+- **A TLS certificate** for your domain, which the Ingress controller serves from
+  the `betpossum-tls` Secret (sealed in step 3). Where the cert comes from is up
+  to your deployment — your own CA, or an origin cert from whatever CDN / load
+  balancer fronts the cluster. No in-cluster issuer is needed. To terminate TLS
+  entirely upstream instead, drop the TLS patch in
+  `overlays/prod/kustomization.yaml`.
+- **DNS** for your domain pointed at the NGINX Ingress Controller's external IP
+  (`kubectl -n nginx-ingress get svc nginx-ingress`) — or at whatever CDN / load
+  balancer fronts it.
 - The **Flux CLI** — `curl -s https://fluxcd.io/install.sh | sudo bash`, or
   `flux-bin` from the AUR.
 - **SOPS + age** (`sops`, `age`) to encrypt the prod Secrets the private overlay
@@ -332,10 +271,13 @@ creation_rules:
     age: age1...        # your PUBLIC key from age-keygen
 ```
 
-### 2. `overlays/prod/kustomization.yaml`
+### 2. `overlays/prod/kustomization.yaml` — host + image pins
 
 The thin real overlay: the public `overlays/prod` as base (via `include`, below),
-plus the SOPS secrets, the image pins Flux writes, and the real host.
+plus the SOPS secrets, the image pins Flux writes, and your real domain. This is
+also where the `base/` placeholders get filled in — the ConfigMap patch sets
+`PUBLIC_HOST`/`KEYCLOAK_ISSUER_URL`, and the Ingress patch sets the host and TLS
+host.
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -421,6 +363,14 @@ DB=$(gen); MQ=$(gen); KCDB=$(gen); KCADMIN=$(gen)
 sops --encrypt --in-place overlays/prod/secrets.enc.yaml   # committing this is safe: private repo + encrypted
 ```
 
+`KEYCLOAK_ADMIN_CLIENT_SECRET` is betting-core's confidential client secret
+(Keycloak admin console → clients → betting-core → Credentials, or set it in
+`realm.prod.json` first). `DB`/`MQ`/`KCDB` each appear where a connection URL the
+apps read meets the discrete var the server reads, so the copies must match;
+generating them from `[A-Za-z0-9]` avoids URL/SQL escaping. `KC_DB_PASSWORD` is the
+single source for the `keycloak` DB role (`postgres-init` creates it, Keycloak
+connects with it — one Postgres hosts both databases). `THE_ODDS_API_KEY` /
+`APIFOOTBALL_API_KEY` only matter if `ODDS_PROVIDERS` names those providers.
 `tls.crt`/`tls.key` are the cert + key for your domain (your own CA, or an origin
 cert from whatever CDN / load balancer fronts the cluster); nothing renews them
 in-cluster, so re-seal when you rotate.
@@ -512,7 +462,36 @@ spec:
 (No `[ci skip]` needed — the private repo has no CI.) Confirm the
 `image.toolkit.fluxcd.io` version matches your installed CRDs after bootstrap.
 
-### 5. Bootstrap Flux
+**How "newest" is decided.** The CI promote job stamps every e2e-validated image
+with `0.1.<run number>` (see [`pr.yml`](../.github/workflows/pr.yml)); an
+`ImagePolicy` with `semver.range: '>=0.1.0'` selects the highest. `run_number` is
+monotonic and never resets, so a higher patch is always a newer build. The git sha
+is deliberately absent from the tag (docker forbids the `+` of semver build
+metadata, and a `-<sha7>` suffix would sort as a *prerelease*, before the plain
+version); the `:<sha>` staging tag on the same digest carries that mapping, as
+does CI run `#<run number>`.
+
+### 5. keycloak-realm ConfigMap (prod)
+
+The realm is imported on first boot and must carry the right URLs. Kustomize
+cannot generate it from a file outside the overlay directory, so create it out of
+band. Copy `realm.json` to `realm.prod.json` first and change the
+`betting-frontend` client to your domain — `redirectUris`
+`https://<domain>/auth/callback` (+ `/silent`), `webOrigins` `https://<domain>`,
+`post.logout.redirect.uris` `https://<domain>/*` — then:
+
+```bash
+kubectl create namespace betpossum
+kubectl -n betpossum create configmap keycloak-realm \
+  --from-file=realm.json=keycloak/realm.prod.json
+```
+
+> `--import-realm` only imports a realm that doesn't already exist. To change the
+> realm after first boot, edit it via the Keycloak admin API/console, or drop the
+> `keycloak` database in the shared Postgres (wiping the postgres PVC would also
+> destroy app data, since one Postgres hosts both databases).
+
+### 6. Bootstrap Flux
 
 ```bash
 export GITHUB_TOKEN=<PAT with repo scope>
@@ -537,9 +516,9 @@ into the artifact under `upstream/`:
       toPath: upstream
 ```
 
-Commit everything (the files from steps 1–4 plus this edit) and push.
+Commit everything (the files from steps 1–5 plus this edit) and push.
 
-### 6. Verify
+### 7. Verify
 
 ```bash
 flux check
@@ -550,56 +529,52 @@ kubectl -n betpossum get deploy -o wide   # IMAGES show the pinned tag, not :lat
 ```
 
 Within an interval the `ImageUpdateAutomation` commits a tag bump to
-`betpossum-prod`; `git revert` that commit and Flux rolls the cluster back.
-Out-of-band prereqs still apply — the `keycloak-realm` ConfigMap (from
-`realm.prod.json`), the NGINX Inc ingress controller, a default StorageClass, and
-DNS pointed at the controller's external IP.
+`betpossum-prod`; `git revert` that commit and Flux rolls the cluster back. Then
+point your domain's DNS at the NGINX Ingress Controller's external IP — the
+controller serves the sealed cert from `betpossum-tls` for the domain.
 
-## Local quickstart on k3s
+### Manual prod apply (without Flux)
 
-The local setup tries to mimic the prod as closely as possible.
-k3s is a quick way to exercise the `local` overlay end to end. Two k3s specifics
-to know:
-
-- **k3s ships Traefik** — but the local overlay's Ingress targets
-  `ingressClassName: nginx` (NGINX-Inc `nginx.org/*` annotations). Install with
-  `--disable traefik`, then install the NGINX-Inc controller with the local
-  values file so its Service publishes on `:8080` — k3s' klipper service-LB
-  binds that host port straight to the controller.
-- **Images are pulled from the registry** — the app images are public on
-  `ghcr.io/andrasore/betpossum/*` and are published automatically by CI on the PR
-  flow — there is nothing to build or push by hand. The default `Always` pull
-  policy is correct: k3s pulls them directly, no containerd import or pull secret
-  needed.
+For a one-shot deploy without GitOps, create the five Secrets out of band, create
+the prod realm ConfigMap ([step 5](#5-keycloak-realm-configmap-prod)), fill the
+`base/` placeholders (`PUBLIC_HOST`/`KEYCLOAK_ISSUER_URL` in `base/02-config.yaml`;
+the Ingress host in `base/50-ingress.yaml` and the tls host in
+`overlays/prod/kustomization.yaml`), then `kubectl apply -k k8s/overlays/prod`.
+The secret-creation, with the same `DB`/`MQ` reuse rules as
+[step 3](#3-overlaysprodsecretsencyaml):
 
 ```bash
-# 1. k3s without Traefik (it would otherwise grab :80/:443)
-curl -sfL https://get.k3s.io | sh -s - --disable traefik
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml          # or copy to ~/.kube/config
-
-# 2. NGINX-Inc ingress controller, published on host :8080 (see Prerequisites)
-helm repo add nginx-stable https://helm.nginx.com/stable && helm repo update
-helm install nginx-ingress nginx-stable/nginx-ingress \
-  -n nginx-ingress --create-namespace \
-  -f k8s/overlays/local/nginx-ingress-values.yaml
-
-# 3. Realm ConfigMap + apply the local overlay (images come from ghcr via CI)
 kubectl create namespace betpossum
-kubectl -n betpossum create configmap keycloak-realm \
-  --from-file=realm.json=keycloak/realm.json
-kubectl apply -k k8s/overlays/local
-kubectl -n betpossum rollout status deploy/nginx
+DB=...; MQ=...        # each of these appears twice below and the copies must match
+kubectl -n betpossum create secret generic betpossum-app-secrets \
+  --from-literal=DATABASE_URL="postgresql://betting:${DB}@postgres:5432/betting" \
+  --from-literal=RABBITMQ_URL="amqp://betting:${MQ}@rabbitmq:5672" \
+  --from-literal=KEYCLOAK_ADMIN_CLIENT_SECRET=...  # betting-core client credential \
+  --from-literal=THE_ODDS_API_KEY= --from-literal=APIFOOTBALL_API_KEY=
+kubectl -n betpossum create secret generic postgres-secret \
+  --from-literal=POSTGRES_DB=betting --from-literal=POSTGRES_USER=betting \
+  --from-literal=POSTGRES_PASSWORD="${DB}"
+kubectl -n betpossum create secret generic rabbitmq-secret \
+  --from-literal=RABBITMQ_DEFAULT_USER=betting --from-literal=RABBITMQ_DEFAULT_PASS="${MQ}"
+kubectl -n betpossum create secret generic keycloak-secret \
+  --from-literal=KC_DB_PASSWORD=... \
+  --from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=admin --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD=...
+kubectl -n betpossum create secret tls betpossum-tls --cert=tls.crt --key=tls.key
 ```
 
-Browse `http://localhost:8080` (served through the Ingress, so this also
-exercises the `nginx.org/websocket-services` annotation), register/log in
-(exercises the `http://localhost:8080` Keycloak issuer + PKCE) and place a bet
-(exercises the `/socket.io` live channel). Once CI publishes a newer image,
-force a fresh `Always` pull with:
+nginx may `CrashLoopBackOff` for a few seconds until the upstream Services exist,
+then stabilizes. You forgo pinned tags, git-revert rollback, and drift
+reconciliation — that is what [Flux](#prod-deployment-flux-gitops) adds.
 
-```bash
-kubectl -n betpossum rollout restart deploy/core        # or whichever service
-```
+## Observability (optional)
+
+A Helm-based metrics + logs platform — kube-prometheus-stack (Prometheus +
+Grafana + Alertmanager), Loki (log store), and Alloy (log collector) — installs
+into a separate `observability` namespace, independent of the `kubectl apply -k`
+app deploy. Grafana gets its own Ingress on the same NGINX controller
+(`grafana.localhost` locally, `grafana.<domain>` + TLS in prod). See
+[`observability/README.md`](observability/README.md) for the install commands and
+verification steps.
 
 ## Scaling caveats (why several services are replicas: 1)
 
