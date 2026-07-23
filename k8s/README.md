@@ -379,9 +379,13 @@ metadata: { name: betpossum, namespace: flux-system }
 spec:
   interval: 5m
   retryInterval: 1m
+  timeout: 10m            # health-check window; without it, defaults to interval (5m),
+                          # which first-boot StatefulSets (PVC + image pull + realm import) can exceed
   path: ./overlays/prod
   prune: true
-  wait: true
+  # No `wait: true` here on purpose: wait makes Flux health-check ALL reconciled
+  # resources and *ignores* healthChecks below — which would gate Ready on bots too.
+  # We want the opposite (exclude bots), so we omit wait and list the checks explicitly.
   sourceRef: { kind: GitRepository, name: flux-system }   # the private repo (self)
   decryption:
     provider: sops
