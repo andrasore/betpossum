@@ -199,9 +199,6 @@ anonymously (no PAT, no `imagePullSecret`).
 `git revert` in the private repo as rollback, and drift reconciliation — a manual
 `kubectl edit` is corrected on the next interval.
 
-> Prefer a one-shot deploy without Flux? See
-> [Manual prod apply](#manual-prod-apply-without-flux) at the end of this section.
-
 ### Prod prerequisites (beyond the shared ones)
 
 - **A TLS certificate** for your domain, which the Ingress controller serves from
@@ -411,14 +408,14 @@ core, odds, notifications, stats, frontend, keycloak, bots), and one shared
 Pattern per image, then the updater:
 
 ```yaml
-apiVersion: image.toolkit.fluxcd.io/v1beta2
+apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
 metadata: { name: core, namespace: flux-system }
 spec:
   image: ghcr.io/andrasore/betpossum/core
   interval: 5m            # public package — no secretRef
 ---
-apiVersion: image.toolkit.fluxcd.io/v1beta2
+apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImagePolicy
 metadata: { name: core, namespace: flux-system }
 spec:
@@ -427,7 +424,7 @@ spec:
 ---
 # ... repeat the pair for odds, notifications, stats, frontend, keycloak, bots ...
 ---
-apiVersion: image.toolkit.fluxcd.io/v1beta2
+apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
 metadata: { name: betpossum, namespace: flux-system }
 spec:
@@ -441,9 +438,6 @@ spec:
     push: { branch: main }
   update: { path: ./overlays/prod, strategy: Setters }
 ```
-
-(No `[ci skip]` needed — the private repo has no CI.) Confirm the
-`image.toolkit.fluxcd.io` version matches your installed CRDs after bootstrap.
 
 **How "newest" is decided.** The CI promote job stamps every e2e-validated image
 with `0.1.<run number>` (see [`pr.yml`](../.github/workflows/pr.yml)); an
@@ -480,12 +474,17 @@ kubectl -n betpossum create configmap keycloak-realm \
 export GITHUB_TOKEN=<PAT with repo scope>
 flux bootstrap github \
   --owner=andrasore --repository=betpossum-prod --private --personal \
+  --branch=main \
   --path=clusters/prod \
   --components-extra=image-reflector-controller,image-automation-controller
 
 # age private key so the cluster can decrypt the SOPS secrets:
 kubectl -n flux-system create secret generic sops-age --from-file=age.agekey=age.agekey
 ```
+
+`--branch=main` points bootstrap at the branch you already populated in steps 1–5
+rather than a fresh one — the repo and branch exist, so bootstrap reconciles into
+them (adds `clusters/prod/flux-system/`, commits, pushes) instead of creating them.
 
 Bootstrap commits `clusters/prod/flux-system/` and registers a read-write deploy
 key. Add the `.spec.include` block to the generated `GitRepository` (in
@@ -515,39 +514,6 @@ Within an interval the `ImageUpdateAutomation` commits a tag bump to
 `betpossum-prod`; `git revert` that commit and Flux rolls the cluster back. Then
 point your domain's DNS at the NGINX Ingress Controller's external IP — the
 controller serves the sealed cert from `betpossum-tls` for the domain.
-
-### Manual prod apply (without Flux)
-
-For a one-shot deploy without GitOps, create the five Secrets out of band, create
-the prod realm ConfigMap ([step 5](#5-keycloak-realm-configmap-prod)), fill the
-`base/` placeholders (`PUBLIC_HOST`/`KEYCLOAK_ISSUER_URL` in `base/02-config.yaml`;
-the Ingress host in `base/50-ingress.yaml` and the tls host in
-`overlays/prod/kustomization.yaml`), then `kubectl apply -k k8s/overlays/prod`.
-The secret-creation, with the same `DB`/`MQ` reuse rules as
-[step 3](#3-overlaysprodsecretsencyaml):
-
-```bash
-kubectl create namespace betpossum
-DB=...; MQ=...        # each of these appears twice below and the copies must match
-kubectl -n betpossum create secret generic betpossum-app-secrets \
-  --from-literal=DATABASE_URL="postgresql://betting:${DB}@postgres:5432/betting" \
-  --from-literal=RABBITMQ_URL="amqp://betting:${MQ}@rabbitmq:5672" \
-  --from-literal=KEYCLOAK_ADMIN_CLIENT_SECRET=...  # betting-core client credential \
-  --from-literal=THE_ODDS_API_KEY= --from-literal=APIFOOTBALL_API_KEY=
-kubectl -n betpossum create secret generic postgres-secret \
-  --from-literal=POSTGRES_DB=betting --from-literal=POSTGRES_USER=betting \
-  --from-literal=POSTGRES_PASSWORD="${DB}"
-kubectl -n betpossum create secret generic rabbitmq-secret \
-  --from-literal=RABBITMQ_DEFAULT_USER=betting --from-literal=RABBITMQ_DEFAULT_PASS="${MQ}"
-kubectl -n betpossum create secret generic keycloak-secret \
-  --from-literal=KC_DB_PASSWORD=... \
-  --from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=admin --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD=...
-kubectl -n betpossum create secret tls betpossum-tls --cert=tls.crt --key=tls.key
-```
-
-nginx may `CrashLoopBackOff` for a few seconds until the upstream Services exist,
-then stabilizes. You forgo pinned tags, git-revert rollback, and drift
-reconciliation — that is what [Flux](#prod-deployment-flux-gitops) adds.
 
 ## Observability (optional)
 
