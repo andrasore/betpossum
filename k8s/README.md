@@ -94,17 +94,34 @@ Shared by both deployment paths:
 - The cluster must be able to reach `ghcr.io` to pull the app images (they are
   public — no pull secret needed).
 
-## Local deployment
+## Local deployment (k3s)
 
-Plain HTTP on `http://localhost:8080`. The local overlay commits throwaway dev
-secrets (`betting_dev`, Keycloak `admin`/`admin`), so there is nothing to fill in
-— never reuse them anywhere reachable. The steps:
+Plain HTTP on `http://localhost:8080`, on a single-node [k3s](https://k3s.io)
+cluster — a quick way to exercise the `local` overlay end to end while mimicking
+prod as closely as possible. The local overlay commits throwaway dev secrets
+(`betting_dev`, Keycloak `admin`/`admin`), so there is nothing to fill in — never
+reuse them anywhere reachable. The steps:
+
+- **Install k3s without Traefik.** k3s ships Traefik, but the local overlay's
+  Ingress targets `ingressClassName: nginx` (NGINX-Inc `nginx.org/*`
+  annotations), and Traefik would otherwise grab `:80`/`:443`. Disable it at
+  install:
+
+  ```bash
+  curl -sfL https://get.k3s.io | sh -s - --disable traefik
+  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml          # or copy to ~/.kube/config
+  ```
+
+  k3s ships a default StorageClass (local-path) and pulls the public
+  `ghcr.io/andrasore/betpossum/*` images directly, so no StorageClass setup,
+  containerd import, or pull secret is needed.
 
 - **Install the NGINX Ingress Controller, published on host `:8080`.** The issuer
   is `http://localhost:8080/kc/realms/betting` and the browser URL must be exactly
   `http://localhost:8080`, so the controller has to answer on that host port. The
   committed `overlays/local/nginx-ingress-values.yaml` sets the controller
-  Service's HTTP port to 8080 (`controller.service.httpPort.port`):
+  Service's HTTP port to 8080 (`controller.service.httpPort.port`); k3s' klipper
+  service-LB then binds host `:8080` straight to the controller:
 
   ```bash
   helm repo add nginx-stable https://helm.nginx.com/stable && helm repo update
@@ -112,10 +129,6 @@ secrets (`betting_dev`, Keycloak `admin`/`admin`), so there is nothing to fill i
     -n nginx-ingress --create-namespace \
     -f k8s/overlays/local/nginx-ingress-values.yaml
   ```
-
-  On k3s the klipper service-LB then binds host `:8080` straight to the
-  controller. On kind, map it instead via `extraPortMappings` 8080→ingress (or
-  use `minikube tunnel`).
 
 - **Create the `keycloak-realm` ConfigMap** from the committed dev realm (already
   points at `http://localhost:8080`). Kustomize cannot generate it from a file
@@ -147,39 +160,9 @@ secrets (`betting_dev`, Keycloak `admin`/`admin`), so there is nothing to fill i
 > `keycloak` database in the shared Postgres (wiping the postgres PVC would also
 > destroy app data, since one Postgres hosts both databases).
 
-### On k3s
-
-The local setup tries to mimic prod as closely as possible, and k3s is a quick
-way to exercise the `local` overlay end to end. Two k3s specifics:
-
-- **k3s ships Traefik** — but the local overlay's Ingress targets
-  `ingressClassName: nginx` (NGINX-Inc `nginx.org/*` annotations). Install with
-  `--disable traefik`, then install the NGINX-Inc controller with the local
-  values file so its Service publishes on `:8080` — k3s' klipper service-LB
-  binds that host port straight to the controller.
-- **Images are pulled from the registry** — the app images are public on
-  `ghcr.io/andrasore/betpossum/*` and published automatically by CI. The default
-  `Always` pull policy is correct: k3s pulls them directly, no containerd import
-  or pull secret needed.
-
-```bash
-# 1. k3s without Traefik (it would otherwise grab :80/:443)
-curl -sfL https://get.k3s.io | sh -s - --disable traefik
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml          # or copy to ~/.kube/config
-
-# 2. NGINX-Inc ingress controller, published on host :8080 (see Prerequisites)
-helm repo add nginx-stable https://helm.nginx.com/stable && helm repo update
-helm install nginx-ingress nginx-stable/nginx-ingress \
-  -n nginx-ingress --create-namespace \
-  -f k8s/overlays/local/nginx-ingress-values.yaml
-
-# 3. Realm ConfigMap + apply the local overlay (images come from ghcr via CI)
-kubectl create namespace betpossum
-kubectl -n betpossum create configmap keycloak-realm \
-  --from-file=realm.json=keycloak/realm.json
-kubectl apply -k k8s/overlays/local
-kubectl -n betpossum rollout status deploy/nginx
-```
+> On kind or minikube instead of k3s, the ingress controller won't be reachable
+> on host `:8080` automatically — map it via kind `extraPortMappings` 8080→ingress,
+> or use `minikube tunnel`.
 
 ## Prod deployment (Flux GitOps)
 
