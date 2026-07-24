@@ -35,6 +35,9 @@ spec:
       containers:
         - name: odds
           image: ghcr.io/andrasore/betpossum/odds:latest   # Dockerfile target: odds
+          env:
+            - name: DB_SCHEMA
+              value: odds
           envFrom:
             - configMapRef:
                 name: betpossum-config
@@ -44,7 +47,7 @@ spec:
             - containerPort: 8000
           readinessProbe:
             httpGet:
-              path: /odds
+              path: /health
               port: 8000
             initialDelaySeconds: 10
             periodSeconds: 10
