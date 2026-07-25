@@ -120,8 +120,28 @@ their own.
 | App (via Nginx)        | http://localhost:8080        |
 | RabbitMQ management UI  | http://localhost:15672 (`betting` / `betting_dev`) |
 
+### Seeded users
+
+The `betting` realm ships two ready-to-use accounts (both password
+`password`) so you can log in without registering:
+
+| User    | Password   | Role           | What it's for                                   |
+|---------|------------|----------------|-------------------------------------------------|
+| `alice` | `password` | `user`         | A plain punter — browse markets and place bets. |
+| `bob`   | `password` | `admin` + `user` | Everything alice can do, plus the admin panel.  |
+
+Sign in as **bob** to reach the **Admin** panel (the nav link only shows for
+admins), where you can top up any user's balance and **manually resolve
+events**. This matters with the default mock provider: mock events never
+resolve on their own, so held bets stay open until an admin picks an outcome
+on the admin panel's **Events** tab — that publishes an `EventResolvedEvent`
+and Core settles the bets. (`bob` is also the account the bot fleet funds
+through the admin API.)
+
 To use real odds, set `ODDS_PROVIDERS` (e.g. `theoddsapi`, `apifootball`) and
 the matching API keys (`THE_ODDS_API_KEY`, …) before bringing up the stack.
+Events from those providers are not manually resolvable — only mock events
+are.
 
 ## Development
 
