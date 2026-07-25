@@ -8,6 +8,8 @@
 
 <img width="218" height="134" alt="BetPossum logo" src="https://github.com/user-attachments/assets/02a5095f-6c46-4dad-906c-8c944e3a6f9f" />
 
+**🔗 Live demo: [betpossum.win](https://betpossum.win)**
+
 ## Overview
 
 BetPossum is a demonstration sports-betting application built as a small
