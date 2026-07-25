@@ -81,8 +81,8 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   // Default selection on first click is 'home' — held state visible.
   await expect(betRow).toContainText(/held/i);
 
-  // Started at £100, staked £10 → £90 held until settlement.
-  await expect(alicePage.getByTestId("balance")).toContainText("£90.00");
+  // Started at $100, staked $10 → $90 held until settlement.
+  await expect(alicePage.getByTestId("balance")).toContainText("$90.00");
 
   // Resolve the event in alice's favour by clicking the Home button on
   // the row in bob's Events admin tab.
@@ -101,12 +101,12 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
   // Bet row flips to "Won" via the socket-driven useBets revalidation.
   await expect(betRow).toContainText(/won/i, { timeout: 20_000 });
 
-  // Balance: stake released (back to £100) + profit (stake * (odds - 1)) > £100.
+  // Balance: stake released (back to $100) + profit (stake * (odds - 1)) > $100.
   await expect
     .poll(
       async () => {
         const text = await alicePage.getByTestId("balance").textContent();
-        const match = text?.match(/£([\d.]+)/);
+        const match = text?.match(/\$([\d.]+)/);
         return match ? parseFloat(match[1]) : NaN;
       },
       { timeout: 20_000 },

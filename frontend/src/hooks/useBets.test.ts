@@ -65,7 +65,7 @@ describe("useBets bet.settled toasts", () => {
   it("pops a success toast with the profit on a winning settlement", () => {
     renderHook(() => useBets("token"), { wrapper });
     settle({ betId: "bet-1", won: true, payout: 23.5 });
-    expect(toast.success).toHaveBeenCalledWith("Bet won! +£23.50");
+    expect(toast.success).toHaveBeenCalledWith("Bet won! +$23.50");
     expect(toast.error).not.toHaveBeenCalled();
   });
 
@@ -101,7 +101,7 @@ describe("useBets bet.settled toasts", () => {
 
     settle({ betId: "bet-1", won: true, payout: 15 });
     expect(toast.success).toHaveBeenCalledWith(
-      "Bet won! Arsenal vs Chelsea +£15.00",
+      "Bet won! Arsenal vs Chelsea +$15.00",
     );
   });
 });

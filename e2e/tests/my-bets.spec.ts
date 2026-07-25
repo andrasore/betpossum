@@ -48,7 +48,7 @@ test("a placed bet deep-links from Recent Bets into My Bets and settles to Won",
   await loginAs(page, "bob");
   await page.waitForURL("**/dashboard");
 
-  // Fund bob enough for a £10 bet (the balance is set absolutely).
+  // Fund bob enough for a $10 bet (the balance is set absolutely).
   await page.getByTestId("admin-link").click();
   await page.waitForURL("**/admin");
   const bobRow = page.locator("tr", { hasText: "admin@example.com" });
@@ -80,16 +80,16 @@ test("a placed bet deep-links from Recent Bets into My Bets and settles to Won",
   // place one bet on that event — a card click defaults to the 'home' selection.
   await page.getByTestId("dashboard-link").click();
   await page.waitForURL("**/dashboard");
-  await expect(page.getByTestId("balance")).toContainText("£100.00");
+  await expect(page.getByTestId("balance")).toContainText("$100.00");
 
   const eventCard = page.getByTestId(`event-card-${eventId}`);
   await expect(eventCard).toBeVisible();
   await eventCard.click();
   await page.getByTestId("stake-input").fill("10");
   await page.getByTestId("place-bet-button").click();
-  // The held bet drops the available balance by £10 — a reliable completion sync
+  // The held bet drops the available balance by $10 — a reliable completion sync
   // (the bet slip stays mounted off-screen, so it can't signal completion).
-  await expect(page.getByTestId("balance")).toContainText("£90.00");
+  await expect(page.getByTestId("balance")).toContainText("$90.00");
 
   // The bet shows in the dashboard's Recent Bets sidebar; deep-link through it.
   await expect(

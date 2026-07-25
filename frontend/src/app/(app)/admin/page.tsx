@@ -100,7 +100,7 @@ function UsersPanel() {
                 Bets
               </Table.ColumnHeaderCell>
               <Table.ColumnHeaderCell justify="end">
-                Balance (£)
+                Balance ($)
               </Table.ColumnHeaderCell>
             </Table.Row>
           </Table.Header>

@@ -66,8 +66,8 @@ function createToast(won: boolean, payout: number, event?: OddsEvent) {
   if (won) {
     toast.success(
       matchup
-        ? `Bet won! ${matchup} +£${payout.toFixed(2)}`
-        : `Bet won! +£${payout.toFixed(2)}`,
+        ? `Bet won! ${matchup} +$${payout.toFixed(2)}`
+        : `Bet won! +$${payout.toFixed(2)}`,
     );
   } else {
     toast.error(matchup ? `Bet lost — ${matchup}` : "Bet lost");

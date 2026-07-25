@@ -143,7 +143,7 @@ export function BetSlip({
         </Box>
         <Box>
           <Text as="label" size="2" weight="medium" htmlFor="stake-input">
-            Stake (£)
+            Stake ($)
           </Text>
           <TextField.Root
             id="stake-input"
@@ -161,7 +161,7 @@ export function BetSlip({
           />
           {overBalance && (
             <Text size="1" color="red" as="div" mt="1">
-              Stake exceeds your balance of £{balance?.toFixed(2)}.
+              Stake exceeds your balance of ${balance?.toFixed(2)}.
             </Text>
           )}
         </Box>
@@ -171,7 +171,7 @@ export function BetSlip({
             Potential return
           </Text>
           <Text size="2" weight="medium">
-            £{potentialReturn}
+            ${potentialReturn}
           </Text>
         </Flex>
         {loggedIn ? (

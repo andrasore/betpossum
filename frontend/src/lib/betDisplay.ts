@@ -31,7 +31,7 @@ export function selectionLabel(bet: Bet, event?: OddsEvent): string {
 // Settlement outcome text: the status, plus the profit paid out on a win.
 export function betOutcomeLabel(bet: Bet): string {
   if (bet.status === "won" && bet.payout != null) {
-    return `Won +£${Number(bet.payout).toFixed(2)}`;
+    return `Won +$${Number(bet.payout).toFixed(2)}`;
   }
   return bet.status;
 }

@@ -125,7 +125,7 @@ export function BetsTable({ bets, oddsIndex }: BetsTableProps) {
                 </Text>
               </Table.Cell>
               <Table.Cell justify="end">
-                <Text size="2">£{Number(bet.stake).toFixed(2)}</Text>
+                <Text size="2">${Number(bet.stake).toFixed(2)}</Text>
               </Table.Cell>
               <Table.Cell>
                 <Badge

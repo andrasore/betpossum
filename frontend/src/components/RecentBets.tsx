@@ -63,7 +63,7 @@ export function RecentBets({ bets, oddsIndex }: RecentBetsProps) {
                         {bet.selection} @ {Number(bet.odds).toFixed(2)}
                       </Text>
                       <Text size="2" color="gray">
-                        £{Number(bet.stake).toFixed(2)}
+                        ${Number(bet.stake).toFixed(2)}
                       </Text>
                       <Badge
                         color={statusColor[bet.status]}

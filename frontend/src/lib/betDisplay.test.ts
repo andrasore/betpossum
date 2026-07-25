@@ -32,7 +32,7 @@ describe("selectionLabel", () => {
 describe("betOutcomeLabel", () => {
   it("shows the won payout with profit formatting", () => {
     expect(betOutcomeLabel(makeBet({ status: "won", payout: 23.5 }))).toBe(
-      "Won +£23.50",
+      "Won +$23.50",
     );
   });
 

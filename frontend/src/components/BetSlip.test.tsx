@@ -44,14 +44,14 @@ describe("BetSlip", () => {
       selection: { event: makeEvent({ homeOdds: 2.5 }), choice: "home" },
     });
     await userEvent.type(screen.getByTestId("stake-input"), "10");
-    expect(screen.getByText("£25.00")).toBeInTheDocument();
+    expect(screen.getByText("$25.00")).toBeInTheDocument();
   });
 
   it("warns and disables Place Bet when the stake exceeds the balance", async () => {
     renderSlip({ balance: 50 });
     await userEvent.type(screen.getByTestId("stake-input"), "60");
     expect(
-      screen.getByText(/Stake exceeds your balance of £50\.00/),
+      screen.getByText(/Stake exceeds your balance of \$50\.00/),
     ).toBeInTheDocument();
     expect(screen.getByTestId("place-bet-button")).toBeDisabled();
   });

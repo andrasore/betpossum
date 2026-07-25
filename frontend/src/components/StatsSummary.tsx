@@ -40,7 +40,7 @@ export function StatsSummary({ summary }: { summary: Summary }) {
     >
       <Tile
         label="Net P&L"
-        value={`£${signed(summary.netProfit)}`}
+        value={`$${signed(summary.netProfit)}`}
         color={pnlColor}
       />
       <Tile

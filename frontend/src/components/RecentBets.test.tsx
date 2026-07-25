@@ -47,7 +47,7 @@ describe("RecentBets", () => {
     const bet = makeBet({ id: "bet-1", status: "won", payout: 25.5 });
     render(<RecentBets bets={[bet]} oddsIndex={emptyIndex} />);
 
-    expect(screen.getByText("Won +£25.50")).toBeInTheDocument();
+    expect(screen.getByText("Won +$25.50")).toBeInTheDocument();
   });
 
   it("omits the matchup line when the event is not in the index", () => {

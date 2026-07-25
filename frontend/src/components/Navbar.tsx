@@ -155,7 +155,7 @@ const BalancePill = ({ balance }: { balance: number }) => (
     <Wallet size={18} aria-hidden />
     <Text color="gray">Balance:</Text>
     <Text size="3" weight="bold" style={{ color: "white" }}>
-      £{balance.toFixed(2)}
+      ${balance.toFixed(2)}
     </Text>
   </Badge>
 );
