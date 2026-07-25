@@ -71,6 +71,10 @@ see [ARCHITECTURE.md](ARCHITECTURE.md).
 - **Kubernetes** — via Kustomize: a shared `base/` with `local` and `prod`
   overlays.
 - **GitHub Actions** — CI pipeline: typecheck → build → e2e.
+- **Continuous delivery via Flux GitOps** — e2e-validated images are promoted on
+  `main`, and Flux's image automation writes the new tags back to a private
+  config repo it reconciles into the cluster, so a merge deploys itself and a
+  `git revert` is the rollback.
 - **Observability (optional)** — kube-prometheus-stack + Loki + Alloy + Grafana
   in its own namespace.
 
@@ -188,7 +192,7 @@ pnpm schema:gen   # regenerate Zod/Pydantic bindings from schemas/json
 pnpm hooks:setup  # point git at .githooks (enables the pre-push gate)
 ```
 
-## Testing & CI
+## Testing & CI/CD
 
 - **Unit tests** — one suite per service.
 - **Playwright e2e** — [`e2e/`](e2e/) boots the full stack and drives it through
@@ -199,6 +203,10 @@ pnpm hooks:setup  # point git at .githooks (enables the pre-push gate)
   runs `test → build images → e2e`, then on `main` the e2e-validated `:<sha>`
   images are promoted to `:latest` on GHCR by digest — a manifest copy, not a
   rebuild.
+- **Continuous delivery** — Flux watches GHCR and commits the resolved image tags
+  into the private config repo it reconciles into the cluster, so promotion ends
+  in a deploy without a manual `kubectl apply`. See
+  [`k8s/README.md`](k8s/README.md#prod-deployment-flux-gitops).
 
 ## Deployment
 
