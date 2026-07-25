@@ -12,6 +12,9 @@ export interface UserView {
   createdAt: Date;
 }
 
+// $1000, in cents at the ledger boundary.
+const STARTING_BALANCE_CENTS = 1000 * 100;
+
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
@@ -49,7 +52,7 @@ export class UsersService {
     // primary key.
 
     // TODO this is not updated when someone changes their name in keycloak
-    await this.repo
+    const insert = await this.repo
       .createQueryBuilder()
       .insert()
       .into(User)
@@ -57,10 +60,21 @@ export class UsersService {
       .orIgnore()
       .execute();
 
+    // Postgres returns the inserted row here only for the one caller that won
+    // the race; conflicting inserts are ignored and come back empty. Gate the
+    // starting grant on that so concurrent creates seed the balance exactly once.
+    const isNew = insert.raw.length > 0;
+
     const local = await this.repo.findOneByOrFail({ id: dto.id });
 
     this.logger.log(`Ensuring wallet account for user ${local.id}`);
     await this.wallet.createAccount(local.id);
+
+    if (isNew) {
+      // TODO balance top-up is not implemented, so every user starts with a
+      // fixed $1000 grant and cannot add more once it runs out.
+      await this.wallet.deposit(local.id, STARTING_BALANCE_CENTS);
+    }
 
     return {
       id: local.id,
