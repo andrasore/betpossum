@@ -63,6 +63,9 @@ export function OddsBoard({
         // bet on — settlement has already happened, so the bet would never
         // settle. Render it inert: no click, dimmed, with a "Final" badge.
         const resolved = e.outcome != null;
+        // Flag events coming from the mock provider so the demo makes it
+        // obvious which cards aren't backed by a real odds feed.
+        const isMock = e.origin === "mock";
         const winnerLabel =
           e.outcome === "home"
             ? (e.homeTeamName ?? e.homeTeam)
@@ -76,6 +79,7 @@ export function OddsBoard({
             aria-disabled={resolved || undefined}
             onClick={resolved ? undefined : () => onToggle(e)}
             style={{
+              position: "relative",
               cursor: resolved ? "not-allowed" : "pointer",
               opacity: resolved ? 0.55 : undefined,
               transition: "outline-color 0.15s, background-color 0.15s",
@@ -87,6 +91,23 @@ export function OddsBoard({
                 : {}),
             }}
           >
+            {isMock && (
+              <Badge
+                size="1"
+                color="amber"
+                variant="soft"
+                highContrast
+                style={{
+                  position: "absolute",
+                  top: "var(--space-2)",
+                  right: "var(--space-2)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Mock
+              </Badge>
+            )}
             <Flex direction="column" align="start" gap="1" mb="3">
               {e.leagueName && (
                 <Badge size="3" color={sportColor(e.sport)} variant="soft">
