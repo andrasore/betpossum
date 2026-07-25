@@ -8,8 +8,19 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap");
 
+/* Druk Wide — the commercial brand wordmark face, bundled from the licensed
+   file (mirrors frontend's next/font/local). Used only for the header banner. */
+@font-face {
+  font-family: "Druk Wide";
+  src: url("../fonts/DrukWideBold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bp-font: "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bp-display: "Druk Wide", system-ui, sans-serif;
   --bp-radius: 4px; /* Radix Themes radius="small" */
 }
 
@@ -41,12 +52,38 @@ textarea,
   box-shadow: 0 1px 2px var(--sand-a3), 0 8px 24px var(--sand-a2);
 }
 
-/* Brand wordmark (shows realm displayName = "BetPossum"). */
+/* Brand banner — reproduces the frontend Navbar's <Brand>: the green-masked
+   possum logo followed by the "BetPossum" wordmark in Druk Wide. The header
+   text is the realm displayNameHtml ("BetPossum"); the logo is a ::before mask
+   filled with the green accent, exactly like the Navbar's masked <span>. */
 #kc-header-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px; /* Navbar Brand gap="3" */
   color: var(--green-11) !important;
+  font-family: var(--bp-display) !important;
+  font-size: 28px; /* Radix Text size="7" */
+  line-height: 36px;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.02em; /* Navbar wordmark */
   text-transform: none;
+}
+
+#kc-header-wrapper::before {
+  content: "";
+  display: block;
+  width: 90px; /* Navbar logo dimensions */
+  height: 48px;
+  background-color: var(--green-11);
+  -webkit-mask-image: url("../img/possum.png");
+  mask-image: url("../img/possum.png");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
 #kc-page-title,
