@@ -1,6 +1,7 @@
 "use client";
 
 import { Flex } from "@radix-ui/themes";
+import { DemoBanner } from "@/components/DemoBanner";
 import { Navbar } from "@/components/Navbar";
 import { useBalance } from "@/hooks/useBalance";
 import { useAuth } from "@/lib/auth-context";
@@ -15,6 +16,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <Flex direction="column" style={{ height: "100vh" }}>
+      <DemoBanner />
       <Navbar balance={balance} />
       {children}
     </Flex>
