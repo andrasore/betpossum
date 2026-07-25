@@ -9,23 +9,27 @@ notifications service, and Next.js for the frontend. Services communicate
 asynchronously via RabbitMQ fanout exchanges using JSON messages validated
 against a shared JSON Schema.
 
+![BetPossum architecture](docs/architecture.drawio.svg)
+
 ---
 
 ## Stack
     
-| Layer            | Technology                                        |
-|------------------|---------------------------------------------------|
-| Frontend         | Next.js (React, SWR) — static export              |
-| Edge proxy       | Nginx (path-based routing only)                   |
-| Core API         | NestJS (Node.js) — includes the wallet module     |
-| Odds Service     | FastAPI (Python, asyncio)                         |
-| Notifications    | FastAPI + python-socketio (Python, ASGI/uvicorn)  |
-| Identity         | Keycloak (OIDC, realm `betting`)                  |
-| Messaging        | RabbitMQ (fanout exchanges)                       |
-| Message format   | JSON (validated against shared JSON Schema)       |
-| Primary DB       | PostgreSQL                                        |
-| Financial ledger | TigerBeetle                                       |
-| External data    | The Odds API + API-Football (pluggable providers) |
+| Layer            | Technology                                          |
+|------------------|-----------------------------------------------------|
+| Frontend         | Next.js (React, SWR) — static export, OIDC + PKCE   |
+| Edge proxy       | Nginx (single origin, path-based routing)           |
+| Core API         | NestJS (Node.js) — bets, wallet, settlement         |
+| Odds Service     | FastAPI (Python, asyncio) — pluggable providers     |
+| Stats Service    | FastAPI (Python) — read model over settled bets     |
+| Notifications    | FastAPI + python-socketio (ASGI, uvicorn)           |
+| Identity         | Keycloak (OIDC, realm `betting`)                    |
+| Messaging        | RabbitMQ (fanout exchanges)                          |
+| Message format   | JSON validated against shared JSON Schema            |
+| Primary DB       | PostgreSQL (schema-per-service)                      |
+| Financial ledger | TigerBeetle (double-entry)                           |
+| External data    | The Odds API + API-Football (pluggable providers)   |
+| Orchestration    | Docker Compose · Kubernetes (Kustomize)             |
 
 ---
 

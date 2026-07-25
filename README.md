@@ -74,34 +74,6 @@ see [ARCHITECTURE.md](ARCHITECTURE.md).
 - **Observability (optional)** — kube-prometheus-stack + Loki + Alloy + Grafana
   in its own namespace.
 
-## Architecture
-
-![BetPossum architecture](docs/architecture.drawio.svg)
-
-| Exchange          | Publisher           | Subscriber    | Payload              |
-|-------------------|---------------------|---------------|----------------------|
-| `odds.updated`    | Odds Service        | —             | `OddsUpdatedEvent`   |
-| `events.resolved` | Odds Service        | Core API      | `EventResolvedEvent` |
-| `bets.settled`    | Core API            | Stats Service | `BetSettledEvent`    |
-| `notifications`   | Core + Odds Service | Notifications | `NotificationEvent`  |
-
-## Tech stack
-
-| Layer            | Technology                                          |
-|------------------|-----------------------------------------------------|
-| Frontend         | Next.js (React, SWR) — static export, OIDC + PKCE   |
-| Edge proxy       | Nginx (single origin, path-based routing)           |
-| Core API         | NestJS (Node.js) — bets, wallet, settlement         |
-| Odds Service     | FastAPI (Python, asyncio) — pluggable providers     |
-| Stats Service    | FastAPI (Python) — read model over settled bets     |
-| Notifications    | FastAPI + python-socketio (ASGI, uvicorn)           |
-| Identity         | Keycloak (OIDC, realm `betting`)                     |
-| Messaging        | RabbitMQ (fanout exchanges)                          |
-| Message format   | JSON validated against shared JSON Schema            |
-| Primary DB       | PostgreSQL (schema-per-service)                      |
-| Financial ledger | TigerBeetle (double-entry)                           |
-| Orchestration    | Docker Compose · Kubernetes (Kustomize)             |
-
 ## Repository layout
 
 ```
