@@ -9,12 +9,11 @@ ones an admin may resolve manually.
 """
 
 import logging
-import os
 import random
 import time
 from typing import AsyncIterator, ClassVar, TypedDict
 
-from odds.models import CanonicalEvent, EventResult, Market, Selection
+from odds.models import CanonicalEvent, Market, Selection
 from .base import OddsProvider
 
 logger = logging.getLogger(__name__)
@@ -88,8 +87,6 @@ FIXTURES: list[Fixture] = [
     },
 ]
 
-DEFAULT_RESOLVE_TICKS = 3
-
 # Minutes-from-startup kickoff offset per fixture, giving the mock board a
 # spread of commence times (a couple live-soon, the rest over the coming days)
 # so the frontend cards show varied dates. Anchored to provider start so the
@@ -135,25 +132,14 @@ def _drift(value: float, lo: float, hi: float) -> float:
 class MockProvider(OddsProvider):
     name: ClassVar[str] = "mock"
 
-    def __init__(
-        self,
-        fixtures: list[Fixture] = FIXTURES,
-        resolve_ticks: int = DEFAULT_RESOLVE_TICKS,
-    ):
+    def __init__(self, fixtures: list[Fixture] = FIXTURES):
         self._fixtures = fixtures
-        self._resolve_ticks = resolve_ticks
         self._started_at = int(time.time() * 1000)
         self._state: dict[str, dict[str, float]] = {}
-        self._ticks: dict[str, int] = {}
-        self._resolved: set[str] = set()
-        self._pending_results: list[EventResult] = []
 
     @classmethod
     def from_env(cls) -> "MockProvider":
-        resolve_ticks = int(
-            os.environ.get("MOCK_RESOLVE_TICKS", str(DEFAULT_RESOLVE_TICKS))
-        )
-        return cls(resolve_ticks=resolve_ticks)
+        return cls()
 
     def _commence_time(self, event_id: str) -> int:
         offset = COMMENCE_OFFSET_MINUTES.get(event_id, DEFAULT_COMMENCE_OFFSET_MINUTES)
@@ -184,13 +170,10 @@ class MockProvider(OddsProvider):
     async def fetch_tick(self) -> AsyncIterator[CanonicalEvent]:
         for fixture in self._fixtures:
             sid = fixture["event_id"]
-            if sid in self._resolved:
-                continue
             has_draw = _has_draw(fixture["sport"])
 
             if sid not in self._state:
                 self._state[sid] = _seed(has_draw)
-                self._ticks[sid] = 0
 
             s = self._state[sid]
             s["home"] = _drift(s["home"], 1.1, 6.0)
@@ -199,7 +182,6 @@ class MockProvider(OddsProvider):
                 s["draw"] = _drift(s["draw"], 2.5, 6.0)
             s["over"] = _drift(s["over"], 1.4, 2.6)
             s["under"] = _drift(s["under"], 1.4, 2.6)
-            self._ticks[sid] += 1
 
             yield CanonicalEvent(
                 event_id=self.canonical_id(sid),
@@ -216,13 +198,4 @@ class MockProvider(OddsProvider):
                 country=fixture["country"],
             )
 
-        active = sum(1 for f in self._fixtures if f["event_id"] not in self._resolved)
-        logger.info(
-            "Published mock odds for %d active fixtures (%d resolved)",
-            active,
-            len(self._resolved),
-        )
-
-    async def fetch_results(self) -> AsyncIterator[EventResult]:
-        while self._pending_results:
-            yield self._pending_results.pop(0)
+        logger.info("Published mock odds for %d fixtures", len(self._fixtures))
