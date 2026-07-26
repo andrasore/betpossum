@@ -52,9 +52,16 @@ calculate odds — ingestion + normalisation only.
   `fetch_results(pending)`; the runner passes it that provider's
   kicked-off-but-unresolved events (`OddsStorage.list_unresolved`, bounded by the
   `RESULTS_*` constants in `runner.py`), so providers still never touch storage.
-  `apifootball` does this; `mock` is resolved through the admin route instead and
-  `theoddsapi` isn't wired up yet. A fixture that ends with no fair outcome
-  (cancelled, abandoned) is skipped rather than guessed at, so its bets stay held.
+  `apifootball` and `theoddsapi` both do this; `mock` is resolved through the
+  admin route instead. An event that ends with no fair outcome (cancelled,
+  abandoned) is skipped rather than guessed at, so its bets stay held.
+  The two real providers derive the outcome differently, because their APIs
+  differ: API-Football has winner flags (`/fixtures?ids=`, up to 20 ids a
+  request, and an AET/PEN fixture resolves to whoever *advanced*, not the
+  90-minute score), while The Odds API has none, so `/scores` outcomes come from
+  comparing the two string scores. `/scores` also caps `daysFrom` at 3, tighter
+  than `RESULTS_LOOKBACK_MS` — a theoddsapi event unresolved for longer than that
+  can no longer be resolved by polling.
 - The wire schema (`OddsUpdatedEvent`/`EventResolvedEvent`) stays 3-way and
   **unchanged**; the flexible model lives entirely inside this service.
 

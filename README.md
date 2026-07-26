@@ -145,10 +145,10 @@ through the admin API.)
 To use real odds, set `ODDS_PROVIDERS` (e.g. `theoddsapi`, `apifootball`) and
 the matching API keys (`THE_ODDS_API_KEY`, …) before bringing up the stack.
 Events from those providers are not manually resolvable — only mock events are.
-They don't need to be: `apifootball` polls its own fixtures for results, so an
-event that has reached full time resolves on its own within a poll interval and
-Core settles the held bets. (Fixtures abandoned or cancelled without a result
-are the exception — there's no fair outcome to publish, so those bets stay open.)
+They don't need to be: both real providers poll for their own results, so an
+event that has finished resolves on its own within a poll interval and Core
+settles the held bets. (Events abandoned or cancelled without a result are the
+exception — there's no fair outcome to publish, so those bets stay open.)
 
 ## Development
 

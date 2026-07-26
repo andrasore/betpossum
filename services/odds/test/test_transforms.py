@@ -16,6 +16,8 @@ from providers.apifootball import (
     _outcome_from_fixture,
 )
 from providers.theoddsapi import _normalise
+from providers.theoddsapi import _outcome_from_scores
+from providers.theoddsapi import _result_for as _scores_result_for
 
 
 def _market(event: CanonicalEvent, key: str) -> Market:
@@ -260,3 +262,101 @@ def test_result_for_unrequested_fixture_is_none() -> None:
     # The batch only asks for pending ids, but never trust the echo.
     fixture = _fixture("FT", home_winner=True, away_winner=False, fixture_id=999)
     assert _provider()._result_for(fixture, {"1492300": _pending_event()}) is None
+
+
+# ── The Odds API result mapping ──────────────────────────────────────────────
+#
+# `/scores` shape per the v4 docs: `completed` flags the finish, `scores` is null
+# before kickoff, and each entry's `score` is a *string*. There is no winner
+# flag, so the outcome is the comparison.
+
+
+def _score_payload(
+    *,
+    completed: bool = True,
+    scores: list[dict[str, Any]] | None = None,
+    event_id: str = "abc123",
+) -> dict[str, Any]:
+    return {
+        "id": event_id,
+        "sport_key": "soccer_epl",
+        "sport_title": "EPL",
+        "commence_time": "2026-07-25T21:30:00Z",
+        "completed": completed,
+        "home_team": "Arsenal",
+        "away_team": "Chelsea",
+        "scores": scores,
+        "last_update": "2026-07-25T23:20:00Z",
+    }
+
+
+def _scores(home: str, away: str) -> list[dict[str, Any]]:
+    return [{"name": "Arsenal", "score": home}, {"name": "Chelsea", "score": away}]
+
+
+def _scores_pending(source_id: str = "abc123") -> CanonicalEvent:
+    return CanonicalEvent(
+        event_id=f"theoddsapi:{source_id}",
+        origin="theoddsapi",
+        source_event_id=source_id,
+        sport="soccer_epl",
+        home_team="Arsenal",
+        away_team="Chelsea",
+        markets=[],
+        updated_at=1,
+    )
+
+
+@pytest.mark.parametrize(
+    ("home", "away", "expected"),
+    [("2", "1", "home"), ("0", "3", "away"), ("1", "1", "draw")],
+)
+def test_outcome_from_scores_compares_string_scores(
+    home: str, away: str, expected: str
+) -> None:
+    assert _outcome_from_scores(_scores(home, away), "Arsenal", "Chelsea") == expected
+
+
+def test_outcome_from_scores_none_when_a_side_is_missing() -> None:
+    one_side = [{"name": "Arsenal", "score": "2"}]
+    assert _outcome_from_scores(one_side, "Arsenal", "Chelsea") is None
+    # Names that match neither team leave both sides unset.
+    mismatched = _scores("2", "1")
+    assert _outcome_from_scores(mismatched, "Spurs", "Fulham") is None
+
+
+def test_outcome_from_scores_none_when_score_is_unparseable() -> None:
+    assert (
+        _outcome_from_scores(_scores("2", "not-a-number"), "Arsenal", "Chelsea") is None
+    )
+    assert _outcome_from_scores(_scores("2", None), "Arsenal", "Chelsea") is None  # pyright: ignore[reportArgumentType]
+
+
+def test_scores_result_for_completed_game() -> None:
+    payload = _score_payload(scores=_scores("2", "1"))
+    result = _scores_result_for(payload, {"abc123": _scores_pending()})
+
+    assert result is not None
+    assert result.event_id == "theoddsapi:abc123"
+    assert result.sport == "soccer_epl"
+    assert result.outcome == "home"
+    assert result.resolved_at > 0
+
+
+def test_scores_result_for_unfinished_game_is_none() -> None:
+    # Before kickoff The Odds API sends completed=false and a null scores array.
+    payload = _score_payload(completed=False, scores=None)
+    assert _scores_result_for(payload, {"abc123": _scores_pending()}) is None
+    # In play: scores present, but not final.
+    in_play = _score_payload(completed=False, scores=_scores("1", "0"))
+    assert _scores_result_for(in_play, {"abc123": _scores_pending()}) is None
+
+
+def test_scores_result_for_completed_without_scores_is_none() -> None:
+    payload = _score_payload(completed=True, scores=None)
+    assert _scores_result_for(payload, {"abc123": _scores_pending()}) is None
+
+
+def test_scores_result_for_unrequested_game_is_none() -> None:
+    payload = _score_payload(scores=_scores("2", "1"), event_id="other")
+    assert _scores_result_for(payload, {"abc123": _scores_pending()}) is None
