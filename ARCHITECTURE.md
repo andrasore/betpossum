@@ -390,3 +390,10 @@ These are the known gaps and what closing each one would look like:
 - **Stats rebuilds** — the read model accrues forward from `bets.settled` and
   has no backfill/replay path; rebuilding it after a bug or schema change
   would need an event replay mechanism or a rebuild from Core's bet history.
+- **No balance top-up** — a user gets a one-off play-money grant when their
+  account is first created (`STARTING_BALANCE_CENTS` in
+  `services/core/src/users/users.service.ts`) and has no way to add funds once
+  it runs out; the only refill path is an admin setting the balance outright
+  via `PUT /api/admin/users/:userId/balance`. A real deposit flow means a
+  payment provider, a webhook confirming settled funds, and a ledger transfer
+  keyed to the payment so a retried webhook can't double-credit.
