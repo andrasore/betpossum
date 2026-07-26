@@ -51,6 +51,18 @@ class OddsStorage(ABC):
     async def get_current(self, event_id: str) -> CanonicalEvent | None: ...
 
     @abstractmethod
+    async def list_unresolved(
+        self, origin: str, since: int, before: int, limit: int
+    ) -> list[CanonicalEvent]:
+        """Events from `origin` that have kicked off but carry no outcome yet.
+
+        Bounded to kickoffs in `(since, before)` — Unix ms — and to `limit` rows,
+        so the results poll does a fixed amount of work per tick and fixtures
+        that never reach a final status age out instead of being retried forever.
+        """
+        ...
+
+    @abstractmethod
     async def list_sports(self) -> list[CanonicalSport]: ...
 
     @abstractmethod

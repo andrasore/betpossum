@@ -1,11 +1,20 @@
-"""Provider payload -> common-model transforms and the h2h wire projection.
+"""Provider payload -> common-model transforms, result mapping, and the h2h wire
+projection.
 
 These exercise real boundaries: the shape each external API actually returns,
 and the projection the wire contract depends on.
 """
 
+from typing import Any
+
+import pytest
+
 from odds.models import CanonicalEvent, Market, Selection, h2h_odds
-from providers.apifootball import _markets_from_bets
+from providers.apifootball import (
+    ApiFootballProvider,
+    _markets_from_bets,
+    _outcome_from_fixture,
+)
 from providers.theoddsapi import _normalise
 
 
@@ -132,3 +141,122 @@ def test_h2h_odds_none_without_h2h_market() -> None:
         updated_at=1,
     )
     assert h2h_odds(event) is None
+
+
+# ── API-Football result mapping ──────────────────────────────────────────────
+#
+# Payload shapes copied from live `/fixtures?ids=` responses. `score.fulltime`
+# is carried even though the mapping keys off the winner flags, so the PEN case
+# documents which of the two the settlement follows.
+
+
+def _fixture(
+    status: str,
+    *,
+    home_winner: object,
+    away_winner: object,
+    fulltime: tuple[int, int] = (0, 0),
+    penalty: tuple[int, int] | None = None,
+    fixture_id: int = 1492300,
+) -> dict[str, Any]:
+    return {
+        "fixture": {"id": fixture_id, "status": {"short": status}},
+        "teams": {
+            "home": {"name": "Atletico Paranaense", "winner": home_winner},
+            "away": {"name": "Internacional", "winner": away_winner},
+        },
+        "goals": {"home": fulltime[0], "away": fulltime[1]},
+        "score": {
+            "fulltime": {"home": fulltime[0], "away": fulltime[1]},
+            "penalty": (
+                {"home": penalty[0], "away": penalty[1]}
+                if penalty is not None
+                else {"home": None, "away": None}
+            ),
+        },
+    }
+
+
+def _pending_event(source_id: str = "1492300") -> CanonicalEvent:
+    return CanonicalEvent(
+        event_id=f"apifootball:{source_id}",
+        origin="apifootball",
+        source_event_id=source_id,
+        sport="soccer_71",
+        home_team="Atletico Paranaense",
+        away_team="Internacional",
+        markets=[],
+        updated_at=1,
+    )
+
+
+def _provider() -> ApiFootballProvider:
+    return ApiFootballProvider(api_key="k", leagues=["71"], season="2026", upcoming=3)
+
+
+@pytest.mark.parametrize(
+    ("home_winner", "away_winner", "expected"),
+    [
+        (True, False, "home"),
+        (False, True, "away"),
+        # A 90-minute draw comes back with a null winner on *both* sides.
+        (None, None, "draw"),
+    ],
+)
+def test_outcome_from_winner_flags(
+    home_winner: object, away_winner: object, expected: str
+) -> None:
+    fixture = _fixture("FT", home_winner=home_winner, away_winner=away_winner)
+    assert _outcome_from_fixture(fixture) == expected
+
+
+def test_outcome_none_when_winner_flags_absent() -> None:
+    # A malformed payload must not settle bets as a draw.
+    assert _outcome_from_fixture({"teams": {"home": {}, "away": {}}}) is None
+    assert _outcome_from_fixture({}) is None
+
+
+def test_result_for_finished_fixture_carries_canonical_id_and_sport() -> None:
+    fixture = _fixture("FT", home_winner=True, away_winner=False, fulltime=(2, 0))
+    result = _provider()._result_for(fixture, {"1492300": _pending_event()})
+
+    assert result is not None
+    assert result.event_id == "apifootball:1492300"
+    assert result.sport == "soccer_71"
+    assert result.outcome == "home"
+    assert result.resolved_at > 0
+
+
+def test_result_for_penalties_follows_the_advancing_team() -> None:
+    # MLS playoff shape: level at 90, decided 6-7 on penalties. We settle on the
+    # winner flag, so this is `away` rather than the regulation-time `draw`.
+    fixture = _fixture(
+        "PEN",
+        home_winner=False,
+        away_winner=True,
+        fulltime=(0, 0),
+        penalty=(6, 7),
+    )
+    result = _provider()._result_for(fixture, {"1492300": _pending_event()})
+
+    assert result is not None
+    assert result.outcome == "away"
+
+
+@pytest.mark.parametrize("status", ["NS", "1H", "HT", "2H", "SUSP"])
+def test_result_for_unfinished_fixture_is_none(status: str) -> None:
+    fixture = _fixture(status, home_winner=None, away_winner=None)
+    assert _provider()._result_for(fixture, {"1492300": _pending_event()}) is None
+
+
+@pytest.mark.parametrize("status", ["PST", "CANC", "ABD"])
+def test_result_for_abandoned_fixture_is_none(status: str) -> None:
+    # No fair 1X2 outcome — the bet stays held rather than being guessed at.
+    fixture = _fixture(status, home_winner=None, away_winner=None)
+    assert _provider()._result_for(fixture, {"1492300": _pending_event()}) is None
+
+
+def test_result_for_unrequested_fixture_is_none() -> None:
+    # The batch only asks for pending ids, but never trust the echo.
+    fixture = _fixture("FT", home_winner=True, away_winner=False, fixture_id=999)
+    assert _provider()._result_for(fixture, {"1492300": _pending_event()}) is None

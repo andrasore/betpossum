@@ -28,6 +28,7 @@ def _event(
     origin: str = "mock",
     sport: str = "soccer_epl",
     updated_at: int = 1000,
+    commence_time: int | None = 1717200000000,
     markets: list[Market] | None = None,
 ) -> CanonicalEvent:
     return CanonicalEvent(
@@ -37,7 +38,7 @@ def _event(
         sport=sport,
         home_team="A",
         away_team="B",
-        commence_time=1717200000000,
+        commence_time=commence_time,
         markets=markets
         if markets is not None
         else [
@@ -161,6 +162,58 @@ async def test_record_result_sets_outcome_without_clobbering_odds(
     assert got.resolved_at == 5000
     # The conflict path updates only outcome/resolved_at — odds stay put.
     assert got.market("h2h") is not None
+
+
+async def test_list_unresolved_filters_by_origin_outcome_and_window(
+    storage: PostgresStorage,
+) -> None:
+    # In-window, unresolved, right provider — these three should come back.
+    await storage.record(
+        _event("apifootball:1", origin="apifootball", commence_time=1000)
+    )
+    await storage.record(
+        _event("apifootball:2", origin="apifootball", commence_time=3000)
+    )
+    await storage.record(
+        _event("apifootball:3", origin="apifootball", commence_time=2000)
+    )
+    # Another provider's event.
+    await storage.record(
+        _event("theoddsapi:1", origin="theoddsapi", commence_time=2000)
+    )
+    # Already resolved.
+    await storage.record(
+        _event("apifootball:done", origin="apifootball", commence_time=2000)
+    )
+    await storage.record_result(
+        EventResult(
+            event_id="apifootball:done",
+            sport="soccer_epl",
+            outcome="home",
+            resolved_at=9,
+        )
+    )
+    # Kicked off too recently (still in play) and kickoff unknown.
+    await storage.record(
+        _event("apifootball:live", origin="apifootball", commence_time=8000)
+    )
+    await storage.record(
+        _event("apifootball:nokickoff", origin="apifootball", commence_time=None)
+    )
+
+    pending = await storage.list_unresolved("apifootball", 500, 5000, 10)
+
+    # Oldest kickoff first, everything else excluded.
+    assert [e.event_id for e in pending] == [
+        "apifootball:1",
+        "apifootball:3",
+        "apifootball:2",
+    ]
+    # The provider queries its own API by source id, so that has to survive.
+    assert [e.source_event_id for e in pending] == ["1", "3", "2"]
+
+    capped = await storage.list_unresolved("apifootball", 500, 5000, 2)
+    assert [e.event_id for e in capped] == ["apifootball:1", "apifootball:3"]
 
 
 async def test_record_result_on_unknown_event_inserts_bare_mock_row(

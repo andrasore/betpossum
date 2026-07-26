@@ -513,9 +513,10 @@ class PostgresStorage(OddsStorage):
 
     async def record_result(self, result: EventResult) -> None:
         assert self._engine is not None, "record_result called outside async-with"
-        # An admin-driven resolution can only target a mock-origin event that
-        # already exists (the route enforces both), but keep the upsert
-        # defensive: a bare row can only originate from mock.
+        # Both callers — the admin route (mock-origin only) and a provider's
+        # results poll — resolve an event that already exists, so in practice
+        # only the conflict branch fires and the row keeps its real origin. The
+        # insert stays as a defensive fallback: a bare row can only be mock's.
         stmt = pg_insert(OddsCurrent).values(
             event_id=result.event_id,
             origin="mock",
@@ -620,6 +621,27 @@ class PostgresStorage(OddsStorage):
                 return None
             events = await self._hydrate_names(session, [row])
         return events[0]
+
+    async def list_unresolved(
+        self, origin: str, since: int, before: int, limit: int
+    ) -> list[CanonicalEvent]:
+        assert self._session is not None, "list_unresolved called outside async-with"
+        # A NULL commence_time fails both range comparisons, so an event whose
+        # kickoff we never learned is excluded without a separate IS NOT NULL.
+        # Oldest kickoff first: a backlog drains in order instead of starving.
+        stmt = (
+            select(OddsCurrent)
+            .where(col(OddsCurrent.origin) == origin)
+            .where(col(OddsCurrent.outcome).is_(None))
+            .where(col(OddsCurrent.commence_time) > since)
+            .where(col(OddsCurrent.commence_time) < before)
+            .order_by(col(OddsCurrent.commence_time))
+            .limit(limit)
+        )
+        async with self._session() as session:
+            rows = (await session.exec(stmt)).all()
+        # Callers want ids to poll, not display names — skip the entity join.
+        return [_to_event(r) for r in rows]
 
     async def list_sports(self) -> list[CanonicalSport]:
         assert self._session is not None, "list_sports called outside async-with"

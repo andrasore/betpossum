@@ -7,6 +7,9 @@ from odds.models import CanonicalEvent, EventResult
 
 class OddsProvider(ABC):
     name: ClassVar[str]
+    # Whether this provider can discover event conclusions. False keeps the
+    # runner from paying for the pending-events query on every tick.
+    polls_results: ClassVar[bool] = False
 
     @classmethod
     @abstractmethod
@@ -34,10 +37,18 @@ class OddsProvider(ABC):
     @abstractmethod
     def fetch_tick(self) -> AsyncIterator[CanonicalEvent]: ...
 
-    async def fetch_results(self) -> AsyncIterator[EventResult]:
-        """Emit any newly-resolved events since the last call.
+    async def fetch_results(
+        self, pending: list[CanonicalEvent]
+    ) -> AsyncIterator[EventResult]:
+        """Emit results for any of `pending` that have since concluded.
 
-        Default is empty; providers that know about event conclusions override.
+        `pending` is the runner's list of this provider's kicked-off-but-open
+        events (see `OddsStorage.list_unresolved`) — the provider stays free of
+        storage access and just answers "which of these are done?". Events with
+        no fair outcome (cancelled, abandoned) are skipped, not guessed at.
+
+        Default is empty; providers that know about event conclusions override
+        and set `polls_results = True`.
         """
         return
         yield  # pragma: no cover  — make this an async generator

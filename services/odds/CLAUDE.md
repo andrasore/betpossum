@@ -46,8 +46,15 @@ calculate odds — ingestion + normalisation only.
   the producing provider; the `event_source_map` table links the canonical id
   back to each provider's original ids.
 - **Manual resolution is mock-only.** `POST /odds/events/{id}/result` returns 409 unless
-  the event's `origin == "mock"` (404 if unknown). Real-provider events are never
-  auto-resolved — this keeps settlement single-sourced.
+  the event's `origin == "mock"` (404 if unknown) — settlement stays single-sourced.
+- **Real providers resolve themselves by polling.** A provider that can discover
+  event conclusions sets `polls_results = True` and implements
+  `fetch_results(pending)`; the runner passes it that provider's
+  kicked-off-but-unresolved events (`OddsStorage.list_unresolved`, bounded by the
+  `RESULTS_*` constants in `runner.py`), so providers still never touch storage.
+  `apifootball` does this; `mock` is resolved through the admin route instead and
+  `theoddsapi` isn't wired up yet. A fixture that ends with no fair outcome
+  (cancelled, abandoned) is skipped rather than guessed at, so its bets stay held.
 - The wire schema (`OddsUpdatedEvent`/`EventResolvedEvent`) stays 3-way and
   **unchanged**; the flexible model lives entirely inside this service.
 
@@ -55,7 +62,8 @@ calculate odds — ingestion + normalisation only.
 
 - `app.py` — FastAPI app + `lifespan`: opens storage/publisher and spawns the
   background `run()` worker; HTTP request-logging middleware; `/health`.
-- `runner.py` — the poll loop: `fetch_tick` → `storage.record` → `publish`.
+- `runner.py` — the poll loop: `fetch_tick` → `storage.record` → `publish`, then
+  `fetch_results` → `storage.record_result` → `publish_result`.
 - `providers/` — pluggable `OddsProvider` (`base.py`, `mock.py`, `theoddsapi.py`,
   `apifootball.py`; `common.py` holds shared transform helpers); the enabled set
   is chosen by `ODDS_PROVIDERS`. Each yields `CanonicalEvent`s.
