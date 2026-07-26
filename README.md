@@ -135,12 +135,18 @@ The `betting` realm ships two ready-to-use accounts (both password
 | `bob`   | `password` | `admin` + `user` | Everything alice can do, plus the admin panel.  |
 
 Sign in as **bob** to reach the **Admin** panel (the nav link only shows for
-admins), where you can top up any user's balance and **manually resolve
+admins), where you can set any user's balance and **manually resolve
 events**. This matters with the default mock provider: mock events never
 resolve on their own, so held bets stay open until an admin picks an outcome
 on the admin panel's **Events** tab — that publishes an `EventResolvedEvent`
 and Core settles the bets. (`bob` is also the account the bot fleet funds
 through the admin API.)
+
+> **Note — self-service balance top-up is not implemented.** Every user gets a
+> one-off $1000 grant when their account is first created, and there's no way
+> for a user to add funds once it runs out. The only way to refill a wallet is
+> an admin setting the balance directly (Admin panel, or
+> `PUT /api/admin/users/:userId/balance`).
 
 To use real odds, set `ODDS_PROVIDERS` (e.g. `theoddsapi`, `apifootball`) and
 the matching API keys (`THE_ODDS_API_KEY`, …) before bringing up the stack.
