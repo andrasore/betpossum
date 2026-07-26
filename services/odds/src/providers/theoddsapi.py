@@ -54,6 +54,7 @@ def _normalise(raw_event: dict[str, Any], sport: str) -> CanonicalEvent | None:
         home: str = raw_event["home_team"]
         away: str = raw_event["away_team"]
         # Take the first bookmaker's markets as representative.
+
         raw_markets: list[dict[str, Any]] = bookmakers[0].get("markets", [])
         markets: list[Market] = []
         for m in raw_markets:
