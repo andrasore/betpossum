@@ -4,10 +4,12 @@ import "@testing-library/jest-dom/vitest";
 Element.prototype.scrollIntoView = () => {};
 
 // jsdom does implement localStorage, but Node's experimental webstorage global
-// shadows it under vitest, leaving `localStorage` undefined. Anything that
-// persists a preference (useDashboardFilters, lib/auth) needs a real one, so
-// back it with an in-memory Storage.
-if (globalThis.localStorage === undefined) {
+// shadows it under vitest and what's left over is unusable in a
+// version-dependent way: `undefined` on node 26, a method-less object on node
+// 25 (what CI runs). Anything that persists a preference (useDashboardFilters,
+// lib/auth) needs a real one, so probe for a working Storage — not for
+// `undefined` — and back it with an in-memory implementation.
+if (typeof globalThis.localStorage?.getItem !== "function") {
   const store = new Map<string, string>();
   const memoryStorage: Storage = {
     get length() {
