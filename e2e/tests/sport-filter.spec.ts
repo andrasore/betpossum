@@ -26,6 +26,12 @@ test("anonymous visitor filters the dashboard board by canonical sport", async (
     timeout: 15_000,
   });
 
+  // Show concluded events: this spec asserts on which seeded fixtures are on
+  // the board, and other specs resolve arbitrary mock events (only two nfl-*
+  // fixtures exist, so both can be gone). With the toggle on, the assertions
+  // don't depend on what has been settled before this spec ran.
+  await page.getByTestId("concluded-toggle").click();
+
   // "All" is the initial state: every seeded sport is on the board.
   await expect(page.locator(basketballCards).first()).toBeVisible();
   await expect(page.locator(footballCards).first()).toBeVisible();

@@ -131,5 +131,19 @@ test("a placed bet deep-links from Recent Bets into My Bets and settles to Won",
     timeout: 20_000,
   });
 
+  // The now-concluded event drops off the dashboard board by default, since it
+  // can no longer be bet on, and comes back — inert — when the toggle asks for
+  // concluded events. GET /odds/events keeps returning it either way.
+  await page.getByTestId("dashboard-link").click();
+  await page.waitForURL("**/dashboard");
+  const settledCard = page.getByTestId(`event-card-${eventId}`);
+  await expect(
+    page.locator('[data-testid^="event-card-"]').first(),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(settledCard).toHaveCount(0);
+  await page.getByTestId("concluded-toggle").click();
+  await expect(settledCard).toBeVisible();
+  await expect(settledCard).toHaveAttribute("aria-disabled", "true");
+
   await ctx.close();
 });

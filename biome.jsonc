@@ -5,6 +5,17 @@
   },
   "linter": {
     "rules": {
+      "a11y": {
+        // Radix Themes' Switch renders a labelable <button>, so a wrapping
+        // <label> really is associated with it — Biome just can't see through
+        // the component to the element it renders.
+        "noLabelWithoutControl": {
+          "level": "error",
+          "options": {
+            "inputComponents": ["Switch"]
+          }
+        }
+      },
       "style": {
         "useImportType": "off", // This breaks nestjs' import system
         "useBlockStatements": "error"

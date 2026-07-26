@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Flex, Heading } from "@radix-ui/themes";
+import { Box, Flex, Heading, Switch, Text } from "@radix-ui/themes";
 import { useState } from "react";
 import { BetSlipDrawer } from "@/components/BetSlipDrawer";
 import { Leaderboard } from "@/components/Leaderboard";
@@ -24,8 +24,14 @@ type Selection = { event: OddsEvent; choice: Choice } | null;
 export default function DashboardPage() {
   const { isAuthenticated, accessToken, login } = useAuth();
   const [selection, setSelection] = useState<Selection>(null);
-  const { selectedSport, selectedLeague, selectSport, selectLeague } =
-    useDashboardFilters();
+  const {
+    selectedSport,
+    selectedLeague,
+    showConcluded,
+    selectSport,
+    selectLeague,
+    setShowConcluded,
+  } = useDashboardFilters();
 
   const sessionKey = accessToken;
   const sports = useSports();
@@ -52,14 +58,32 @@ export default function DashboardPage() {
               selected={selectedSport}
               onSelect={selectSport}
             />
-            <LeagueFilterBar
-              leagues={leagues}
-              selected={selectedLeague}
-              onSelect={selectLeague}
-            />
+            <Flex align="center" gap="3" mb="4">
+              <Box flexGrow="1">
+                <LeagueFilterBar
+                  leagues={leagues}
+                  selected={selectedLeague}
+                  onSelect={selectLeague}
+                />
+              </Box>
+              <Flex asChild align="center" gap="2" flexShrink="0">
+                <label>
+                  <Switch
+                    size="1"
+                    checked={showConcluded}
+                    onCheckedChange={setShowConcluded}
+                    data-testid="concluded-toggle"
+                  />
+                  <Text size="1" color="gray">
+                    Show concluded
+                  </Text>
+                </label>
+              </Flex>
+            </Flex>
             <OddsBoard
               events={odds}
               isLoading={oddsLoading}
+              showConcluded={showConcluded}
               selectedEventId={selection?.event.eventId ?? null}
               onToggle={(event) =>
                 setSelection((s) =>

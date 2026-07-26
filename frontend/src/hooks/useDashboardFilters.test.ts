@@ -1,11 +1,15 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { League } from "@/generated/events";
 import { useDashboardFilters } from "./useDashboardFilters";
 
 const nbaLeague: League = { id: 7, name: "NBA", sportSlug: "basketball" };
 
 describe("useDashboardFilters", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it("starts with no sport or league selected", () => {
     const { result } = renderHook(() => useDashboardFilters());
     expect(result.current.selectedSport).toBeNull();
@@ -33,5 +37,23 @@ describe("useDashboardFilters", () => {
     act(() => result.current.selectLeague(null));
     expect(result.current.selectedLeague).toBeNull();
     expect(result.current.selectedSport).toBe("basketball");
+  });
+
+  it("hides concluded events until asked, and persists the choice", () => {
+    const { result } = renderHook(() => useDashboardFilters());
+    expect(result.current.showConcluded).toBe(false);
+
+    act(() => result.current.setShowConcluded(true));
+    expect(result.current.showConcluded).toBe(true);
+    expect(localStorage.getItem("odds:show-concluded")).toBe("1");
+
+    act(() => result.current.setShowConcluded(false));
+    expect(localStorage.getItem("odds:show-concluded")).toBeNull();
+  });
+
+  it("rehydrates the concluded toggle from a previous session", () => {
+    localStorage.setItem("odds:show-concluded", "1");
+    const { result } = renderHook(() => useDashboardFilters());
+    expect(result.current.showConcluded).toBe(true);
   });
 });

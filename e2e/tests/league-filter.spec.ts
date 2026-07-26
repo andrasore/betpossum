@@ -29,6 +29,12 @@ test("anonymous visitor filters by league and the sport bar auto-syncs", async (
     timeout: 15_000,
   });
 
+  // Show concluded events: this spec asserts on which seeded fixtures are on
+  // the board, and other specs resolve arbitrary mock events (only two nfl-*
+  // fixtures exist, so both can be gone). With the toggle on, the assertions
+  // don't depend on what has been settled before this spec ran.
+  await page.getByTestId("concluded-toggle").click();
+
   // "All" sports initially: every seeded league has a chip.
   const nbaChip = page.getByRole("button", { name: "NBA", exact: true });
   await expect(nbaChip).toBeVisible();

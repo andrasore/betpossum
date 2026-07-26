@@ -9,6 +9,9 @@ interface Props {
   selectedEventId: string | null;
   onToggle: (event: OddsEvent) => void;
   isLoading: boolean;
+  // Resolved events can't be bet on and pile up over time, so they're hidden
+  // unless the dashboard's toggle asks for them.
+  showConcluded: boolean;
 }
 
 const commenceFormatter = new Intl.DateTimeFormat(undefined, {
@@ -28,11 +31,16 @@ export function OddsBoard({
   selectedEventId,
   onToggle,
   isLoading,
+  showConcluded,
 }: Props) {
+  const visible = showConcluded
+    ? events
+    : events.filter((e) => e.outcome == null);
+
   // Active (still bettable) events first; resolved ones sink to the bottom.
   // Copy before sorting so we don't mutate the prop, and keep it stable so the
   // server's within-group ordering survives.
-  const ordered = events
+  const ordered = visible
     .map((e, i) => [e, i] as const)
     .sort(([a, ai], [b, bi]) => {
       const ar = a.outcome != null ? 1 : 0;
@@ -41,7 +49,7 @@ export function OddsBoard({
     })
     .map(([e]) => e);
 
-  if (isLoading && events.length === 0) {
+  if (isLoading && visible.length === 0) {
     return (
       <Flex
         align="center"
