@@ -89,7 +89,9 @@ def _normalise(raw_event: dict[str, Any], sport: str) -> CanonicalEvent | None:
     except KeyError, ValueError:
         return None
 
+
 # TODO implement fetch_results
+
 
 class TheOddsApiProvider(OddsProvider):
     name: ClassVar[str] = "theoddsapi"
