@@ -48,7 +48,7 @@ export default function DashboardPage() {
   return (
     <>
       <Flex flexGrow="1" overflow="hidden">
-        <Box asChild flexGrow="1" p="6" style={{ overflowY: "auto" }}>
+        <Box asChild flexGrow="1" p={{ initial: "4", sm: "6" }} style={{ overflowY: "auto" }}>
           <main>
             <Heading as="h2" size="4" mb="4">
               Live Markets
@@ -101,6 +101,7 @@ export default function DashboardPage() {
           width="320px"
           flexShrink="0"
           p="6"
+          display={{ initial: "none", sm: "block" }}
           style={{
             borderLeft: "1px solid var(--gray-a5)",
             overflowY: "auto",

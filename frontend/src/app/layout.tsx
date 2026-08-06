@@ -1,5 +1,5 @@
 import "@radix-ui/themes/styles.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import localFont from "next/font/local";
 import { Providers } from "./providers";
@@ -20,6 +20,11 @@ const drukWide = localFont({
   variable: "--font-display",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "BetPossum",

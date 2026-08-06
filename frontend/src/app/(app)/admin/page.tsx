@@ -50,7 +50,7 @@ export default function AdminPage() {
   }
 
   return (
-    <Box asChild flexGrow="1" p="6" style={{ overflowY: "auto" }}>
+    <Box asChild flexGrow="1" p={{ initial: "4", sm: "6" }} style={{ overflowY: "auto" }}>
       <main>
         <Tabs.Root defaultValue="users">
           <Tabs.List>
@@ -90,6 +90,7 @@ function UsersPanel() {
       {isLoading && !users ? (
         <Spinner />
       ) : users && users.length > 0 ? (
+        <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
         <Table.Root size="1" variant="surface">
           <Table.Header>
             <Table.Row>
@@ -110,6 +111,7 @@ function UsersPanel() {
             ))}
           </Table.Body>
         </Table.Root>
+        </Box>
       ) : (
         <Text size="2" color="gray">
           No users yet.
@@ -258,6 +260,7 @@ function EventsPanel() {
       {isLoading && !events ? (
         <Spinner />
       ) : events && events.length > 0 ? (
+        <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
         <Table.Root size="1" variant="surface">
           <Table.Header>
             <Table.Row>
@@ -275,6 +278,7 @@ function EventsPanel() {
             ))}
           </Table.Body>
         </Table.Root>
+        </Box>
       ) : (
         <Text size="2" color="gray">
           No events yet.

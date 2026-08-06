@@ -64,7 +64,7 @@ export function OddsBoard({
   }
 
   return (
-    <Grid columns="repeat(auto-fill, 200px)" gap="3">
+    <Grid columns="repeat(auto-fill, minmax(200px, 1fr))" gap="3">
       {ordered.map((e) => {
         const selected = e.eventId === selectedEventId;
         // A resolved event (outcome set by the odds service) can no longer be

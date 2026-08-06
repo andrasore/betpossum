@@ -3,6 +3,7 @@
 import {
   Avatar,
   Badge,
+  Box,
   Button,
   DropdownMenu,
   Flex,
@@ -35,7 +36,7 @@ export function Navbar({ balance }: NavbarProps) {
       asChild
       align="center"
       justify="between"
-      px="6"
+      px={{ initial: "3", sm: "6" }}
       py="3"
       style={{ borderBottom: "1px solid var(--gray-a5)" }}
     >
@@ -77,17 +78,19 @@ const Brand = () => (
               maskPosition: "center",
             }}
           />
-          <Text
-            size="7"
-            weight="bold"
-            style={{
-              fontFamily: "var(--font-display), system-ui, sans-serif",
-              letterSpacing: "-0.02em",
-              color: "var(--accent-11)",
-            }}
-          >
-            BetPossum
-          </Text>
+          <Box as="span" display={{ initial: "none", xs: "inline" }}>
+            <Text
+              size="7"
+              weight="bold"
+              style={{
+                fontFamily: "var(--font-display), system-ui, sans-serif",
+                letterSpacing: "-0.02em",
+                color: "var(--accent-11)",
+              }}
+            >
+              BetPossum
+            </Text>
+          </Box>
         </Flex>
       </NextLink>
     </Link>
@@ -110,7 +113,7 @@ const CenterNav = ({ isAdmin }: { isAdmin: boolean }) => {
         >
           <NextLink href="/dashboard">
             <LayoutDashboard size={16} />
-            Dashboard
+            <Box as="span" display={{ initial: "none", sm: "inline" }}>Dashboard</Box>
           </NextLink>
         </Button>
         <Button
@@ -122,7 +125,7 @@ const CenterNav = ({ isAdmin }: { isAdmin: boolean }) => {
         >
           <NextLink href="/my-bets">
             <ListChecks size={16} />
-            My Bets
+            <Box as="span" display={{ initial: "none", sm: "inline" }}>My Bets</Box>
           </NextLink>
         </Button>
         {isAdmin && (
@@ -135,7 +138,7 @@ const CenterNav = ({ isAdmin }: { isAdmin: boolean }) => {
           >
             <NextLink href="/admin">
               <Shield size={16} />
-              Admin
+              <Box as="span" display={{ initial: "none", sm: "inline" }}>Admin</Box>
             </NextLink>
           </Button>
         )}
@@ -185,14 +188,16 @@ const AccountMenu = ({
           color: "inherit",
         }}
       >
-        <Flex direction="column" align="end" gap="0">
-          <Text size="1" color="gray">
-            Welcome back
-          </Text>
-          <Text size="2" weight="medium" data-testid="account-name">
-            {displayName}
-          </Text>
-        </Flex>
+        <Box display={{ initial: "none", sm: "block" }}>
+          <Flex direction="column" align="end" gap="0">
+            <Text size="1" color="gray">
+              Welcome back
+            </Text>
+            <Text size="2" weight="medium" data-testid="account-name">
+              {displayName}
+            </Text>
+          </Flex>
+        </Box>
         <Avatar
           size="2"
           radius="full"
