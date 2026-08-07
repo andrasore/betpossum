@@ -113,7 +113,9 @@ const CenterNav = ({ isAdmin }: { isAdmin: boolean }) => {
         >
           <NextLink href="/dashboard">
             <LayoutDashboard size={16} />
-            <Box as="span" display={{ initial: "none", sm: "inline" }}>Dashboard</Box>
+            <Box as="span" display={{ initial: "none", sm: "inline" }}>
+              Dashboard
+            </Box>
           </NextLink>
         </Button>
         <Button
@@ -125,7 +127,9 @@ const CenterNav = ({ isAdmin }: { isAdmin: boolean }) => {
         >
           <NextLink href="/my-bets">
             <ListChecks size={16} />
-            <Box as="span" display={{ initial: "none", sm: "inline" }}>My Bets</Box>
+            <Box as="span" display={{ initial: "none", sm: "inline" }}>
+              My Bets
+            </Box>
           </NextLink>
         </Button>
         {isAdmin && (
@@ -138,7 +142,9 @@ const CenterNav = ({ isAdmin }: { isAdmin: boolean }) => {
           >
             <NextLink href="/admin">
               <Shield size={16} />
-              <Box as="span" display={{ initial: "none", sm: "inline" }}>Admin</Box>
+              <Box as="span" display={{ initial: "none", sm: "inline" }}>
+                Admin
+              </Box>
             </NextLink>
           </Button>
         )}

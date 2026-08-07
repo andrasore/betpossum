@@ -50,7 +50,12 @@ export default function AdminPage() {
   }
 
   return (
-    <Box asChild flexGrow="1" p={{ initial: "4", sm: "6" }} style={{ overflowY: "auto" }}>
+    <Box
+      asChild
+      flexGrow="1"
+      p={{ initial: "4", sm: "6" }}
+      style={{ overflowY: "auto" }}
+    >
       <main>
         <Tabs.Root defaultValue="users">
           <Tabs.List>
@@ -91,26 +96,26 @@ function UsersPanel() {
         <Spinner />
       ) : users && users.length > 0 ? (
         <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-        <Table.Root size="1" variant="surface">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeaderCell>User ID</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Email</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Name</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell justify="end">
-                Bets
-              </Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell justify="end">
-                Balance ($)
-              </Table.ColumnHeaderCell>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {users.map((u) => (
-              <UserRow key={u.id} user={u} onSaved={mutate} />
-            ))}
-          </Table.Body>
-        </Table.Root>
+          <Table.Root size="1" variant="surface">
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeaderCell>User ID</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Email</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Name</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell justify="end">
+                  Bets
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell justify="end">
+                  Balance ($)
+                </Table.ColumnHeaderCell>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {users.map((u) => (
+                <UserRow key={u.id} user={u} onSaved={mutate} />
+              ))}
+            </Table.Body>
+          </Table.Root>
         </Box>
       ) : (
         <Text size="2" color="gray">
@@ -261,23 +266,23 @@ function EventsPanel() {
         <Spinner />
       ) : events && events.length > 0 ? (
         <Box style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-        <Table.Root size="1" variant="surface">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeaderCell>Event</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Sport</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell justify="end">
-                Resolve
-              </Table.ColumnHeaderCell>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {events.map((e) => (
-              <EventRow key={e.eventId} event={e} onSaved={mutate} />
-            ))}
-          </Table.Body>
-        </Table.Root>
+          <Table.Root size="1" variant="surface">
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeaderCell>Event</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Sport</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell justify="end">
+                  Resolve
+                </Table.ColumnHeaderCell>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {events.map((e) => (
+                <EventRow key={e.eventId} event={e} onSaved={mutate} />
+              ))}
+            </Table.Body>
+          </Table.Root>
         </Box>
       ) : (
         <Text size="2" color="gray">
