@@ -35,8 +35,8 @@ through direct method calls.
 
 ## Non-obvious conventions
 
-- **Bet settlement semantics.** `bet.payout` is *profit only*
-  (`stake * (odds - 1)`), not total return. Win = `wallet.release()` (stake
+- **Bet settlement semantics.** `bet.payoutCents` is *profit only*
+  (`stakeCents * (odds - 1)`), not total return. Win = `wallet.release()` (stake
   back) **+** `wallet.payout(profit)`; loss = `wallet.keep()` (stake to house).
   `settle()` throws unless the bet is in `held` state.
 - **`events.resolved` is durable + exactly-once.** It's subscribed with
@@ -45,9 +45,13 @@ through direct method calls.
   stay fire-and-forget (non-durable, anonymous auto-delete queue, `noAck`).
   Don't make a channel durable unless it's a state transition that must not be
   dropped.
-- **Cents at the ledger boundary.** Dollars in the API/DTOs; convert to integer
-  cents (`Math.round(x * 100)`) before any `wallet` call. TigerBeetle stores
-  integer amounts only.
+- **Integer cents everywhere.** Money is a whole number of cents in the DTOs,
+  the `bets` columns, the wire contracts, and the ledger — never a float dollar
+  amount, and always named `*Cents`. Dollars exist only as a display/input
+  string in the browser. `odds` is a ratio, not money, so it stays a decimal.
+  The one place a money value is rounded is `profitCents()` in `common/money.ts`
+  (half-up), because `stakeCents * (odds - 1)` is genuinely fractional; don't
+  add a second rounding site.
 - `synchronize: true` is on (TypeORM) — fine for this demo; production would use
   migrations.
 - Reach for the service that owns the data: features go where the data lives,

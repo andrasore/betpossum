@@ -1,12 +1,14 @@
 export type { OddsEvent } from "@/generated/events";
 
+// All money is integer cents; only `src/lib/money.ts` turns it into dollars.
 export interface Bet {
   id: string;
   eventId: string;
   selection: "home" | "away" | "draw";
   odds: number;
-  stake: number;
-  payout: number | null;
+  stakeCents: number;
+  // Profit only, not total return.
+  payoutCents: number | null;
   status: "pending" | "held" | "won" | "lost";
   placedAt: string;
 }
@@ -15,7 +17,7 @@ export interface PlaceBetPayload {
   eventId: string;
   selection: "home" | "away" | "draw";
   odds: number;
-  stake: number;
+  stakeCents: number;
 }
 
 // One point of the cumulative-ROI% series (one per active UTC day).
@@ -25,11 +27,11 @@ export interface PnlPoint {
 }
 
 export interface StatsSummary {
-  totalStaked: number;
+  totalStakedCents: number;
   settledCount: number;
   wins: number;
   winRatePct: number;
-  netProfit: number;
+  netProfitCents: number;
   roiPct: number;
 }
 
@@ -37,6 +39,6 @@ export interface LeaderboardEntry {
   userId: string;
   userName: string | null;
   roiPct: number;
-  netProfit: number;
+  netProfitCents: number;
   settledCount: number;
 }

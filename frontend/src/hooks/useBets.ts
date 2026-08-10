@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import useSWR from "swr";
 import { BetSettledNotificationSchema } from "@/generated/events";
 import { fetchBets } from "@/lib/api";
+import { formatCents } from "@/lib/money";
 import { getSocket } from "@/lib/websocket";
 import type { Bet, OddsEvent } from "@/types";
 import { useOddsIndex } from "./useOddsIndex";
@@ -33,15 +34,16 @@ export function useBets(token: string | null) {
       void mutate();
     };
     // Settlement refreshes the table and pops a win/lose toast naming the
-    // matchup. `payout` is profit only (matches Bet.payout semantics); 0 on a
-    // loss. The matchup is omitted if the bet's event isn't in the odds index.
+    // matchup. `payoutCents` is profit only (matches Bet.payoutCents
+    // semantics); 0 on a loss. The matchup is omitted if the bet's event isn't
+    // in the odds index.
     const onSettled = (data: unknown) => {
       revalidate();
       const result = BetSettledNotificationSchema.parse(data);
-      const { betId, won, payout } = result;
+      const { betId, won, payoutCents } = result;
       const bet = betsRef.current?.find((b) => b.id === betId);
       const event = bet ? oddsRef.current.get(bet.eventId) : undefined;
-      createToast(won, payout, event);
+      createToast(won, payoutCents, event);
     };
 
     socket.on("bet.held", revalidate);
@@ -59,15 +61,14 @@ export function useBets(token: string | null) {
   return swr;
 }
 
-function createToast(won: boolean, payout: number, event?: OddsEvent) {
+function createToast(won: boolean, payoutCents: number, event?: OddsEvent) {
   const matchup = event
     ? `${event.homeTeamName ?? event.homeTeam} vs ${event.awayTeamName ?? event.awayTeam}`
     : null;
   if (won) {
+    const profit = formatCents(payoutCents);
     toast.success(
-      matchup
-        ? `Bet won! ${matchup} +$${payout.toFixed(2)}`
-        : `Bet won! +$${payout.toFixed(2)}`,
+      matchup ? `Bet won! ${matchup} +$${profit}` : `Bet won! +$${profit}`,
     );
   } else {
     toast.error(matchup ? `Bet lost — ${matchup}` : "Bet lost");

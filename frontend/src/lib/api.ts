@@ -102,8 +102,8 @@ export async function fetchBalance(): Promise<number> {
   if (!res.ok) {
     throw new Error("Failed to fetch balance");
   }
-  const { balance } = (await res.json()) as { balance: number };
-  return balance;
+  const { balanceCents } = (await res.json()) as { balanceCents: number };
+  return balanceCents;
 }
 
 export async function fetchPnlSeries(): Promise<PnlPoint[]> {
@@ -135,7 +135,7 @@ export interface AdminUserRow {
   email: string | null;
   name: string | null;
   betCount: number;
-  balance: number;
+  balanceCents: number;
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
@@ -148,11 +148,11 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
 
 export async function setAdminUserBalance(
   userId: string,
-  amount: number,
+  amountCents: number,
 ): Promise<void> {
   const res = await api(`/admin/users/${userId}/balance`, {
     method: "PUT",
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify({ amountCents }),
   });
   if (!res.ok) {
     throw new Error("Failed to update balance");

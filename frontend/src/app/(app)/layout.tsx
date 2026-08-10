@@ -12,12 +12,12 @@ import { useAuth } from "@/lib/auth-context";
 // balance) on every transition.
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { accessToken } = useAuth();
-  const balance = useBalance(accessToken);
+  const balanceCents = useBalance(accessToken);
 
   return (
     <Flex direction="column" style={{ height: "100vh" }}>
       <DemoBanner />
-      <Navbar balance={balance} />
+      <Navbar balanceCents={balanceCents} />
       {children}
     </Flex>
   );

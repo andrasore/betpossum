@@ -14,7 +14,7 @@ export class BetsController {
       dto.eventId,
       dto.selection,
       dto.odds,
-      dto.stake,
+      dto.stakeCents,
     );
   }
 

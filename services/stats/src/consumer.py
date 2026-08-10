@@ -20,10 +20,12 @@ QUEUE_NAME = "stats.bets.settled"
 
 
 def _signed_profit_cents(event: BetSettledEvent) -> int:
-    """+profit on a win, -stake on a loss (so a sum is net P&L)."""
-    if event.won:
-        return round(event.payout * 100)
-    return -round(event.stake * 100)
+    """+profit on a win, -stake on a loss (so a sum is net P&L).
+
+    The event already carries integer cents, so nothing is rounded here — that
+    is what keeps this read model bit-identical to Core's ledger.
+    """
+    return event.payoutCents if event.won else -event.stakeCents
 
 
 async def handle(store: StatsStorage, body: bytes) -> None:
@@ -33,7 +35,7 @@ async def handle(store: StatsStorage, body: bytes) -> None:
         user_id=event.userId,
         user_name=event.userName,
         settled_at=event.settledAt,
-        stake_cents=round(event.stake * 100),
+        stake_cents=event.stakeCents,
         profit_cents=_signed_profit_cents(event),
     )
 

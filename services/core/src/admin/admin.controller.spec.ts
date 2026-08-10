@@ -72,19 +72,19 @@ describe("AdminController (auth boundary)", () => {
     currentUser = authedAs(["user"]);
     await request(app.getHttpServer())
       .put("/admin/users/22222222-2222-2222-2222-222222222222/balance")
-      .send({ amount: 100 })
+      .send({ amountCents: 10000 })
       .expect(403);
     expect(setUserBalance).not.toHaveBeenCalled();
   });
 
   it("allows an admin user through to GET /admin/users", async () => {
-    listUsers.mockResolvedValue([{ id: "u1", balance: 50 }]);
+    listUsers.mockResolvedValue([{ id: "u1", balanceCents: 5000 }]);
     currentUser = authedAs(["admin"]);
 
     const res = await request(app.getHttpServer())
       .get("/admin/users")
       .expect(200);
-    expect(res.body).toEqual([{ id: "u1", balance: 50 }]);
+    expect(res.body).toEqual([{ id: "u1", balanceCents: 5000 }]);
     expect(listUsers).toHaveBeenCalledTimes(1);
   });
 });

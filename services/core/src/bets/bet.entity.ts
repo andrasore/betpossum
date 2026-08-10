@@ -33,14 +33,19 @@ export class Bet {
   @Column({ type: "varchar" })
   selection!: BetSelection;
 
+  // A ratio, not money — stays decimal. Postgres returns `numeric` as a
+  // string, hence the `Number()` at every read site.
   @Column({ type: "decimal", precision: 10, scale: 4 })
   odds!: number;
 
-  @Column({ type: "decimal", precision: 12, scale: 2 })
-  stake!: number;
+  // Money is integer cents. `integer` also comes back from pg as a real JS
+  // number, unlike `numeric`.
+  @Column({ type: "integer", name: "stake_cents" })
+  stakeCents!: number;
 
-  @Column({ type: "decimal", precision: 12, scale: 2, nullable: true })
-  payout!: number | null;
+  // Profit only (stake * (odds - 1)), not total return.
+  @Column({ type: "integer", name: "payout_cents", nullable: true })
+  payoutCents!: number | null;
 
   @Column({ type: "varchar", default: "pending" })
   status!: BetStatus;

@@ -6,6 +6,7 @@ import { BalanceUpdatedNotificationSchema } from "@/generated/events";
 import { fetchBalance } from "@/lib/api";
 import { getSocket } from "@/lib/websocket";
 
+/** The user's balance in integer cents, or null before it has loaded. */
 export function useBalance(token: string | null) {
   const { data, mutate } = useSWR<number>(token ? "balance" : null, () =>
     fetchBalance(),
@@ -17,7 +18,7 @@ export function useBalance(token: string | null) {
     }
     const socket = getSocket();
     const onBalance = (raw: unknown) => {
-      void mutate(BalanceUpdatedNotificationSchema.parse(raw).balance, {
+      void mutate(BalanceUpdatedNotificationSchema.parse(raw).balanceCents, {
         revalidate: false,
       });
     };

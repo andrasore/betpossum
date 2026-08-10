@@ -31,13 +31,13 @@ describe("selectionLabel", () => {
 
 describe("betOutcomeLabel", () => {
   it("shows the won payout with profit formatting", () => {
-    expect(betOutcomeLabel(makeBet({ status: "won", payout: 23.5 }))).toBe(
+    expect(betOutcomeLabel(makeBet({ status: "won", payoutCents: 2350 }))).toBe(
       "Won +$23.50",
     );
   });
 
   it("falls back to the bare status when there is no payout", () => {
-    expect(betOutcomeLabel(makeBet({ status: "won", payout: null }))).toBe(
+    expect(betOutcomeLabel(makeBet({ status: "won", payoutCents: null }))).toBe(
       "won",
     );
     expect(betOutcomeLabel(makeBet({ status: "held" }))).toBe("held");

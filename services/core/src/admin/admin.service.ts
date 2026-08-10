@@ -7,7 +7,7 @@ export interface AdminUserRow {
   email: string | null;
   name: string | null;
   betCount: number;
-  balance: number;
+  balanceCents: number;
 }
 
 @Injectable()
@@ -27,16 +27,15 @@ export class AdminService {
         email: user.email,
         name: user.name,
         betCount,
-        balance: await this.wallet.getBalance(user.id),
+        balanceCents: await this.wallet.getBalanceCents(user.id),
       })),
     );
   }
 
-  async setUserBalance(userId: string, amount: number): Promise<void> {
-    const targetCents = Math.round(amount * 100);
+  async setUserBalance(userId: string, amountCents: number): Promise<void> {
     this.logger.log(
-      `Admin setting balance for ${userId} to ${targetCents} cents`,
+      `Admin setting balance for ${userId} to ${amountCents} cents`,
     );
-    await this.wallet.setBalance(userId, targetCents);
+    await this.wallet.setBalance(userId, amountCents);
   }
 }

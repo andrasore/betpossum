@@ -8,7 +8,7 @@ export class WalletController {
 
   @Get("wallet/balance")
   async getBalanceForCaller(@CurrentUser() user: AuthUser) {
-    const balance = await this.wallet.getBalance(user.id);
-    return { balance };
+    const balanceCents = await this.wallet.getBalanceCents(user.id);
+    return { balanceCents };
   }
 }

@@ -54,7 +54,7 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
 
   const aliceRow = bobPage.locator("tr", { hasText: "alice@example.com" });
   await expect(aliceRow).toBeVisible();
-  await aliceRow.getByRole("spinbutton").fill("100");
+  await aliceRow.getByLabel("Balance").fill("100");
   await aliceRow.getByRole("button", { name: "Confirm" }).click();
   await expect(aliceRow.getByRole("button", { name: "Confirm" })).toBeHidden();
 
@@ -73,7 +73,13 @@ test("alice logs in, places a bet, the event resolves, and the bet settles as wo
 
   await firstCard.click();
 
-  await alicePage.getByTestId("stake-input").fill("10");
+  // Money is integer cents end to end; the field refuses sub-cent precision
+  // rather than letting the server silently round it.
+  const stakeInput = alicePage.getByTestId("stake-input");
+  await stakeInput.pressSequentially("0.333333");
+  await expect(stakeInput).toHaveValue("0.33");
+
+  await stakeInput.fill("10");
   await alicePage.getByTestId("place-bet-button").click();
 
   const betRow = alicePage.locator('[data-testid^="bet-row-"]').first();

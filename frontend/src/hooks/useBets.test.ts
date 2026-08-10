@@ -64,14 +64,14 @@ describe("useBets bet.settled toasts", () => {
 
   it("pops a success toast with the profit on a winning settlement", () => {
     renderHook(() => useBets("token"), { wrapper });
-    settle({ betId: "bet-1", won: true, payout: 23.5 });
+    settle({ betId: "bet-1", won: true, payoutCents: 2350 });
     expect(toast.success).toHaveBeenCalledWith("Bet won! +$23.50");
     expect(toast.error).not.toHaveBeenCalled();
   });
 
   it("pops an error toast on a losing settlement", () => {
     renderHook(() => useBets("token"), { wrapper });
-    settle({ betId: "bet-1", won: false, payout: 0 });
+    settle({ betId: "bet-1", won: false, payoutCents: 0 });
     expect(toast.error).toHaveBeenCalledWith("Bet lost");
     expect(toast.success).not.toHaveBeenCalled();
   });
@@ -83,8 +83,8 @@ describe("useBets bet.settled toasts", () => {
         eventId: "evt-1",
         selection: "home",
         odds: 2.5,
-        stake: 10,
-        payout: null,
+        stakeCents: 1000,
+        payoutCents: null,
         status: "held",
         placedAt: "2026-06-17T00:00:00Z",
       },
@@ -99,7 +99,7 @@ describe("useBets bet.settled toasts", () => {
     const { result } = renderHook(() => useBets("token"), { wrapper });
     await waitFor(() => expect(result.current.data).toHaveLength(1));
 
-    settle({ betId: "bet-1", won: true, payout: 15 });
+    settle({ betId: "bet-1", won: true, payoutCents: 1500 });
     expect(toast.success).toHaveBeenCalledWith(
       "Bet won! Arsenal vs Chelsea +$15.00",
     );

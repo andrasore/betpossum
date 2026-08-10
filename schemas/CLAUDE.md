@@ -58,7 +58,7 @@ Both generators consume the whole `schemas/json/` directory:
   is the discriminator the relay maps to a socket.io event name; `payload` is
   the inner message object, relayed verbatim.
 - Document field-level gotchas inline as `description`s — e.g. `drawOdds = 0` for
-  no-draw markets, `payout` being profit-only, amounts in dollars vs cents.
+  no-draw markets, `payoutCents` being profit-only, amounts being integer cents.
   These descriptions are the spec.
 - Treat changes as a wire contract: prefer adding fields/variants over
   renaming or repurposing existing ones.

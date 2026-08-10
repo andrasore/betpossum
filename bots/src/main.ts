@@ -14,6 +14,7 @@ import {
   login,
   type Session,
 } from "./keycloak.js";
+import { formatCents } from "./money.js";
 import { generateName } from "./names.js";
 
 function sleep(ms: number): Promise<void> {
@@ -45,17 +46,17 @@ async function provisionBot(
   const session = await login(cfg, name.username, cfg.botPassword);
   const sub = decodeSub(session.accessToken);
   // Warm-up: first authed call lazily creates the user + TigerBeetle wallet.
-  const balance = await getBalance(cfg, session.accessToken);
+  const balanceCents = await getBalance(cfg, session.accessToken);
   if (created) {
-    await setBalance(cfg, adminToken, sub, cfg.startingBalance);
+    await setBalance(cfg, adminToken, sub, cfg.startingBalanceCents);
   }
-  const startingBalance = created ? cfg.startingBalance : balance;
+  const startingCents = created ? cfg.startingBalanceCents : balanceCents;
   console.log(
     created
-      ? `provisioned ${name.username} (funded $${cfg.startingBalance})`
-      : `reused ${name.username} ($${balance.toFixed(2)})`,
+      ? `provisioned ${name.username} (funded $${formatCents(cfg.startingBalanceCents)})`
+      : `reused ${name.username} ($${formatCents(balanceCents)})`,
   );
-  return new Bot(name.username, sub, session, startingBalance);
+  return new Bot(name.username, sub, session, startingCents);
 }
 
 async function betTick(cfg: Config, bots: Bot[]): Promise<void> {

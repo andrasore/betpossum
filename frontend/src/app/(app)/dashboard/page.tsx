@@ -43,7 +43,7 @@ export default function DashboardPage() {
   );
   const { data: bets, mutate } = useBets(sessionKey);
   const oddsIndex = useOddsIndex(sessionKey);
-  const balance = useBalance(sessionKey);
+  const balanceCents = useBalance(sessionKey);
 
   return (
     <>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
       <BetSlipDrawer
         selection={selection}
         loggedIn={isAuthenticated}
-        balance={balance}
+        balanceCents={balanceCents}
         onChoiceChange={(choice) =>
           setSelection((s) => (s ? { ...s, choice } : s))
         }

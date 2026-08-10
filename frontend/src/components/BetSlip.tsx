@@ -14,6 +14,7 @@ import {
 import { LogIn } from "lucide-react";
 import { useState } from "react";
 import { placeBet } from "@/lib/api";
+import { formatCents, isMoneyInput, parseCents } from "@/lib/money";
 import type { OddsEvent } from "@/types";
 
 type Choice = "home" | "away" | "draw";
@@ -26,7 +27,7 @@ interface Selection {
 interface Props {
   selection: Selection | null;
   loggedIn: boolean;
-  balance: number | null;
+  balanceCents: number | null;
   onChoiceChange: (choice: Choice) => void;
   onPlaced: () => void;
   onLogin: () => void;
@@ -35,7 +36,7 @@ interface Props {
 export function BetSlip({
   selection,
   loggedIn,
-  balance,
+  balanceCents,
   onChoiceChange,
   onPlaced,
   onLogin,
@@ -62,10 +63,13 @@ export function BetSlip({
       : choice === "away"
         ? event.awayOdds
         : event.drawOdds;
-  const stakeNum = parseFloat(stake);
-  const stakeValid = stake !== "" && Number.isFinite(stakeNum) && stakeNum > 0;
-  const overBalance = stakeValid && balance !== null && stakeNum > balance;
-  const potentialReturn = stakeValid ? (stakeNum * odds).toFixed(2) : "—";
+  const stakeCents = parseCents(stake);
+  const stakeValid = stakeCents !== null && stakeCents > 0;
+  const overBalance =
+    stakeCents !== null && balanceCents !== null && stakeCents > balanceCents;
+  const potentialReturn = stakeValid
+    ? formatCents(Math.round(stakeCents * odds))
+    : "—";
 
   const segments: { value: Choice; label: string; odds: number }[] = [
     { value: "home", label: homeLabel, odds: event.homeOdds },
@@ -76,7 +80,7 @@ export function BetSlip({
   ];
 
   async function submit() {
-    if (!stake || Number.isNaN(Number(stake))) {
+    if (stakeCents === null || !stakeValid || overBalance) {
       return;
     }
     setLoading(true);
@@ -85,7 +89,7 @@ export function BetSlip({
         eventId: event.eventId,
         selection: choice,
         odds,
-        stake: parseFloat(stake),
+        stakeCents,
       });
       setStake("");
       onPlaced();
@@ -145,15 +149,21 @@ export function BetSlip({
           <Text as="label" size="2" weight="medium" htmlFor="stake-input">
             Stake ($)
           </Text>
+          {/* A number input can't reject a keystroke — the browser reports an
+              empty value for anything it considers invalid, so there is nothing
+              to filter. A text input gated on isMoneyInput makes a third
+              decimal impossible to type or paste. */}
           <TextField.Root
             id="stake-input"
             data-testid="stake-input"
-            type="number"
+            type="text"
+            inputMode="decimal"
             value={stake}
-            onChange={(e) => setStake(e.target.value)}
-            min={0}
-            max={balance ?? undefined}
-            step={1}
+            onChange={(e) => {
+              if (isMoneyInput(e.target.value)) {
+                setStake(e.target.value);
+              }
+            }}
             placeholder="0.00"
             disabled={!loggedIn}
             color={overBalance ? "red" : undefined}
@@ -161,7 +171,7 @@ export function BetSlip({
           />
           {overBalance && (
             <Text size="1" color="red" as="div" mt="1">
-              Stake exceeds your balance of ${balance?.toFixed(2)}.
+              Stake exceeds your balance of ${formatCents(balanceCents ?? 0)}.
             </Text>
           )}
         </Box>

@@ -53,7 +53,7 @@ test("a placed bet deep-links from Recent Bets into My Bets and settles to Won",
   await page.waitForURL("**/admin");
   const bobRow = page.locator("tr", { hasText: "admin@example.com" });
   await expect(bobRow).toBeVisible();
-  await bobRow.getByRole("spinbutton").fill("100");
+  await bobRow.getByLabel("Balance").fill("100");
   await bobRow.getByRole("button", { name: "Confirm" }).click();
   await expect(bobRow.getByRole("button", { name: "Confirm" })).toBeHidden();
 

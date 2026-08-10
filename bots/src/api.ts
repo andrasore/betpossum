@@ -19,7 +19,7 @@ export interface PlaceBetPayload {
   eventId: string;
   selection: Selection;
   odds: number;
-  stake: number;
+  stakeCents: number;
 }
 
 async function asError(prefix: string, res: Response): Promise<Error> {
@@ -41,6 +41,7 @@ export async function getOdds(cfg: Config): Promise<OddsEvent[]> {
   return res.json() as Promise<OddsEvent[]>;
 }
 
+/** The bot's wallet balance, in integer cents. */
 export async function getBalance(cfg: Config, token: string): Promise<number> {
   const res = await fetch(`${cfg.baseUrl}/api/wallet/balance`, {
     headers: authHeaders(token),
@@ -48,8 +49,8 @@ export async function getBalance(cfg: Config, token: string): Promise<number> {
   if (!res.ok) {
     throw await asError("Fetch balance failed", res);
   }
-  const { balance } = (await res.json()) as { balance: number };
-  return balance;
+  const { balanceCents } = (await res.json()) as { balanceCents: number };
+  return balanceCents;
 }
 
 export async function placeBet(
@@ -72,12 +73,12 @@ export async function setBalance(
   cfg: Config,
   adminToken: string,
   userId: string,
-  amount: number,
+  amountCents: number,
 ): Promise<void> {
   const res = await fetch(`${cfg.baseUrl}/api/admin/users/${userId}/balance`, {
     method: "PUT",
     headers: authHeaders(adminToken),
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify({ amountCents }),
   });
   if (!res.ok) {
     throw await asError("Set balance failed", res);

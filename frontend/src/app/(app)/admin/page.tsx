@@ -26,6 +26,7 @@ import {
   setAdminUserBalance,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { formatCents, isMoneyInput, parseCents } from "@/lib/money";
 import type { OddsEvent } from "@/types";
 
 export default function AdminPage() {
@@ -126,33 +127,39 @@ function UsersPanel() {
   );
 }
 
-function UserRow({
+// Exported for unit tests: this row owns the balance-editing rules (cents
+// parsing, the keystroke filter, the dirty check).
+export function UserRow({
   user,
   onSaved,
 }: {
   user: AdminUserRow;
   onSaved: () => void;
 }) {
-  const [draft, setDraft] = useState<string>(user.balance.toFixed(2));
+  const [draft, setDraft] = useState<string>(formatCents(user.balanceCents));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setDraft(user.balance.toFixed(2));
-  }, [user.balance]);
+    setDraft(formatCents(user.balanceCents));
+  }, [user.balanceCents]);
 
-  const parsed = Number(draft);
-  const dirty = draft.trim() !== user.balance.toFixed(2);
-  const valid = Number.isFinite(parsed) && parsed >= 0;
+  // `dirty` drives the edit affordances and so tracks the raw text — an
+  // emptied field must still offer Discard. `canConfirm` compares cents rather
+  // than formatted strings, so retyping "100" over a stored "100.00" is not a
+  // change worth submitting.
+  const parsedCents = parseCents(draft);
+  const dirty = draft !== formatCents(user.balanceCents);
+  const canConfirm = parsedCents !== null && parsedCents !== user.balanceCents;
 
   const confirm = async () => {
-    if (!dirty || !valid) {
+    if (parsedCents === null || !canConfirm) {
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      await setAdminUserBalance(user.id, parsed);
+      await setAdminUserBalance(user.id, parsedCents);
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
@@ -162,7 +169,7 @@ function UserRow({
   };
 
   const discard = () => {
-    setDraft(user.balance.toFixed(2));
+    setDraft(formatCents(user.balanceCents));
     setError(null);
   };
 
@@ -195,13 +202,19 @@ function UserRow({
       <Table.Cell justify="end">{user.betCount}</Table.Cell>
       <Table.Cell justify="end">
         <Flex align="center" justify="end" gap="2">
+          {/* Text, not number, so an over-precise entry can be rejected
+              keystroke-by-keystroke — see BetSlip for the same guard. */}
           <TextField.Root
             size="1"
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
+            inputMode="decimal"
+            aria-label="Balance"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              if (isMoneyInput(e.target.value)) {
+                setDraft(e.target.value);
+              }
+            }}
             disabled={saving}
             style={{
               width: "120px",
@@ -221,7 +234,7 @@ function UserRow({
                 size="1"
                 color="green"
                 onClick={confirm}
-                disabled={!valid || saving}
+                disabled={!canConfirm || saving}
                 loading={saving}
               >
                 <Check size={14} />
@@ -238,6 +251,11 @@ function UserRow({
             </>
           )}
         </Flex>
+        {dirty && parsedCents === null && (
+          <Text size="1" color="red" as="div" mt="1">
+            Enter an amount in dollars and cents.
+          </Text>
+        )}
         {error && (
           <Text size="1" color="red" as="div" mt="1">
             {error}

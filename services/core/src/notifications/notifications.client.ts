@@ -19,20 +19,20 @@ export class NotificationsClient {
     userId: string,
     betId: string,
     won: boolean,
-    payout: number,
+    payoutCents: number,
   ): Promise<void> {
     return this.publish({
       userId,
       kind: "betSettled",
-      payload: { betId, won, payout },
+      payload: { betId, won, payoutCents },
     });
   }
 
-  balanceUpdated(userId: string, balance: number): Promise<void> {
+  balanceUpdated(userId: string, balanceCents: number): Promise<void> {
     return this.publish({
       userId,
       kind: "balanceUpdated",
-      payload: { balance },
+      payload: { balanceCents },
     });
   }
 

@@ -3,6 +3,7 @@
 import { Badge, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import Link from "next/link";
 import { betOutcomeLabel, statusColor } from "@/lib/betDisplay";
+import { formatCents } from "@/lib/money";
 import type { Bet, OddsEvent } from "@/types";
 
 const RECENT_LIMIT = 5;
@@ -63,7 +64,7 @@ export function RecentBets({ bets, oddsIndex }: RecentBetsProps) {
                         {bet.selection} @ {Number(bet.odds).toFixed(2)}
                       </Text>
                       <Text size="2" color="gray">
-                        ${Number(bet.stake).toFixed(2)}
+                        ${formatCents(bet.stakeCents)}
                       </Text>
                       <Badge
                         color={statusColor[bet.status]}

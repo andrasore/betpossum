@@ -15,7 +15,7 @@ interface Selection {
 interface Props {
   selection: Selection | null;
   loggedIn: boolean;
-  balance: number | null;
+  balanceCents: number | null;
   onChoiceChange: (choice: Choice) => void;
   onPlaced: () => void;
   onLogin: () => void;

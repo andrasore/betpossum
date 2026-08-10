@@ -44,7 +44,7 @@ describe("RecentBets", () => {
   });
 
   it("shows the won profit on a settled winning bet", () => {
-    const bet = makeBet({ id: "bet-1", status: "won", payout: 25.5 });
+    const bet = makeBet({ id: "bet-1", status: "won", payoutCents: 2550 });
     render(<RecentBets bets={[bet]} oddsIndex={emptyIndex} />);
 
     expect(screen.getByText("Won +$25.50")).toBeInTheDocument();

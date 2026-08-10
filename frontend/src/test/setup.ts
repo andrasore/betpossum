@@ -3,6 +3,14 @@ import "@testing-library/jest-dom/vitest";
 // jsdom doesn't implement scrollIntoView; BetsTable's deep-link effect calls it.
 Element.prototype.scrollIntoView = () => {};
 
+// Nor ResizeObserver, which Radix's ScrollArea (inside Table.Root) constructs
+// on mount. Observing nothing is fine — no test asserts on resize behaviour.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 // jsdom does implement localStorage, but Node's experimental webstorage global
 // shadows it under vitest and what's left over is unusable in a
 // version-dependent way: `undefined` on node 26, a method-less object on node

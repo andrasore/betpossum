@@ -16,7 +16,7 @@ class LeaderboardEntry:
     userId: str
     userName: str | None
     roiPct: float
-    netProfit: float
+    netProfitCents: int
     settledCount: int
 
 

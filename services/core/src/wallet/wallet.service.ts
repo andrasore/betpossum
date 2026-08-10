@@ -104,11 +104,6 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
     return Number(a.credits_posted - a.debits_posted - a.debits_pending);
   }
 
-  async getBalance(userId: string): Promise<number> {
-    const cents = await this.getBalanceCents(userId);
-    return cents / 100;
-  }
-
   async deposit(userId: string, amountCents: number): Promise<void> {
     await this.simpleTransfer(
       HOUSE_ID,
@@ -232,8 +227,8 @@ export class WalletService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async pushBalanceUpdated(userId: string): Promise<void> {
-    const balance = await this.getBalance(userId);
-    await this.notifications.balanceUpdated(userId, balance);
+    const balanceCents = await this.getBalanceCents(userId);
+    await this.notifications.balanceUpdated(userId, balanceCents);
   }
 
   private buildAccount(

@@ -1,4 +1,5 @@
 import type { Bet, OddsEvent } from "@/types";
+import { formatCents } from "./money";
 import type { AccentColor } from "./sportColor";
 
 // Shared rendering helpers for a placed bet, used by both the dashboard's
@@ -30,8 +31,8 @@ export function selectionLabel(bet: Bet, event?: OddsEvent): string {
 
 // Settlement outcome text: the status, plus the profit paid out on a win.
 export function betOutcomeLabel(bet: Bet): string {
-  if (bet.status === "won" && bet.payout != null) {
-    return `Won +$${Number(bet.payout).toFixed(2)}`;
+  if (bet.status === "won" && bet.payoutCents != null) {
+    return `Won +$${formatCents(bet.payoutCents)}`;
   }
   return bet.status;
 }

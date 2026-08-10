@@ -1,10 +1,11 @@
-// A single bot player: holds its session + locally-tracked balance and decides
-// what to bet. Token refresh is lazy (just before use) since the daemon outlives
-// the 30-minute access-token lifetime.
+// A single bot player: holds its session + locally-tracked balance (integer
+// cents) and decides what to bet. Token refresh is lazy (just before use) since
+// the daemon outlives the 30-minute access-token lifetime.
 
 import { getBalance, type OddsEvent, placeBet, type Selection } from "./api.js";
 import type { Config } from "./config.js";
 import { refreshSession, type Session } from "./keycloak.js";
+import { formatCents } from "./money.js";
 
 interface Candidate {
   selection: Selection;
@@ -58,18 +59,18 @@ export class Bot {
   readonly username: string;
   readonly sub: string;
   private session: Session;
-  private balance: number;
+  private balanceCents: number;
 
   constructor(
     username: string,
     sub: string,
     session: Session,
-    balance: number,
+    balanceCents: number,
   ) {
     this.username = username;
     this.sub = sub;
     this.session = session;
-    this.balance = balance;
+    this.balanceCents = balanceCents;
   }
 
   private async token(cfg: Config): Promise<string> {
@@ -80,7 +81,7 @@ export class Bot {
   }
 
   async syncBalance(cfg: Config): Promise<void> {
-    this.balance = await getBalance(cfg, await this.token(cfg));
+    this.balanceCents = await getBalance(cfg, await this.token(cfg));
   }
 
   // Place one bet on a randomly chosen open event, sized as a fraction of the
@@ -90,7 +91,7 @@ export class Bot {
     if (open.length === 0) {
       return null;
     }
-    if (this.balance < cfg.minStake) {
+    if (this.balanceCents < cfg.minStakeCents) {
       return null;
     }
     const event = open[Math.floor(Math.random() * open.length)];
@@ -102,11 +103,11 @@ export class Bot {
 
     const span = cfg.maxStakeFraction - cfg.minStakeFraction;
     const fraction = cfg.minStakeFraction + Math.random() * span;
-    let stake = Math.round(this.balance * fraction * 100) / 100;
-    if (stake < cfg.minStake) {
-      stake = cfg.minStake;
-    }
-    if (stake > this.balance) {
+    const stakeCents = Math.max(
+      cfg.minStakeCents,
+      Math.round(this.balanceCents * fraction),
+    );
+    if (stakeCents > this.balanceCents) {
       return null;
     }
 
@@ -114,10 +115,10 @@ export class Bot {
       eventId: event.eventId,
       selection: choice.selection,
       odds: choice.odds,
-      stake,
+      stakeCents,
     });
     // Stake is now held; reflect it locally so subsequent ticks size correctly.
-    this.balance = Math.round((this.balance - stake) * 100) / 100;
-    return `${this.username} bet $${stake} on ${choice.selection} @ ${choice.odds} (${event.eventId})`;
+    this.balanceCents -= stakeCents;
+    return `${this.username} bet $${formatCents(stakeCents)} on ${choice.selection} @ ${choice.odds} (${event.eventId})`;
   }
 }

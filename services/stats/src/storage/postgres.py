@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from types import TracebackType
 from typing import ClassVar
 
-from sqlalchemy import BigInteger, Integer, Text, text
+from sqlalchemy import BigInteger, Text, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel import Column, Field, SQLModel, col, select
@@ -31,9 +31,9 @@ class Settlement(SQLModel, table=True):
     user_id: str = Field(sa_column=Column(Text, nullable=False, index=True))
     user_name: str | None = Field(default=None, sa_column=Column(Text))
     settled_at: int = Field(sa_column=Column(BigInteger, nullable=False))
-    stake_cents: int = Field(sa_column=Column(Integer, nullable=False))
+    stake_cents: int = Field(sa_column=Column(BigInteger, nullable=False))
     # Signed: +profit on a win, -stake on a loss.
-    profit_cents: int = Field(sa_column=Column(Integer, nullable=False))
+    profit_cents: int = Field(sa_column=Column(BigInteger, nullable=False))
 
 
 def _async_dsn(dsn: str) -> str:
@@ -169,7 +169,7 @@ class PostgresStorage(StatsStorage):
                 roiPct=round(a.profit_cents / a.stake_cents * 100, 2)
                 if a.stake_cents > 0
                 else 0.0,
-                netProfit=round(a.profit_cents / 100, 2),
+                netProfitCents=a.profit_cents,
                 settledCount=a.count,
             )
             for user_id, a in agg.items()

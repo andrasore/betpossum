@@ -22,12 +22,13 @@ import {
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { formatCents } from "@/lib/money";
 
 interface NavbarProps {
-  balance?: number | null;
+  balanceCents?: number | null;
 }
 
-export function Navbar({ balance }: NavbarProps) {
+export function Navbar({ balanceCents }: NavbarProps) {
   const { isAuthenticated, name, roles, login, logout } = useAuth();
   const isAdmin = isAuthenticated && roles.includes("admin");
   const displayName = name ?? "";
@@ -44,7 +45,7 @@ export function Navbar({ balance }: NavbarProps) {
         <Brand />
         {isAuthenticated && <CenterNav isAdmin={isAdmin} />}
         <Flex align="center" justify="end" gap="4" flexGrow="1" flexBasis="0">
-          {balance != null && <BalancePill balance={balance} />}
+          {balanceCents != null && <BalancePill balanceCents={balanceCents} />}
           {isAuthenticated ? (
             <AccountMenu displayName={displayName} logout={logout} />
           ) : (
@@ -153,9 +154,9 @@ const CenterNav = ({ isAdmin }: { isAdmin: boolean }) => {
   );
 };
 
-const BalancePill = ({ balance }: { balance: number }) => (
+const BalancePill = ({ balanceCents }: { balanceCents: number }) => (
   <Badge
-    color={balance === 0 ? "yellow" : "green"}
+    color={balanceCents === 0 ? "yellow" : "green"}
     variant="soft"
     radius="full"
     size="2"
@@ -164,7 +165,7 @@ const BalancePill = ({ balance }: { balance: number }) => (
     <Wallet size={18} aria-hidden />
     <Text color="gray">Balance:</Text>
     <Text size="3" weight="bold" style={{ color: "white" }}>
-      ${balance.toFixed(2)}
+      ${formatCents(balanceCents)}
     </Text>
   </Badge>
 );

@@ -46,14 +46,16 @@ class BetSettledNotification(BaseModel):
     )
     betId: str
     won: bool
-    payout: float = Field(..., description='Profit only, not total return.')
+    payoutCents: int = Field(
+        ..., description='Profit only, not total return. Integer cents.'
+    )
 
 
 class BalanceUpdatedNotification(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
-    balance: float = Field(..., description='Dollars, not cents.')
+    balanceCents: int = Field(..., description='Integer cents, not dollars.')
 
 
 class BetSettledEvent(BaseModel):
@@ -68,9 +70,11 @@ class BetSettledEvent(BaseModel):
     eventId: str
     selection: Literal['home', 'away', 'draw']
     odds: float
-    stake: float = Field(..., description='Dollars.')
+    stakeCents: int = Field(..., description='Integer cents.')
     won: bool
-    payout: float = Field(..., description='Profit only, not total return. 0 on loss.')
+    payoutCents: int = Field(
+        ..., description='Profit only, not total return. Integer cents; 0 on loss.'
+    )
     settledAt: int = Field(..., description='Unix ms.')
 
 

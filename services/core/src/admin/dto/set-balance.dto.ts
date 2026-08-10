@@ -1,7 +1,9 @@
-import { IsNumber, Min } from "class-validator";
+import { IsInt, Max, Min } from "class-validator";
+import { MAX_STAKE_CENTS } from "../../common/money";
 
 export class SetBalanceDto {
-  @IsNumber()
+  @IsInt()
   @Min(0)
-  amount!: number;
+  @Max(MAX_STAKE_CENTS)
+  amountCents!: number;
 }

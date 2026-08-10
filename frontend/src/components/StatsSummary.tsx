@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, Flex, Grid, Text } from "@radix-ui/themes";
+import { formatCentsSigned } from "@/lib/money";
 import type { StatsSummary as Summary } from "@/types";
 
 function Tile({
@@ -26,12 +27,11 @@ function Tile({
   );
 }
 
-const signed = (n: number, suffix = "") =>
-  `${n >= 0 ? "+" : ""}${n.toFixed(suffix === "%" ? 1 : 2)}${suffix}`;
+const signedPct = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
 
 // Personal betting summary derived from settled bets (GET /stats/me/summary).
 export function StatsSummary({ summary }: { summary: Summary }) {
-  const pnlColor = summary.netProfit >= 0 ? "green" : "red";
+  const pnlColor = summary.netProfitCents >= 0 ? "green" : "red";
   return (
     <Grid
       columns={{ initial: "2", sm: "4" }}
@@ -40,12 +40,12 @@ export function StatsSummary({ summary }: { summary: Summary }) {
     >
       <Tile
         label="Net P&L"
-        value={`$${signed(summary.netProfit)}`}
+        value={`$${formatCentsSigned(summary.netProfitCents)}`}
         color={pnlColor}
       />
       <Tile
         label="ROI"
-        value={signed(summary.roiPct, "%")}
+        value={signedPct(summary.roiPct)}
         color={summary.roiPct >= 0 ? "green" : "red"}
       />
       <Tile label="Win rate" value={`${summary.winRatePct.toFixed(0)}%`} />

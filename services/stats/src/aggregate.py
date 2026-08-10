@@ -1,8 +1,8 @@
 """Pure aggregation over settlement rows.
 
 Kept free of any DB or framework imports so the cumulative-ROI maths can be unit
-tested directly. All money is integer cents in, dollars (float) out on the
-summary; the series carries percentages only.
+tested directly. All money is integer cents, in and out; only the percentages
+(ROI, win rate) are floats.
 """
 
 from __future__ import annotations
@@ -31,11 +31,11 @@ class PnlPoint:
 
 @dataclass(frozen=True)
 class Summary:
-    totalStaked: float
+    totalStakedCents: int
     settledCount: int
     wins: int
     winRatePct: float
-    netProfit: float
+    netProfitCents: int
     roiPct: float
 
 
@@ -77,10 +77,10 @@ def summarise(rows: list[SettlementRow]) -> Summary:
     settled = len(rows)
     wins = sum(1 for r in rows if r.profit_cents > 0)
     return Summary(
-        totalStaked=round(total_stake / 100, 2),
+        totalStakedCents=total_stake,
         settledCount=settled,
         wins=wins,
         winRatePct=round(wins / settled * 100, 2) if settled > 0 else 0.0,
-        netProfit=round(net / 100, 2),
+        netProfitCents=net,
         roiPct=round(net / total_stake * 100, 2) if total_stake > 0 else 0.0,
     )

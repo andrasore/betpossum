@@ -51,8 +51,8 @@ def test_summary_counts_wins_and_roi() -> None:
     assert s.settledCount == 3
     assert s.wins == 2
     assert s.winRatePct == round(2 / 3 * 100, 2)
-    assert s.totalStaked == 400.0
-    assert s.netProfit == 50.0
+    assert s.totalStakedCents == 40_000
+    assert s.netProfitCents == 5_000
     assert s.roiPct == 12.5
 
 

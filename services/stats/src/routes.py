@@ -28,11 +28,11 @@ async def my_summary(
     rows = await store.user_rows(sub)
     s = summarise(rows)
     return {
-        "totalStaked": s.totalStaked,
+        "totalStakedCents": s.totalStakedCents,
         "settledCount": s.settledCount,
         "wins": s.wins,
         "winRatePct": s.winRatePct,
-        "netProfit": s.netProfit,
+        "netProfitCents": s.netProfitCents,
         "roiPct": s.roiPct,
     }
 
@@ -47,7 +47,7 @@ async def leaderboard(store: StorageDep) -> list[dict[str, object]]:
             "userId": e.userId,
             "userName": e.userName,
             "roiPct": e.roiPct,
-            "netProfit": e.netProfit,
+            "netProfitCents": e.netProfitCents,
             "settledCount": e.settledCount,
         }
         for e in entries

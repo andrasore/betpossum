@@ -48,7 +48,11 @@ factory, with `from_env` on the class.
 - **Forward-only.** No backfill of pre-existing bets; the read model accrues
   from new settlements.
 - **Signed cents.** `profit_cents` is +profit on a win, −stake on a loss, so a
-  plain `SUM` is net P&L. Money crosses the HTTP boundary in **dollars**.
+  plain `SUM` is net P&L. Money is **integer cents** on the way in and on the
+  way out — the event carries cents, the columns store cents, and the HTTP
+  responses return `*Cents` fields. Nothing here rounds; that is what keeps the
+  read model identical to Core's ledger. Only ROI/win-rate percentages are
+  floats.
 - **Cumulative ROI%**, bucketed by UTC day: each `/stats/me/pnl` point is
   cumulative net ÷ cumulative stake to date. The maths lives in `aggregate.py`
   (pure, no DB) so it is unit-tested directly.

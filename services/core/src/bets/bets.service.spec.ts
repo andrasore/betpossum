@@ -111,12 +111,12 @@ describe("BetsService", () => {
     const userId = await newFundedUser(10000);
     notifications.betHeld.mockClear();
 
-    const bet = await bets.place(userId, "evt-1", "home", 2, 5);
+    const bet = await bets.place(userId, "evt-1", "home", 2, 500);
 
     expect(bet.status).toBe("held");
     const stored = await betRepo.findOneByOrFail({ id: bet.id });
     expect(stored.status).toBe("held");
-    expect(Number(stored.stake)).toBe(5);
+    expect(stored.stakeCents).toBe(500);
     expect(Number(stored.odds)).toBe(2);
 
     expect(await wallet.getBalanceCents(userId)).toBe(9500);
@@ -126,15 +126,15 @@ describe("BetsService", () => {
 
   it("settles a winning bet: releases hold, pays profit, updates row", async () => {
     const userId = await newFundedUser(10000);
-    const bet = await bets.place(userId, "evt-2", "home", 3, 10);
+    const bet = await bets.place(userId, "evt-2", "home", 3, 1000);
     notifications.betSettled.mockClear();
 
-    // stake 10 at odds 3 → profit = 10 * (3 - 1) = 20
-    await bets.settle(bet.id, true, 20);
+    // stake 1000c at odds 3 → profit = 1000 * (3 - 1) = 2000c
+    await bets.settle(bet.id, true, 2000);
 
     const stored = await betRepo.findOneByOrFail({ id: bet.id });
     expect(stored.status).toBe("won");
-    expect(Number(stored.payout)).toBe(20);
+    expect(stored.payoutCents).toBe(2000);
 
     // release voids the 1000c hold (stake returns) + payout adds 2000c profit.
     expect(await wallet.getBalanceCents(userId)).toBe(12000);
@@ -143,17 +143,17 @@ describe("BetsService", () => {
       userId,
       bet.id,
       true,
-      20,
+      2000,
     );
   });
 
   it("publishes a durable BetSettledEvent carrying the denormalized fields", async () => {
     const userId = await newFundedUser(10000);
     await userRepo.update(userId, { name: "Ada" });
-    const bet = await bets.place(userId, "evt-evt", "home", 3, 10);
+    const bet = await bets.place(userId, "evt-evt", "home", 3, 1000);
     messaging.publish.mockClear();
 
-    await bets.settle(bet.id, true, 20);
+    await bets.settle(bet.id, true, 2000);
 
     const settledCall = messaging.publish.mock.calls.find(
       ([channel]) => channel === "bets.settled",
@@ -170,23 +170,23 @@ describe("BetsService", () => {
       eventId: "evt-evt",
       selection: "home",
       odds: 3,
-      stake: 10,
+      stakeCents: 1000,
       won: true,
-      payout: 20, // profit only
+      payoutCents: 2000, // profit only
     });
     expect(typeof event.settledAt).toBe("number");
   });
 
   it("settles a losing bet: keeps the hold, no payout", async () => {
     const userId = await newFundedUser(10000);
-    const bet = await bets.place(userId, "evt-3", "home", 3, 10);
+    const bet = await bets.place(userId, "evt-3", "home", 3, 1000);
     notifications.betSettled.mockClear();
 
     await bets.settle(bet.id, false, 0);
 
     const stored = await betRepo.findOneByOrFail({ id: bet.id });
     expect(stored.status).toBe("lost");
-    expect(Number(stored.payout)).toBe(0);
+    expect(stored.payoutCents).toBe(0);
 
     // keep makes the 1000c hold permanent → balance drops by stake.
     expect(await wallet.getBalanceCents(userId)).toBe(9000);
@@ -201,32 +201,33 @@ describe("BetsService", () => {
 
   it("settle throws when called twice — duplicate invocations are the caller-side bug", async () => {
     const userId = await newFundedUser(10000);
-    const bet = await bets.place(userId, "evt-twice", "home", 3, 10);
+    const bet = await bets.place(userId, "evt-twice", "home", 3, 1000);
 
-    await bets.settle(bet.id, true, 20);
+    await bets.settle(bet.id, true, 2000);
     const after1 = await wallet.getBalanceCents(userId);
     expect(after1).toBe(12000);
 
-    await expect(bets.settle(bet.id, true, 20)).rejects.toThrow(
+    await expect(bets.settle(bet.id, true, 2000)).rejects.toThrow(
       /status is won/,
     );
     expect(await wallet.getBalanceCents(userId)).toBe(after1);
   });
 
-  it("preserves decimal precision through stake × odds settlement", async () => {
+  it("rounds a fractional stake × odds profit to whole cents, and the ledger matches the row", async () => {
     const userId = await newFundedUser(10000);
 
-    // 0.1 * 3 lands cleanly in decimal arithmetic but is 0.30000000000000004 in IEEE-754 float.
-    const bet = await bets.place(userId, "evt-4", "home", 3, 0.1);
-    const placed = await betRepo.findOneByOrFail({ id: bet.id });
-    expect(Number(placed.stake)).toBe(0.1);
-    expect(await wallet.getBalanceCents(userId)).toBe(9990);
+    // 333c at odds 1.5 → profit is 166.5c, the one genuinely fractional
+    // quantity in the money path. It must land on a single rounded value that
+    // both the bet row and the ledger agree on.
+    const bet = await bets.place(userId, "evt-4", "home", 1.5, 333);
+    expect(await wallet.getBalanceCents(userId)).toBe(9667);
 
-    // profit = 0.1 * (3 - 1) = 0.2
-    await bets.settle(bet.id, true, 0.2);
+    await bets.handleEventResolved(encodeEvent("evt-4", "home"));
+
     const settled = await betRepo.findOneByOrFail({ id: bet.id });
-    expect(Number(settled.payout)).toBe(0.2);
-    expect(await wallet.getBalanceCents(userId)).toBe(10020);
+    expect(settled.payoutCents).toBe(167);
+    // stake released (back to 10000) + 167c profit, exactly the stored payout.
+    expect(await wallet.getBalanceCents(userId)).toBe(10167);
   });
 
   it("handleEventResolved settles only held bets on the resolved event; winning selections receive profit", async () => {
@@ -234,9 +235,9 @@ describe("BetsService", () => {
     const userB = await newFundedUser(10000);
 
     // Two bets on the event-to-resolve, one bet on an unrelated event.
-    const winnerBet = await bets.place(userA, "evt-win", "home", 3, 10); // matches outcome → wins
-    const loserBet = await bets.place(userB, "evt-win", "away", 2, 5); // doesn't match → loses
-    const unrelatedBet = await bets.place(userA, "evt-other", "home", 2, 5);
+    const winnerBet = await bets.place(userA, "evt-win", "home", 3, 1000); // matches outcome → wins
+    const loserBet = await bets.place(userB, "evt-win", "away", 2, 500); // doesn't match → loses
+    const unrelatedBet = await bets.place(userA, "evt-other", "home", 2, 500);
 
     await bets.handleEventResolved(encodeEvent("evt-win", "home"));
 
@@ -245,10 +246,10 @@ describe("BetsService", () => {
     const unrelated = await betRepo.findOneByOrFail({ id: unrelatedBet.id });
 
     expect(winner.status).toBe("won");
-    expect(Number(winner.payout)).toBe(20); // 10 * (3-1) = 20
+    expect(winner.payoutCents).toBe(2000); // 1000c * (3-1) = 2000c
 
     expect(loser.status).toBe("lost");
-    expect(Number(loser.payout)).toBe(0);
+    expect(loser.payoutCents).toBe(0);
 
     expect(unrelated.status).toBe("held");
 
@@ -260,7 +261,7 @@ describe("BetsService", () => {
 
   it("handleEventResolved is idempotent — duplicate delivery does not settle bets twice", async () => {
     const userId = await newFundedUser(10000);
-    const bet = await bets.place(userId, "evt-dup", "home", 3, 10);
+    const bet = await bets.place(userId, "evt-dup", "home", 3, 1000);
 
     await bets.handleEventResolved(encodeEvent("evt-dup", "home"));
     const balanceAfterFirst = await wallet.getBalanceCents(userId);

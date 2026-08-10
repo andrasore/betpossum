@@ -1,4 +1,4 @@
-"""HTTP boundary: serialization (dollars, key names, shapes) and the auth split.
+"""HTTP boundary: serialization (integer cents, key names, shapes) and the auth split.
 
 Runs the real `app` through an in-process ASGI transport (no network, no
 lifespan -> the RabbitMQ consumer never starts). `get_stats_storage` is
@@ -41,7 +41,7 @@ async def client(store: StatsStorage) -> AsyncIterator[AsyncClient]:
     app.dependency_overrides.clear()
 
 
-async def test_me_summary_is_scoped_and_in_dollars(
+async def test_me_summary_is_scoped_and_in_cents(
     store: StatsStorage, client: AsyncClient
 ) -> None:
     await _seed(
@@ -59,18 +59,18 @@ async def test_me_summary_is_scoped_and_in_dollars(
     assert resp.status_code == 200
     body = resp.json()
     assert set(body) == {
-        "totalStaked",
+        "totalStakedCents",
         "settledCount",
         "wins",
         "winRatePct",
-        "netProfit",
+        "netProfitCents",
         "roiPct",
     }
-    # Only u1's two rows; money in dollars (cents / 100).
+    # Only u1's two rows; money stays in integer cents.
     assert body["settledCount"] == 2
     assert body["wins"] == 1
-    assert body["totalStaked"] == 200.0
-    assert body["netProfit"] == -50.0
+    assert body["totalStakedCents"] == 20_000
+    assert body["netProfitCents"] == -5_000
 
 
 async def test_me_pnl_returns_date_roi_points_scoped_to_sub(
@@ -157,8 +157,8 @@ async def test_leaderboard_ranks_by_roi(
         "userId",
         "userName",
         "roiPct",
-        "netProfit",
+        "netProfitCents",
         "settledCount",
     }
     assert board[0]["roiPct"] == 33.33
-    assert board[0]["netProfit"] == 100.0
+    assert board[0]["netProfitCents"] == 10_000

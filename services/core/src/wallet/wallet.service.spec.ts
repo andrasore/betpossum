@@ -95,13 +95,6 @@ describe("WalletService", () => {
     expect(await wallet.getBalanceCents(userId)).toBe(500);
   });
 
-  it("returns the balance amount in dollars", async () => {
-    const userId = newId();
-    await wallet.createAccount(userId);
-    await wallet.payout(userId, newId(), 500);
-    expect(await wallet.getBalance(userId)).toBe(5);
-  });
-
   it("debits the user balance on hold", async () => {
     const userId = newId();
     await wallet.createAccount(userId);

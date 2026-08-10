@@ -1,12 +1,17 @@
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeEvent } from "@/test/fixtures";
 import { render, screen } from "@/test/render";
 
 // BetSlip imports placeBet from the api module; stub it so no network is hit.
 vi.mock("@/lib/api", () => ({ placeBet: vi.fn() }));
 
+import { placeBet } from "@/lib/api";
 import { BetSlip } from "./BetSlip";
+
+beforeEach(() => {
+  vi.mocked(placeBet).mockClear();
+});
 
 const noop = () => {};
 
@@ -15,7 +20,7 @@ function renderSlip(props: Partial<Parameters<typeof BetSlip>[0]> = {}) {
     <BetSlip
       selection={{ event: makeEvent(), choice: "home" }}
       loggedIn={true}
-      balance={100}
+      balanceCents={10000}
       onChoiceChange={noop}
       onPlaced={noop}
       onLogin={noop}
@@ -48,7 +53,7 @@ describe("BetSlip", () => {
   });
 
   it("warns and disables Place Bet when the stake exceeds the balance", async () => {
-    renderSlip({ balance: 50 });
+    renderSlip({ balanceCents: 5000 });
     await userEvent.type(screen.getByTestId("stake-input"), "60");
     expect(
       screen.getByText(/Stake exceeds your balance of \$50\.00/),
@@ -66,12 +71,50 @@ describe("BetSlip", () => {
       <BetSlip
         selection={{ event: makeEvent({ drawOdds: 0 }), choice: "home" }}
         loggedIn={true}
-        balance={100}
+        balanceCents={10000}
         onChoiceChange={noop}
         onPlaced={noop}
         onLogin={noop}
       />,
     );
     expect(screen.queryAllByText("Draw")).toHaveLength(0);
+  });
+
+  it("refuses more than two decimals as they are typed", async () => {
+    renderSlip();
+    const input = screen.getByTestId("stake-input");
+    await userEvent.type(input, "0.333333");
+    expect(input).toHaveValue("0.33");
+  });
+
+  it("refuses an over-precise amount pasted in one go", async () => {
+    renderSlip();
+    const input = screen.getByTestId("stake-input");
+    await userEvent.click(input);
+    await userEvent.paste("12.3456");
+    expect(input).toHaveValue("");
+  });
+
+  it("sends the stake to the API as integer cents", async () => {
+    renderSlip();
+    await userEvent.type(screen.getByTestId("stake-input"), "0.333333");
+    await userEvent.click(screen.getByTestId("place-bet-button"));
+
+    expect(placeBet).toHaveBeenCalledWith(
+      expect.objectContaining({ stakeCents: 33 }),
+    );
+  });
+
+  it("disables Place Bet until a complete amount is entered", async () => {
+    renderSlip();
+    const button = screen.getByTestId("place-bet-button");
+    expect(button).toBeDisabled();
+
+    // "0." is a legal thing to have typed so far, but not a placeable stake.
+    await userEvent.type(screen.getByTestId("stake-input"), "0.");
+    expect(button).toBeDisabled();
+
+    await userEvent.type(screen.getByTestId("stake-input"), "5");
+    expect(button).toBeEnabled();
   });
 });

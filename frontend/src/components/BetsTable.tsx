@@ -3,6 +3,7 @@
 import { Badge, Flex, Table, Text } from "@radix-ui/themes";
 import { useEffect, useRef, useState } from "react";
 import { betOutcomeLabel, selectionLabel, statusColor } from "@/lib/betDisplay";
+import { formatCents } from "@/lib/money";
 import { sportColor } from "@/lib/sportColor";
 import type { Bet, OddsEvent } from "@/types";
 
@@ -125,7 +126,7 @@ export function BetsTable({ bets, oddsIndex }: BetsTableProps) {
                 </Text>
               </Table.Cell>
               <Table.Cell justify="end">
-                <Text size="2">${Number(bet.stake).toFixed(2)}</Text>
+                <Text size="2">${formatCents(bet.stakeCents)}</Text>
               </Table.Cell>
               <Table.Cell>
                 <Badge

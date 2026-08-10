@@ -30,7 +30,7 @@ export interface Config {
   adminPassword: string;
   botCount: number;
   botPassword: string;
-  startingBalance: number;
+  startingBalanceCents: number;
   // Bet loop cadence: base interval with +/- jitter, and how many bots act per tick.
   betIntervalMs: number;
   betJitterMs: number;
@@ -38,7 +38,7 @@ export interface Config {
   // Stake sizing as a fraction of the bot's current balance, with a floor.
   minStakeFraction: number;
   maxStakeFraction: number;
-  minStake: number;
+  minStakeCents: number;
 }
 
 export function loadConfig(): Config {
@@ -56,12 +56,12 @@ export function loadConfig(): Config {
     adminPassword: str("ADMIN_PASSWORD", "password"),
     botCount: num("BOT_COUNT", 10),
     botPassword: str("BOT_PASSWORD", "password"),
-    startingBalance: num("BOT_STARTING_BALANCE", 1000),
+    startingBalanceCents: num("BOT_STARTING_BALANCE_CENTS", 100_000),
     betIntervalMs: num("BOT_BET_INTERVAL_MS", 8000),
     betJitterMs: num("BOT_BET_JITTER_MS", 4000),
     betsPerTick: num("BOT_BETS_PER_TICK", 3),
     minStakeFraction: num("BOT_MIN_STAKE_FRACTION", 0.02),
     maxStakeFraction: num("BOT_MAX_STAKE_FRACTION", 0.12),
-    minStake: num("BOT_MIN_STAKE", 5),
+    minStakeCents: num("BOT_MIN_STAKE_CENTS", 500),
   };
 }

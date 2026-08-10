@@ -62,35 +62,35 @@
     },
     "BetSettledNotification": {
       "title": "BetSettledNotification",
-      "description": "Core API -> Notifications. Per-user notification: a bet was settled. `payout` is profit only (matches Bet.payout semantics — see bets.service.ts).",
+      "description": "Core API -> Notifications. Per-user notification: a bet was settled. `payoutCents` is profit only (matches Bet.payoutCents semantics — see bets.service.ts).",
       "type": "object",
       "additionalProperties": false,
-      "required": ["betId", "won", "payout"],
+      "required": ["betId", "won", "payoutCents"],
       "properties": {
         "betId": { "type": "string" },
         "won": { "type": "boolean" },
-        "payout": {
-          "type": "number",
-          "description": "Profit only, not total return."
+        "payoutCents": {
+          "type": "integer",
+          "description": "Profit only, not total return. Integer cents."
         }
       }
     },
     "BalanceUpdatedNotification": {
       "title": "BalanceUpdatedNotification",
-      "description": "Core API -> Notifications. Per-user notification: wallet balance changed (in dollars, not cents).",
+      "description": "Core API -> Notifications. Per-user notification: wallet balance changed.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["balance"],
+      "required": ["balanceCents"],
       "properties": {
-        "balance": {
-          "type": "number",
-          "description": "Dollars, not cents."
+        "balanceCents": {
+          "type": "integer",
+          "description": "Integer cents, not dollars."
         }
       }
     },
     "BetSettledEvent": {
       "title": "BetSettledEvent",
-      "description": "Core API -> Stats. Durable, exactly-once domain event emitted when a bet settles, published on the `bets.settled` exchange. Distinct from BetSettledNotification (a UI-only notification): this is the event-sourcing contract for the stats read model and carries everything the read side needs, denormalized. `payout` is profit only (matches Bet.payout). Amounts in dollars.",
+      "description": "Core API -> Stats. Durable, exactly-once domain event emitted when a bet settles, published on the `bets.settled` exchange. Distinct from BetSettledNotification (a UI-only notification): this is the event-sourcing contract for the stats read model and carries everything the read side needs, denormalized. `payoutCents` is profit only (matches Bet.payoutCents). Amounts in integer cents.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -99,9 +99,9 @@
         "eventId",
         "selection",
         "odds",
-        "stake",
+        "stakeCents",
         "won",
-        "payout",
+        "payoutCents",
         "settledAt"
       ],
       "properties": {
@@ -117,14 +117,14 @@
           "enum": ["home", "away", "draw"]
         },
         "odds": { "type": "number" },
-        "stake": {
-          "type": "number",
-          "description": "Dollars."
+        "stakeCents": {
+          "type": "integer",
+          "description": "Integer cents."
         },
         "won": { "type": "boolean" },
-        "payout": {
-          "type": "number",
-          "description": "Profit only, not total return. 0 on loss."
+        "payoutCents": {
+          "type": "integer",
+          "description": "Profit only, not total return. Integer cents; 0 on loss."
         },
         "settledAt": {
           "type": "integer",

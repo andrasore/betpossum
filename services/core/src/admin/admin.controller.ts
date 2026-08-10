@@ -28,7 +28,7 @@ export class AdminController {
     @Param("userId", ParseUUIDPipe) userId: string,
     @Body() dto: SetBalanceDto,
   ) {
-    await this.admin.setUserBalance(userId, dto.amount);
+    await this.admin.setUserBalance(userId, dto.amountCents);
     return { status: "ok" };
   }
 }

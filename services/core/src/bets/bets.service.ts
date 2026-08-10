@@ -1,6 +1,7 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
+import { profitCents } from "../common/money";
 import {
   BetSettledEventSchema,
   EventResolvedEventSchema,
@@ -44,7 +45,7 @@ export class BetsService implements OnModuleInit {
     eventId: string,
     selection: Selection,
     odds: number,
-    stake: number,
+    stakeCents: number,
   ): Promise<Bet> {
     const bet = await this.repo.save(
       this.repo.create({
@@ -52,12 +53,11 @@ export class BetsService implements OnModuleInit {
         eventId,
         selection,
         odds,
-        stake,
+        stakeCents,
         status: "pending",
       }),
     );
 
-    const stakeCents = Math.round(stake * 100);
     try {
       await this.wallet.hold(userId, bet.id, stakeCents);
     } catch (err) {
@@ -70,13 +70,17 @@ export class BetsService implements OnModuleInit {
     return { ...bet, status: "held" };
   }
 
-  // `payout` is profit only (stake * (odds - 1)), not total return. On win we
-  // release the pending hold (stake returns to the user) and pay out the
+  // `payoutCents` is profit only (stake * (odds - 1)), not total return. On win
+  // we release the pending hold (stake returns to the user) and pay out the
   // profit separately; on loss we keep the hold (stake transfers to the
   // house). Throws if the bet is not in `held` state — settle is meant to be
   // called exactly once; the `status: 'held'` filter in handleEventResolved
   // prevents duplicate invocations from reaching this method.
-  async settle(betId: string, won: boolean, payout: number): Promise<void> {
+  async settle(
+    betId: string,
+    won: boolean,
+    payoutCents: number,
+  ): Promise<void> {
     const bet = await this.repo.findOneByOrFail({ id: betId });
     if (bet.status !== "held") {
       throw new Error(
@@ -86,9 +90,8 @@ export class BetsService implements OnModuleInit {
 
     if (won) {
       await this.wallet.release(bet.userId, betId);
-      const profitCents = Math.round(payout * 100);
-      if (profitCents > 0) {
-        await this.wallet.payout(bet.userId, betId, profitCents);
+      if (payoutCents > 0) {
+        await this.wallet.payout(bet.userId, betId, payoutCents);
       }
     } else {
       await this.wallet.keep(bet.userId, betId);
@@ -96,19 +99,20 @@ export class BetsService implements OnModuleInit {
 
     await this.repo.update(betId, {
       status: won ? "won" : "lost",
-      payout: won ? payout : 0,
+      payoutCents: won ? payoutCents : 0,
     });
-    await this.notifications.betSettled(bet.userId, betId, won, payout);
-    await this.publishSettled(bet, won, payout);
+    await this.notifications.betSettled(bet.userId, betId, won, payoutCents);
+    await this.publishSettled(bet, won, payoutCents);
   }
 
   // Durable domain event for the stats read model. Carries everything the read
   // side needs (denormalized, incl. display name) so stats never reaches into
-  // Core's tables. `payout` is profit only (0 on loss), matching Bet.payout.
+  // Core's tables. `payoutCents` is profit only (0 on loss), matching
+  // Bet.payoutCents.
   private async publishSettled(
     bet: Bet,
     won: boolean,
-    payout: number,
+    payoutCents: number,
   ): Promise<void> {
     const user = await this.users.findById(bet.userId);
     const event = BetSettledEventSchema.parse({
@@ -118,9 +122,9 @@ export class BetsService implements OnModuleInit {
       eventId: bet.eventId,
       selection: bet.selection,
       odds: Number(bet.odds),
-      stake: Number(bet.stake),
+      stakeCents: bet.stakeCents,
       won,
-      payout: won ? payout : 0,
+      payoutCents: won ? payoutCents : 0,
       settledAt: Date.now(),
     });
     await this.messaging.publish(
@@ -146,9 +150,7 @@ export class BetsService implements OnModuleInit {
 
     for (const bet of held) {
       const won = bet.selection === outcome;
-      const stake = Number(bet.stake);
-      const odds = Number(bet.odds);
-      const profit = won ? stake * (odds - 1) : 0;
+      const profit = won ? profitCents(bet.stakeCents, Number(bet.odds)) : 0;
       await this.settle(bet.id, won, profit);
     }
   }
