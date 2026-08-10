@@ -114,7 +114,12 @@ shared Postgres instance, isolated from the app's `betting` database.
 
 ### NestJS — Core API
 The primary application service. Responsibilities:
-- Bet placement and settlement logic
+- Bet placement and settlement logic. The **server** prices every bet: the
+  request carries no odds, and core stamps the line from its own odds cache
+  (409 if it hasn't got one for that selection)
+- Keeps that cache current off the `odds.updated` fanout, warmed at boot by a
+  one-shot `GET /odds/events` against the Odds service — the only HTTP core
+  makes to a sibling, and never during a request
 - Wallet / ledger operations against TigerBeetle (in-process module)
 - Subscribes to the `events.resolved` exchange (durable queue
   `core.events.resolved`) and settles any held bets on the resolved event
@@ -210,6 +215,33 @@ The split follows a few rules:
   atomically with it. Durable queues + idempotent, `betId`-keyed upserts make
   redelivery safe, so eventual convergence is the only guarantee any consumer
   needs.
+- **A service may call another *out of band*, never while serving a request.**
+  The rule the split protects is that no request fans out across services — not
+  that one service may never speak HTTP to another. Warming a local replica at
+  startup, or on a background schedule, is outside any request and can't drag a
+  second service's latency or availability into a user-facing path: it retries,
+  it degrades, and the caller keeps serving. Core's odds cache is the worked
+  example (below). What stays banned is the synchronous variant — reading
+  another service mid-request, so that its failure becomes yours.
+
+### Worked example: Core's odds cache
+
+Core needs the current line to price a bet, and the line belongs to Odds. It
+gets one without ever calling Odds on the placement path:
+
+- `OddsCacheService` subscribes to the `odds.updated` fanout and keeps an
+  in-memory map of the current h2h prices. This is the steady-state feed.
+- At boot it also `GET`s `/odds/events` once, retrying with backoff, purely to
+  avoid an empty cache after a restart. Failure is logged, not fatal — the cache
+  simply fills from the next tick instead.
+- `POST /bets` reads only that local map. Odds can be down, redeploying, or
+  mid-poll and placement is unaffected; the bet is stamped with the cached price
+  and settlement later reads it back off the bet row.
+
+The hydrate is the allowed shape: asynchronous relative to any request,
+best-effort, and replaceable by the message stream. A version of this that
+looked up the price over HTTP inside `place()` would be the banned shape, and is
+the reason the cache exists at all.
 
 The one seam this leaves open is the publish itself: a service's local write and
 its subsequent publish are two steps, so a crash between them can lose an event.

@@ -13,10 +13,12 @@ export interface Bet {
   placedAt: string;
 }
 
+// No `odds`: Core stamps the bet with its own current line and rejects the
+// placement outright if it hasn't got one. The odds shown on the slip are a
+// quote, not part of the request.
 export interface PlaceBetPayload {
   eventId: string;
   selection: "home" | "away" | "draw";
-  odds: number;
   stakeCents: number;
 }
 

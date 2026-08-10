@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { OddsModule } from "../odds/odds.module";
 import { UsersModule } from "../users/users.module";
 import { WalletModule } from "../wallet/wallet.module";
 import { Bet } from "./bet.entity";
@@ -11,6 +12,7 @@ import { BetsService } from "./bets.service";
   imports: [
     TypeOrmModule.forFeature([Bet]),
     NotificationsModule,
+    OddsModule,
     UsersModule,
     WalletModule,
   ],

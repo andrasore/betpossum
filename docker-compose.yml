@@ -105,6 +105,11 @@ services:
       RABBITMQ_URL: amqp://betting:betting_dev@rabbitmq:5672
       TIGERBEETLE_ADDRESS: tigerbeetle:6000
       TIGERBEETLE_CLUSTER_ID: "0"
+      # Boot-time hydrate for the odds cache only — core never calls odds while
+      # serving a request. ODDS_MAX_AGE_MS must stay above the odds service's
+      # POLL_INTERVAL_SECONDS or un-refreshed prices read as stale.
+      ODDS_SERVICE_URL: http://odds:8000
+      ODDS_MAX_AGE_MS: "21600000"
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
       KEYCLOAK_ISSUER_URL: http://localhost:8080/kc/realms/betting
       KEYCLOAK_REALM: betting

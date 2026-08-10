@@ -9,13 +9,7 @@ export class BetsController {
 
   @Post()
   place(@CurrentUser() user: AuthUser, @Body() dto: PlaceBetDto) {
-    return this.bets.place(
-      user.id,
-      dto.eventId,
-      dto.selection,
-      dto.odds,
-      dto.stakeCents,
-    );
+    return this.bets.place(user.id, dto.eventId, dto.selection, dto.stakeCents);
   }
 
   @Get()

@@ -43,6 +43,7 @@ export function BetSlip({
 }: Props) {
   const [stake, setStake] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!selection) {
     return (
@@ -84,18 +85,22 @@ export function BetSlip({
       return;
     }
     setLoading(true);
+    setError(null);
     try {
       await placeBet({
         eventId: event.eventId,
         selection: choice,
-        odds,
         stakeCents,
       });
       setStake("");
       onPlaced();
     } catch {
-      // Stake is validated against the balance before submit; any other
-      // placement failure is logged server-side.
+      // The stake is validated against the balance before submit, so the
+      // realistic failure here is Core refusing the price — it stamps its own
+      // line and rejects when it hasn't got a current one for this selection.
+      setError(
+        "This market isn't accepting bets right now. Try again shortly.",
+      );
     } finally {
       setLoading(false);
     }
@@ -184,6 +189,11 @@ export function BetSlip({
             ${potentialReturn}
           </Text>
         </Flex>
+        {error && (
+          <Text size="1" color="red" as="div" data-testid="betslip-error">
+            {error}
+          </Text>
+        )}
         {loggedIn ? (
           <Button
             onClick={submit}

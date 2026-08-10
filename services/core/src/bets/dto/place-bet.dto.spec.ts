@@ -11,14 +11,13 @@ const errorsFor = (overrides: Partial<Record<keyof PlaceBetDto, unknown>>) =>
     plainToInstance(PlaceBetDto, {
       eventId: "evt-1",
       selection: "home",
-      odds: 2,
       stakeCents: 500,
       ...overrides,
     }),
   ).flatMap((e) => e.property);
 
 describe("PlaceBetDto", () => {
-  it("accepts a whole-cent stake at sane odds", () => {
+  it("accepts a whole-cent stake", () => {
     expect(errorsFor({})).toEqual([]);
   });
 
@@ -49,20 +48,7 @@ describe("PlaceBetDto", () => {
     });
   });
 
-  describe("odds", () => {
-    // Decimal odds are a payout multiplier, so profit is stake * (odds - 1).
-    // At 1.0 a win pays nothing; below 1.0 the profit is negative.
-    it.each([1, 0.5, 0, -2])("rejects the non-multiplier odds %p", (odds) => {
-      expect(errorsFor({ odds })).toContain("odds");
-    });
-
-    it("rejects implausibly large odds", () => {
-      expect(errorsFor({ odds: 100_000 })).toContain("odds");
-    });
-
-    it("accepts fractional odds above 1", () => {
-      expect(errorsFor({ odds: 1.01 })).toEqual([]);
-      expect(errorsFor({ odds: 3.35 })).toEqual([]);
-    });
-  });
+  // There is no `odds` case here on purpose: the client doesn't get to name a
+  // price any more. The MIN_ODDS/MAX_ODDS range check moved to
+  // `OddsCacheService.priceFor`, which is now the only way a bet gets one.
 });

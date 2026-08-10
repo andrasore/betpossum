@@ -1,4 +1,9 @@
-import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  type OnModuleInit,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 import { profitCents } from "../common/money";
@@ -8,6 +13,7 @@ import {
 } from "../generated/events";
 import { MessagingService } from "../messaging/messaging.service";
 import { NotificationsClient } from "../notifications/notifications.client";
+import { OddsCacheService } from "../odds/odds-cache.service";
 import { UsersService } from "../users/users.service";
 import { WalletService } from "../wallet/wallet.service";
 import { Bet } from "./bet.entity";
@@ -30,6 +36,7 @@ export class BetsService implements OnModuleInit {
     private readonly users: UsersService,
     private readonly wallet: WalletService,
     private readonly messaging: MessagingService,
+    private readonly odds: OddsCacheService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -40,13 +47,25 @@ export class BetsService implements OnModuleInit {
     );
   }
 
+  // The price is the server's, not the client's: whatever the bet slip showed,
+  // the bet is stamped with the line core currently holds for that selection.
+  // A price core can't vouch for (unknown or resolved event, stale cache, no
+  // such market) is a rejection rather than a guess — see `OddsCacheService`.
+  // Settlement then reads the stamped odds back off the row, so a bet is
+  // always paid at the price it was accepted at.
   async place(
     userId: string,
     eventId: string,
     selection: Selection,
-    odds: number,
     stakeCents: number,
   ): Promise<Bet> {
+    const odds = this.odds.priceFor(eventId, selection);
+    if (odds === null) {
+      throw new ConflictException(
+        `No current odds for ${selection} on event ${eventId}`,
+      );
+    }
+
     const bet = await this.repo.save(
       this.repo.create({
         userId,
@@ -140,6 +159,7 @@ export class BetsService implements OnModuleInit {
   async handleEventResolved(raw: Buffer): Promise<void> {
     const event = EventResolvedEventSchema.parse(JSON.parse(raw.toString()));
     const outcome: Selection = event.outcome;
+    this.odds.markResolved(event.eventId);
 
     const held = await this.repo.find({
       where: { eventId: event.eventId, status: "held" },
