@@ -25,7 +25,7 @@ import { WalletModule } from "./wallet/wallet.module";
         type: "postgres",
         url: config.get("DATABASE_URL"),
         // Core's tables live in their own schema of the shared `betting` DB
-        // (infra's init.sql creates it). Unset (tests) falls back to `public`.
+        // (infra's init.sh creates it). Unset (tests) falls back to `public`.
         schema: config.get("DB_SCHEMA") || undefined,
         entities: [User, Bet],
         synchronize: true, // use migrations in production

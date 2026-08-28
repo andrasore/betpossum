@@ -68,15 +68,12 @@ see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 - **Docker Compose** — dev stack with explicit, named overlays
   (`dev` / `ci` / `e2e`).
-- **Kubernetes** — via Kustomize: a shared `base/` with `local` and `prod`
-  overlays.
 - **GitHub Actions** — CI pipeline: typecheck → build → e2e.
-- **Continuous delivery via Flux GitOps** — e2e-validated images are promoted on
-  `main`, and Flux's image automation writes the new tags back to a private
-  config repo it reconciles into the cluster, so a merge deploys itself and a
-  `git revert` is the rollback.
-- **Observability (optional)** — kube-prometheus-stack + Loki + Alloy + Grafana
-  in its own namespace.
+- **Image promotion** — e2e-validated `:<sha>` images are promoted to `:latest`
+  on `main` by digest — a manifest copy, not a rebuild.
+- **Coolify** — production runs as a single Docker Compose resource on a
+  self-hosted server, pulling the promoted GHCR images behind a TLS-terminating
+  proxy.
 
 ## Repository layout
 
@@ -93,8 +90,7 @@ betpossum/
 ├── keycloak/            # Realm, roles, clients
 ├── bots/                # Synthetic players that place bets to populate the demo
 ├── e2e/                 # Playwright full-stack tests
-├── k8s/                 # Kustomize base + local/prod overlays + observability
-└── docker-compose*.yml  # Local dev stack + named ci/e2e overlays
+└── docker-compose*.yml  # Local dev stack + named ci/e2e overlays + the Coolify stack
 ```
 
 Most folders carry a local `CLAUDE.md` documenting their conventions.
@@ -212,18 +208,16 @@ pnpm hooks:setup  # point git at .githooks (enables the pre-push gate)
   runs `test → build images → e2e`, then on `main` the e2e-validated `:<sha>`
   images are promoted to `:latest` on GHCR by digest — a manifest copy, not a
   rebuild.
-- **Continuous delivery** — Flux watches GHCR and commits the resolved image tags
-  into the private config repo it reconciles into the cluster, so promotion ends
-  in a deploy without a manual `kubectl apply`. See
-  [`k8s/README.md`](k8s/README.md#prod-deployment-flux-gitops).
 
 ## Deployment
 
 - **Local** — `docker-compose.yml` plus the named `dev` / `ci` / `e2e` overlays
   (activated explicitly with `-f`).
-- **Kubernetes** — Kustomize manifests in [`k8s/`](k8s/): a shared `base/` with
-  `local` and `prod` overlays, plus an optional observability stack. See
-  [`k8s/README.md`](k8s/README.md).
+- **Production** — [Coolify](https://coolify.io) runs
+  [`docker-compose.coolify.yml`](docker-compose.coolify.yml) as one resource on a
+  self-hosted server: no `build:` steps, GHCR images only, generated credentials,
+  and a single domain routed to the nginx origin. See
+  [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 - **Images** — published to GHCR by CI; never pushed manually.
 
 ---

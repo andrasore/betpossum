@@ -9,6 +9,9 @@ table.
 - `nginx.conf` — production/e2e config (listens on 80 inside the container).
 - `nginx.dev.conf` — dev overrides.
 
+Both files are kept in step; they differ only in the `/` location (static export
+vs. proxy to the host's `pnpm dev`) and their comments.
+
 ## Why it's shaped this way
 
 - **nginx fronts everything** — frontend, the backend endpoints, *and* Keycloak
@@ -19,6 +22,15 @@ table.
   derives its issuer from `window.location.origin` (see `frontend/src/lib/auth.ts`).
   There is no `config.js` template or entrypoint render step anymore — the static
   export is fully origin-agnostic.
+- **It forwards the edge's proto, not its own.** In production Coolify's Traefik
+  terminates TLS and talks plain HTTP to this listener, so `$scheme` is `http`.
+  The `$forwarded_proto` map prefers an incoming `X-Forwarded-Proto` and falls
+  back to `$scheme` when there is no proxy in front — which is why dev and e2e
+  are unaffected. This is proxy hygiene, not a bug fix: Keycloak takes its
+  advertised scheme from `KC_HOSTNAME`, so login works on HTTPS either way
+  (measured). The map matters if `KC_HOSTNAME` is ever made relative, and it
+  keeps the header honest for anything else that reads it. Don't cite it as the
+  cause when an OIDC URL comes back `http://` — that is `PUBLIC_ORIGIN`.
 - **It is not a smart gateway.** Path-based routing and WebSocket upgrade only.
   Auth/authz is each service's own job (every service verifies its own JWT);
   rate limiting is per-service if at all. Don't add auth, header rewriting, or

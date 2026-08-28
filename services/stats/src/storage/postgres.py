@@ -88,7 +88,7 @@ class PostgresStorage(StatsStorage):
         assert self._engine is not None
         async with self._engine.begin() as conn:
             if self._schema:
-                # infra's init.sql already creates it; idempotent self-provision
+                # infra's init.sh already creates it; idempotent self-provision
                 # keeps the search_path target present even on a bare DB.
                 await conn.execute(
                     text(f'CREATE SCHEMA IF NOT EXISTS "{self._schema}"')

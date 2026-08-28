@@ -1,0 +1,323 @@
+# Production stack for Coolify (https://coolify.io) — a STANDALONE compose file,
+# not an overlay. The dev/ci/e2e files are layered onto docker-compose.yml with
+# `-f`; this one is not, because Coolify points at exactly one file:
+#
+#   New Resource → Docker Compose → this repo
+#     Base Directory        /
+#     Docker Compose Location  /docker-compose.coolify.yml
+#
+# Differences from docker-compose.yml, and why:
+#
+#  * No `build:` anywhere. Every service pulls the image CI already published to
+#    GHCR, so the server never builds the monorepo. `IMAGE_TAG` selects what is
+#    deployed — `latest` tracks the promoted build, or pin `0.1.<run_number>`.
+#  * No published host ports. Coolify's Traefik terminates TLS and routes the
+#    assigned domain to nginx:80 (see SERVICE_FQDN_NGINX_80 below); everything
+#    else is reachable only on the stack's internal network.
+#  * Credentials come from Coolify's magic `SERVICE_PASSWORD_*` variables, which
+#    it generates once and keeps stable across deploys. These are deliberately
+#    the alphanumeric variant, never SERVICE_PASSWORDWITHSYMBOLS_*, because the
+#    values are embedded inside DATABASE_URL / RABBITMQ_URL / KC_DB_URL where
+#    symbols would need percent-encoding.
+#  * `PUBLIC_ORIGIN` (e.g. https://betpossum.example.com) must be set by hand and
+#    must match the domain assigned to the nginx service. `:?` makes a missing
+#    value fail the deploy rather than silently booting a broken IdP.
+#  * Healthchecks on the app services, which the dev stack does without — Coolify
+#    gates a deployment on container health.
+#  * RabbitMQ gets a volume and a fixed hostname; the dev stack has neither.
+#
+# See docs/DEPLOYMENT.md for the runbook.
+
+services:
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: betting
+      POSTGRES_USER: betting
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      # Read by postgres/init.sh to create Keycloak's login role. Only consulted
+      # on the first init of an empty volume.
+      KEYCLOAK_DB_PASSWORD: ${SERVICE_PASSWORD_KCDB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U betting"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    # Mnesia derives its node name from the hostname, so a fresh container ID on
+    # every deploy would orphan the volume below. Pinning the hostname keeps the
+    # durable queues (core.events.resolved, stats.bets.settled) across restarts.
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: betting
+      RABBITMQ_DEFAULT_PASS: ${SERVICE_PASSWORD_RABBITMQ}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  tigerbeetle:
+    image: ghcr.io/tigerbeetle/tigerbeetle:0.17.3
+    restart: unless-stopped
+    # Enable the builtin init script "tini" bc SIGTERM handling is not implemented in TigerBeetle
+    # Required for graceful shutdown
+    # https://github.com/tigerbeetle/tigerbeetle/issues/136
+    init: true
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "/tigerbeetle format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle 2>/dev/null || true &&
+       exec /tigerbeetle start --addresses=0.0.0.0:6000 --development /data/0_0.tigerbeetle"
+    volumes:
+      - tigerbeetle_data:/data
+    security_opt:
+      - seccomp=unconfined  # TigerBeetle requires io_uring; Docker's default seccomp profile blocks it
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q ':1770' /proc/net/tcp || grep -q ':1770' /proc/net/tcp6"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  keycloak:
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/keycloak:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    # The image's own entrypoint is kc.sh; interpose the render step, which then
+    # execs it with the CMD below. See keycloak/render-realm.sh.
+    entrypoint: ["/bin/bash", "/opt/betpossum/render-realm.sh"]
+    command: ["start", "--optimized", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${SERVICE_PASSWORD_KCDB}
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${SERVICE_PASSWORD_KCADMIN}
+      # Browser-facing base URL is the single nginx origin, with Keycloak under
+      # the /kc path prefix. KC_HOSTNAME must include that path so generated
+      # links (issuer, login-action form posts) carry /kc; KC_HTTP_RELATIVE_PATH
+      # makes the server actually serve there (it is also baked at build time —
+      # `start --optimized` ignores it at runtime — and repeated here for parity).
+      KC_HOSTNAME: ${PUBLIC_ORIGIN:?}/kc
+      KC_HTTP_RELATIVE_PATH: /kc
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      # Paired with nginx forwarding the edge's X-Forwarded-Proto, so Keycloak
+      # builds https:// absolute URLs behind Coolify's TLS-terminating proxy.
+      KC_PROXY_HEADERS: xforwarded
+      # Consumed by render-realm.sh, not by Keycloak itself.
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${SERVICE_PASSWORD_CORECLIENT}
+      # Unlike dev/e2e: reject plain-HTTP requests from non-private clients.
+      SSL_REQUIRED: external
+    volumes:
+      - ./keycloak/realm.template.json:/opt/betpossum/realm.template.json:ro
+      - ./keycloak/render-realm.sh:/opt/betpossum/render-realm.sh:ro
+      - ./keycloak/healthcheck.sh:/opt/betpossum/healthcheck.sh:ro
+    # See keycloak/healthcheck.sh for what this probes and why.
+    healthcheck:
+      test: ["CMD", "/bin/bash", "/opt/betpossum/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Application Services ───────────────────────────────────────────────────
+
+  core:
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/core:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://betting:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/betting
+      DB_SCHEMA: core
+      RABBITMQ_URL: amqp://betting:${SERVICE_PASSWORD_RABBITMQ}@rabbitmq:5672
+      TIGERBEETLE_ADDRESS: tigerbeetle:6000
+      TIGERBEETLE_CLUSTER_ID: "0"
+      # Boot-time hydrate for the odds cache only — core never calls odds while
+      # serving a request. ODDS_MAX_AGE_MS must stay above the odds service's
+      # POLL_INTERVAL_SECONDS or un-refreshed prices read as stale.
+      ODDS_SERVICE_URL: http://odds:8000
+      ODDS_MAX_AGE_MS: "21600000"
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
+      KEYCLOAK_ISSUER_URL: ${PUBLIC_ORIGIN:?}/kc/realms/betting
+      KEYCLOAK_REALM: betting
+      KEYCLOAK_ADMIN_CLIENT_ID: betting-core
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${SERVICE_PASSWORD_CORECLIENT}
+    security_opt:
+      - seccomp=unconfined  # TigerBeetle requires io_uring; Docker's default seccomp profile blocks it
+    # Core exposes no HTTP health route, so probe the listener directly — the
+    # same thing the old Kubernetes manifest did with a TCP readiness probe.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('node:net').connect(4000,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      tigerbeetle:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  odds:
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/odds:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    # Single instance by design: the poll loops have no partitioning or leader
+    # election, so a second replica would double-publish every odds update.
+    environment:
+      RABBITMQ_URL: amqp://betting:${SERVICE_PASSWORD_RABBITMQ}@rabbitmq:5672
+      DATABASE_URL: postgresql://betting:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/betting
+      DB_SCHEMA: odds
+      ODDS_PROVIDERS: ${ODDS_PROVIDERS:-mock}
+      ODDS_STORAGE: postgres
+      POLL_INTERVAL_SECONDS: 3000
+      THE_ODDS_API_KEY: ${THE_ODDS_API_KEY:-demo}
+      APIFOOTBALL_API_KEY: ${APIFOOTBALL_API_KEY:-}
+      APIFOOTBALL_LEAGUES: ${APIFOOTBALL_LEAGUES:-421}
+      APIFOOTBALL_SEASON: ${APIFOOTBALL_SEASON:-2023}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
+      KEYCLOAK_ISSUER_URL: ${PUBLIC_ORIGIN:?}/kc/realms/betting
+      KEYCLOAK_REALM: betting
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  notifications:
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/notifications:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    # Single instance by design: socket.io rooms live in process memory, so
+    # scaling out needs sticky routing or a message-queue adapter first.
+    environment:
+      RABBITMQ_URL: amqp://betting:${SERVICE_PASSWORD_RABBITMQ}@rabbitmq:5672
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
+      KEYCLOAK_ISSUER_URL: ${PUBLIC_ORIGIN:?}/kc/realms/betting
+      KEYCLOAK_REALM: betting
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  stats:
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/stats:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      RABBITMQ_URL: amqp://betting:${SERVICE_PASSWORD_RABBITMQ}@rabbitmq:5672
+      DATABASE_URL: postgresql://betting:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/betting
+      DB_SCHEMA: stats
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/kc
+      KEYCLOAK_ISSUER_URL: ${PUBLIC_ORIGIN:?}/kc/realms/betting
+      KEYCLOAK_REALM: betting
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  # The only service Coolify's proxy routes to. Note the service/image name
+  # mismatch inherited from the build: the `frontend` image is nginx with the
+  # static SPA export baked in, and it fronts every backend path.
+  nginx:
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/frontend:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      # Coolify magic variable: binds the domain assigned to this resource to
+      # this service on container port 80. Keep PUBLIC_ORIGIN in sync with it —
+      # the non-port-suffixed SERVICE_FQDN_NGINX is deliberately not used to
+      # derive it, because it does not refresh when the domain is changed in the
+      # UI (coollabsio/coolify#8912).
+      SERVICE_FQDN_NGINX_80: /
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    depends_on:
+      - core
+      - notifications
+      - odds
+      - stats
+      - keycloak
+
+  # Play-data generator. This is a public demo, so it ships: it provisions bot
+  # users via the Keycloak admin API, funds them through the app admin, and
+  # places bets via the internal nginx origin, which keeps the odds board and
+  # the leaderboard populated. Deliberately has no healthcheck — it is a
+  # best-effort daemon that waits for the stack and restarts on failure, and a
+  # restarting bot must not mark the whole deployment unhealthy.
+  bots:
+    image: ${IMAGE_REPO:-ghcr.io/andrasore/betpossum}/bots:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      BOT_BASE_URL: http://nginx
+      KC_ADMIN: admin
+      KC_ADMIN_PASSWORD: ${SERVICE_PASSWORD_KCADMIN}
+      # Seeded demo users from the realm; their passwords are public by design.
+      ADMIN_USER: bob
+      ADMIN_PASSWORD: password
+      BOT_COUNT: ${BOT_COUNT:-10}
+    depends_on:
+      - nginx
+      - core
+      - odds
+      - keycloak
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  tigerbeetle_data:

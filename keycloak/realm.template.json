@@ -9,7 +9,7 @@
   "rememberMe": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
-  "sslRequired": "none",
+  "sslRequired": "__SSL_REQUIRED__",
   "accessTokenLifespan": 1800,
   "roles": {
     "realm": [
@@ -40,20 +40,20 @@
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "http://localhost:8080/auth/callback",
-        "http://localhost:8080/auth/silent"
+        "__PUBLIC_ORIGIN__/auth/callback",
+        "__PUBLIC_ORIGIN__/auth/silent"
       ],
-      "webOrigins": ["http://localhost:8080"],
+      "webOrigins": ["__PUBLIC_ORIGIN__"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:8080/*"
+        "post.logout.redirect.uris": "__PUBLIC_ORIGIN__/*"
       }
     },
     {
       "clientId": "betting-core",
       "enabled": true,
       "publicClient": false,
-      "secret": "betting-core-secret",
+      "secret": "__CORE_CLIENT_SECRET__",
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
@@ -83,7 +83,7 @@
     },
     {
       "username": "bob",
-      "email": "bob@example.com",
+      "email": "admin@example.com",
       "firstName": "Bob",
       "lastName": "Example",
       "enabled": true,

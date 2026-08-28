@@ -6,7 +6,7 @@
 #   since compose otherwise concatenates port lists on merge.
 # - User-facing services are shifted to non-conflicting ports so the dev stack
 #   on standard ports can keep running.
-# - Keycloak uses a dedicated realm.e2e.json with shifted redirect URIs.
+# - Keycloak re-renders the shared realm template at the shifted origin.
 
 services:
   postgres:
@@ -34,8 +34,9 @@ services:
       # Reached only through the nginx origin (18080) under /kc; relative path
       # is inherited from the base compose. No published port of its own.
       KC_HOSTNAME: http://localhost:18080/kc
-    volumes: !override
-      - ./keycloak/realm.e2e.json:/opt/keycloak/data/import/realm.json:ro
+      # Re-renders the shared realm template at the shifted origin. The realm
+      # file itself is the same one dev and production use.
+      PUBLIC_ORIGIN: http://localhost:18080
     ports: !reset []
   nginx:
     ports: !override

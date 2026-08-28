@@ -29,7 +29,7 @@ against a shared JSON Schema.
 | Primary DB       | PostgreSQL (schema-per-service)                      |
 | Financial ledger | TigerBeetle (double-entry)                           |
 | External data    | The Odds API + API-Football (pluggable providers)   |
-| Orchestration    | Docker Compose · Kubernetes (Kustomize)             |
+| Orchestration    | Docker Compose · Coolify (self-hosted PaaS)         |
 
 ---
 
@@ -321,7 +321,7 @@ A single Postgres instance backs the whole stack. It hosts two databases:
 - **`keycloak`** — Keycloak's own database (own role/credentials), isolated from
   application data.
 
-`postgres/init.sql` provisions the `keycloak` database and the three schemas on
+`postgres/init.sh` provisions the `keycloak` database and the three schemas on
 first boot of a fresh data volume.
 
 ### TigerBeetle
@@ -354,30 +354,17 @@ Each service runs as an independent Docker container.
   RabbitMQ, PostgreSQL, and TigerBeetle. Variants activate explicitly via named
   overlays (`docker-compose.dev.yml` / `.ci.yml` / `.e2e.yml`) — there is no
   auto-loaded `override` file, and host ports stay unprivileged (Nginx on 8080).
-- **Kubernetes** — Kustomize manifests in `k8s/`: a shared `base/` with `local`
-  and `prod` overlays. Replica counts are deliberate per service — Core and
-  Nginx run at 2, while the odds poller and the notifications relay document in
-  their manifests why they run single-replica (see
-  "Production gaps & trade-offs" below).
+- **Production** — `docker-compose.coolify.yml`, a standalone (not overlaid)
+  stack deployed by Coolify onto a self-hosted server. It declares no `build:`
+  steps and no host ports: every service pulls its promoted GHCR image, and
+  Coolify's Traefik terminates TLS and routes one domain to Nginx:80. Per-deploy
+  credentials come from Coolify's generated `SERVICE_PASSWORD_*` variables, and
+  a single `PUBLIC_ORIGIN` drives Keycloak's hostname, every service's issuer
+  URL, and the realm rendered at boot from `keycloak/realm.template.json`. See
+  `docs/DEPLOYMENT.md`.
 - **Images** — built and pushed to GHCR by CI only: the PR pipeline runs
   `test → build images → e2e`, and on `main` the e2e-validated `:<sha>` images
   are promoted to `:latest` by digest (a manifest copy, not a rebuild).
-
-## Observability
-
-On Kubernetes, an optional Helm-installed platform lives in its own
-`observability` namespace (`k8s/observability/`):
-
-- **Metrics** — kube-prometheus-stack: Prometheus scrapes cluster/infra metrics
-  (node-exporter, kube-state-metrics, cAdvisor), with Alertmanager for routing.
-- **Logs** — Loki (single-binary, filesystem) as the store, fed by Alloy (a
-  DaemonSet) tailing every pod's logs.
-- **Dashboards** — Grafana, wired to both Prometheus and Loki, exposed on its own
-  Ingress host.
-
-This is infra-level only today; the app services do not yet export `/metrics`, so
-per-service instrumentation (prom-client / prometheus_client + ServiceMonitors) is
-a future step. See `k8s/observability/README.md`.
 
 ---
 
@@ -397,24 +384,23 @@ These are the known gaps and what closing each one would look like:
   cannot recover a publish that never happened. Production fix: an outbox
   table drained by a relay, or CDC.
 - **Secrets** — dev credentials (`betting_dev`, Keycloak admin/admin, the
-  `betting-core` client secret) live in plaintext in compose files and the local
-  overlay. The prod overlay ships no secrets; a deployment supplies them — the
-  GitOps path is SOPS-encrypted Secrets in a private config repo that Flux decrypts
-  in-cluster (`k8s/README.md` → Continuous delivery). That keeps ciphertext safe to
-  commit but offers no rotation, no audit trail, and no dynamic credentials — once
-  decrypted they are ordinary Secrets in etcd. A deployment needing those wants
-  External Secrets over a cloud store, or Vault; either way, rotated Keycloak client
-  credentials.
-- **Single points of scale** — the odds poller and the notifications relay are
-  intentionally single-replica; their manifests (`k8s/base/31-odds.yaml`,
-  `32-notifications.yaml`) document exactly why and what scaling them would
-  take (partitioned/leader-elected polling; sticky routing or a socket.io
-  message-queue adapter). Postgres, RabbitMQ, and TigerBeetle each run as one
-  node — HA would mean a managed Postgres, quorum queues, and a TigerBeetle
-  replica cluster.
-- **Observability depth** — metrics and logs cover the cluster, not the app:
-  no per-service `/metrics`, no distributed tracing. Next steps are
-  prom-client / prometheus_client + ServiceMonitors, and OpenTelemetry trace
+  `betting-core` client secret) live in plaintext in `docker-compose.yml`, which
+  is fine for a stack that only ever listens on localhost. The Coolify stack does
+  better: every credential is a generated `SERVICE_PASSWORD_*` value that never
+  enters the repo, injected into `postgres/init.sh` and into the realm rendered
+  by `keycloak/render-realm.sh`. That is still not a secrets manager — there is
+  no rotation, no audit trail, no dynamic credentials, and rotating the
+  `betting-core` client secret means recreating the Keycloak database because
+  `--import-realm` will not revisit an existing realm.
+- **Single points of scale** — the odds poller and the notifications relay
+  are single-instance; scaling either takes real design work
+  (partitioned/leader-elected polling for the poller; sticky routing or a
+  socket.io message-queue adapter for notifications). Postgres, RabbitMQ, and
+  TigerBeetle each run as one node — HA would mean a managed Postgres, quorum
+  queues, and a TigerBeetle replica cluster.
+- **Observability depth** — there is no metrics or log aggregation, and no
+  distributed tracing. Next steps are prom-client / prometheus_client
+  instrumentation with a Prometheus + Grafana stack, and OpenTelemetry trace
   propagation across the RabbitMQ hops.
 - **Edge hardening** — Nginx does path routing only; there is no rate
   limiting, request size policing beyond defaults, or WAF. Acceptable behind a

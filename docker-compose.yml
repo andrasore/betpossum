@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: betting_dev
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -85,8 +85,18 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
       KC_PROXY_HEADERS: xforwarded
+      # Consumed by render-realm.sh, not by Keycloak. There is one realm file
+      # for every environment; these three values are the only things that
+      # differ between dev, e2e and production.
+      PUBLIC_ORIGIN: http://localhost:8080
+      KEYCLOAK_ADMIN_CLIENT_SECRET: betting-core-secret
+      SSL_REQUIRED: none
+    # Interpose the realm render step ahead of the image's own kc.sh entrypoint.
+    entrypoint: ["/bin/bash", "/opt/betpossum/render-realm.sh"]
+    command: ["start", "--optimized", "--import-realm"]
     volumes:
-      - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
+      - ./keycloak/realm.template.json:/opt/betpossum/realm.template.json:ro
+      - ./keycloak/render-realm.sh:/opt/betpossum/render-realm.sh:ro
     depends_on:
       postgres:
         condition: service_healthy
