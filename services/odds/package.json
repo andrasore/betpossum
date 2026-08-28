@@ -2,11 +2,54 @@
   "name": "@betting/odds",
   "version": "0.1.0",
   "scripts": {
-    "init": "uv sync --extra dev",
-    "schema:gen": "mkdir -p ./src/generated && .venv/bin/datamodel-codegen --input ../../schemas/json --input-file-type jsonschema --output src/generated --output-model-type pydantic_v2.BaseModel --target-python-version 3.14 --enum-field-as-literal all --disable-timestamp",
-    "typecheck": ".venv/bin/pyright src/",
-    "lint": ".venv/bin/ruff check && .venv/bin/ruff format --check",
-    "lint:fix": ".venv/bin/ruff format",
-    "test": ".venv/bin/pytest"
+    "schema:gen": "mkdir -p ./src/generated && node ../../tools/gen-zod.mjs ../../schemas/json ./src/generated/events.ts",
+    "build": "nest build",
+    "start": "node dist/main",
+    "start:dev": "nest start --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "lint": "pnpx @biomejs/biome check",
+    "lint:fix": "pnpx @biomejs/biome check --write --unsafe"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/core": "^11.1.19",
+    "@nestjs/passport": "^11.0.5",
+    "@nestjs/platform-express": "^11.1.19",
+    "@nestjs/typeorm": "^11.0.1",
+    "amqplib": "^0.10.5",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "express": "^5.2.1",
+    "jwks-rsa": "^3.2.2",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "pg": "^8.20.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "^0.3.28",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "@nestjs/cli": "^11.0.21",
+    "@nestjs/schematics": "^11.1.0",
+    "@nestjs/testing": "^11.1.21",
+    "@testcontainers/postgresql": "^11.14.0",
+    "@types/amqplib": "^0.10.5",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.6.0",
+    "@types/passport-jwt": "^4.0.1",
+    "@types/pg": "^8.11.10",
+    "@types/supertest": "^7.2.0",
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.9",
+    "typescript": "^6.0.3"
   }
 }

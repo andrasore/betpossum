@@ -11,19 +11,24 @@ COPY frontend/package.json ./frontend/
 COPY services/core/package.json ./services/core/
 COPY services/notifications/package.json ./services/notifications/
 COPY services/stats/package.json ./services/stats/
+COPY services/odds/package.json ./services/odds/
 RUN pnpm install --frozen-lockfile --filter '@betting/frontend...' --filter '@betting/core...' \
-      --filter '@betting/notifications...' --filter '@betting/stats...'
+      --filter '@betting/notifications...' --filter '@betting/stats...' \
+      --filter '@betting/odds...'
 COPY schemas/ ./schemas/
 COPY services/core/ ./services/core/
 COPY services/notifications/ ./services/notifications/
 COPY services/stats/ ./services/stats/
+COPY services/odds/ ./services/odds/
 COPY frontend/ ./frontend/
 RUN pnpm --filter '@betting/core' --filter '@betting/notifications' \
-      --filter '@betting/stats' --filter '@betting/frontend' run build
+      --filter '@betting/stats' --filter '@betting/odds' \
+      --filter '@betting/frontend' run build
 # pnpm deploy is used to generate a copiable directory per node service
 RUN pnpm --filter '@betting/core' deploy --prod services/core/pruned
 RUN pnpm --filter '@betting/notifications' deploy --prod services/notifications/pruned
 RUN pnpm --filter '@betting/stats' deploy --prod services/stats/pruned
+RUN pnpm --filter '@betting/odds' deploy --prod services/odds/pruned
 
 # Stage 2: Next.js static export packaged into nginx. The same image is served
 # on dev (8080) and e2e (18080) with no per-environment config: Keycloak is
@@ -42,16 +47,14 @@ COPY --chown=appuser:appgroup --from=builder-node /app/services/core/pruned/ ./
 USER appuser
 CMD ["node", "./dist/main.js"]
 
-# Stage 4: Odds service.
-FROM python:3.14-alpine AS odds
+# Stage 4: Odds service runtime — NestJS ingestion + poll loops.
+FROM node:25-alpine AS odds
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
-COPY services/odds/pyproject.toml services/odds/uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
-COPY services/odds/src/ ./src/
+ENV NODE_ENV=production
+COPY --chown=appuser:appgroup --from=builder-node /app/services/odds/pruned/ ./
 USER appuser
-CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn app:app --app-dir src --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["node", "./dist/main.js"]
 
 # Stage 5: Notifications service runtime — NestJS socket.io relay.
 FROM node:25-alpine AS notifications
