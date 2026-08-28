@@ -3,9 +3,9 @@
 ## Overview
 
 This is a distributed sports betting application built for demonstration
-purposes. It uses a polyglot service architecture — NestJS for the real-time
-core, FastAPI for the odds ingestion service, FastAPI + python-socketio for the
-notifications service, and Next.js for the frontend. Services communicate
+purposes. Every backend service is a NestJS application — the real-time core,
+the odds ingestion service, the settled-bets read model, and the socket.io
+notifications relay — with Next.js for the frontend. Services communicate
 asynchronously via RabbitMQ fanout exchanges using JSON messages validated
 against a shared JSON Schema.
 
@@ -20,12 +20,12 @@ against a shared JSON Schema.
 | Frontend         | Next.js (React, SWR) — static export, OIDC + PKCE   |
 | Edge proxy       | Nginx (single origin, path-based routing)           |
 | Core API         | NestJS (Node.js) — bets, wallet, settlement         |
-| Odds Service     | FastAPI (Python, asyncio) — pluggable providers     |
-| Stats Service    | FastAPI (Python) — read model over settled bets     |
-| Notifications    | FastAPI + python-socketio (ASGI, uvicorn)           |
+| Odds Service     | NestJS — pluggable ingestion providers              |
+| Stats Service    | NestJS — read model over settled bets               |
+| Notifications    | NestJS + socket.io — stateless relay                |
 | Identity         | Keycloak (OIDC, realm `betting`)                    |
 | Messaging        | RabbitMQ (fanout exchanges)                          |
-| Message format   | JSON validated against shared JSON Schema            |
+| Message format   | JSON validated against shared JSON Schema (Zod)     |
 | Primary DB       | PostgreSQL (schema-per-service)                      |
 | Financial ledger | TigerBeetle (double-entry)                           |
 | External data    | The Odds API + API-Football (pluggable providers)   |
@@ -131,7 +131,7 @@ Internally the wallet logic lives as a Nest module within the core service and
 is invoked by the bets module via direct method calls — no broker hop for
 money movement.
 
-### FastAPI + python-socketio — Notifications Service
+### NestJS + socket.io — Notifications Service
 The only service the browser holds an open socket to. Responsibilities:
 - Accepts socket.io connections, verifies the JWT on `connect`, and joins each
   socket into a room named after its `sub` claim
@@ -143,11 +143,11 @@ The service is stateless — no DB, no business logic — and exists purely so t
 frontend has a fan-out point that doesn't depend on Core staying up to keep
 sockets healthy.
 
-### FastAPI — Odds Service
+### NestJS — Odds Service
 Lightweight async service responsible for ingesting odds from one or more
 external providers. Responsibilities:
-- Runs a concurrent `asyncio` polling loop (using `aiohttp`) per enabled
-  provider (`ODDS_PROVIDERS`); providers run side by side
+- Runs a concurrent polling loop per enabled provider (`ODDS_PROVIDERS`);
+  providers run side by side
 - Normalises each provider's payload into a provider-agnostic common model
   (`CanonicalEvent` → `Market`s → `Selection`s) that represents many sports and
   bet types; events are kept separate per provider, stamped with an `origin`,
@@ -162,7 +162,7 @@ external providers. Responsibilities:
 > Note: This service does not calculate odds. It is purely an ingestion and
 > normalisation layer over an external feed.
 
-### FastAPI — Stats Service
+### NestJS — Stats Service
 Maintains a read model built from settled bets — a logically separate read store
 (its own schema) kept in sync off an event, so the dashboard's aggregate reads
 don't hit Core.
@@ -255,9 +255,8 @@ trade-offs" — a conscious trade, not an accident of the split.
 Cross-process traffic flows over RabbitMQ fanout exchanges with JSON
 payloads — the schemas in `schemas/json/` serve as the contract (`events.json`
 for the pubsub messages, `rest.json` for the HTTP resource shapes), from which
-each service generates its bindings (Zod for TS, Pydantic for Python). The wallet
-logic is colocated inside Core as a Nest module; bets call the wallet via
-direct in-process method calls.
+each service generates its Zod bindings. The wallet logic is colocated inside
+Core as a Nest module; bets call the wallet via direct in-process method calls.
 
 The frontend talks to Core and Odds over HTTP and to Notifications over a
 socket.io connection — all through the Nginx proxy on a single origin.
@@ -298,7 +297,7 @@ does not wait for a reply.
 ### Why JSON Schema?
 - One schema is the contract for all four services; bindings are generated, so
   drift is caught by the pre-push guard rather than at runtime
-- Runtime validation on both ends (Zod / Pydantic) — malformed messages are
+- Runtime validation on both ends (Zod `.strict()`) — malformed messages are
   rejected at the boundary instead of corrupting state
 - Human-readable on the wire (RabbitMQ management UI, socket frames), and no
   binary toolchain to install
@@ -373,10 +372,10 @@ Each service runs as an independent Docker container.
 BetPossum is a demonstration system, and some corners are cut deliberately.
 These are the known gaps and what closing each one would look like:
 
-- **DB schema management** — Core runs TypeORM with `synchronize: true`, which
-  auto-syncs entities to tables on boot. Fine for a demo with disposable data;
-  production would use versioned migrations so schema changes are reviewed,
-  ordered, and reversible.
+- **DB schema management** — every service runs TypeORM with
+  `synchronize: true`, which auto-syncs entities to tables on boot. Fine for a
+  demo with disposable data; production would use versioned migrations so schema
+  changes are reviewed, ordered, and reversible.
 - **No transactional outbox** — a settlement's Postgres write and its
   `bets.settled` publish are two separate operations, so a crash between them
   can produce a settled bet whose event was never published. The durable

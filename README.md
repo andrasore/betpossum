@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/andrasore/betpossum/actions/workflows/pr.yml/badge.svg?branch=main)](https://github.com/andrasore/betpossum/actions/workflows/pr.yml)
 
-> A distributed, event-driven sports-betting platform — four backend services
-> using Node.js and Python, and a Next.js frontend, wired together over a RabbitMQ
-> message bus with schema-validated contracts.
+> A distributed, event-driven sports-betting platform — four NestJS backend
+> services and a Next.js frontend, wired together over a RabbitMQ message bus
+> with schema-validated contracts.
 
 <img width="218" height="134" alt="BetPossum logo" src="https://github.com/user-attachments/assets/02a5095f-6c46-4dad-906c-8c944e3a6f9f" />
 
@@ -13,8 +13,8 @@
 ## Overview
 
 BetPossum is a demonstration sports-betting application built as a small
-Node.js/Python microservice system. A NestJS core handles bets and the wallet, two
-FastAPI services ingest odds and serve a stats read model, a FastAPI + Socket.IO
+Node.js microservice system. A NestJS core handles bets and the wallet, two more
+NestJS services ingest odds and serve a stats read model, a NestJS + Socket.IO
 service fans real-time events out to browsers, and a Next.js SPA is served as a
 pure static export. Services never call each other's databases — they
 communicate asynchronously over RabbitMQ fanout exchanges using JSON messages
@@ -30,18 +30,18 @@ see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Highlights
 
-### Distributed & polyglot
+### Distributed by design
 
 - Four independent backend services, each owning its own data:
-  - **Core** — NestJS (Node.js): bets, wallet, settlement.
-  - **Odds** — FastAPI (Python): pluggable odds ingestion.
-  - **Stats** — FastAPI (Python): read model over settled bets.
-  - **Notifications** — FastAPI + Socket.IO: real-time event fan-out.
+  - **Core** — NestJS: bets, wallet, settlement.
+  - **Odds** — NestJS: pluggable odds ingestion.
+  - **Stats** — NestJS: read model over settled bets.
+  - **Notifications** — NestJS + Socket.IO: real-time event fan-out.
 - **Pub/sub over RabbitMQ fanout** — each subscriber binds its own queue, so
   services stay decoupled and independently deployable.
 - **One JSON Schema contract** — the same schema is the cross-service contract
   for all four services.
-- **Generated bindings** — Zod for TypeScript, Pydantic for Python.
+- **Generated bindings** — one Zod module per workspace, from one generator.
 - **Drift caught at push time** — a schema guard checks the bindings rather than
   failing at runtime.
 
@@ -83,10 +83,10 @@ betpossum/
 ├── nginx/               # Single-origin edge proxy (SPA + APIs + Keycloak)
 ├── services/
 │   ├── core/            # NestJS API: bets, wallet/ledger, settlement
-│   ├── odds/            # FastAPI: pluggable odds ingestion + normalisation
-│   ├── stats/           # FastAPI: read model over settled bets
-│   └── notifications/   # FastAPI + Socket.IO real-time event fan-out
-├── schemas/             # Shared JSON Schema contracts → generated Zod/Pydantic
+│   ├── odds/            # NestJS: pluggable odds ingestion + normalisation
+│   ├── stats/           # NestJS: read model over settled bets
+│   └── notifications/   # NestJS + Socket.IO real-time event fan-out
+├── schemas/             # Shared JSON Schema contracts → generated Zod bindings
 ├── keycloak/            # Realm, roles, clients
 ├── bots/                # Synthetic players that place bets to populate the demo
 ├── e2e/                 # Playwright full-stack tests
@@ -97,8 +97,8 @@ Most folders carry a local `CLAUDE.md` documenting their conventions.
 
 ## Getting started
 
-Prerequisites: just Docker + Docker Compose. Everything else (Node, Python,
-pnpm) builds inside the images.
+Prerequisites: just Docker + Docker Compose. Everything else (Node, pnpm)
+builds inside the images.
 
 ```bash
 # Build and bring up the whole stack — frontend, the four backend services,
@@ -158,10 +158,8 @@ For iterating on the frontend with hot reload, run it locally instead of baked
 into the Nginx image. The `compose:dev` overlay points Nginx at your host's
 `pnpm dev` server, so HMR works through the same `:8080` origin.
 
-Prerequisites: Docker + Docker Compose, Node 25, [pnpm](https://pnpm.io) 11
-(version is pinned via `packageManager`), Python 3.14, and
-[uv](https://docs.astral.sh/uv/) (creates each Python service's `.venv` from
-its committed `uv.lock`).
+Prerequisites: Docker + Docker Compose, Node 25, and [pnpm](https://pnpm.io) 11
+(the version is pinned via `packageManager`).
 
 > This repo is pnpm-only, and build/typecheck/test scripts are meant to be run
 > from the repo root (Turbo coordinates the workspaces).
@@ -193,7 +191,7 @@ pnpm typecheck    # typecheck all workspaces
 pnpm lint         # lint all workspaces
 pnpm test         # unit tests across services
 pnpm e2e          # Playwright end-to-end suite
-pnpm schema:gen   # regenerate Zod/Pydantic bindings from schemas/json
+pnpm schema:gen   # regenerate the Zod bindings from schemas/json
 pnpm hooks:setup  # point git at .githooks (enables the pre-push gate)
 ```
 

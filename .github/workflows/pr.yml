@@ -10,7 +10,7 @@ env:
 
 jobs:
   # Everything that runs against the source tree without a built Docker image:
-  # typecheck, lint, the JS/Python build (regenerates bindings) and unit tests.
+  # typecheck, lint, build and unit tests.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -23,14 +23,6 @@ jobs:
         with:
           node-version: '25'
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: '0.11.30'
-
       - name: Cache node_modules
         id: cache-node
         uses: actions/cache@v4
@@ -39,17 +31,10 @@ jobs:
             node_modules
             frontend/node_modules
             services/core/node_modules
+            services/odds/node_modules
+            services/stats/node_modules
+            services/notifications/node_modules
           key: node-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Cache Python venvs
-        id: cache-venv
-        uses: actions/cache@v4
-        with:
-          path: |
-            services/odds/.venv
-            services/notifications/.venv
-            services/stats/.venv
-          key: venv-${{ runner.os }}-py3.14-v3-${{ hashFiles('services/*/pyproject.toml', 'services/*/uv.lock') }}
 
       - name: Cache turbo
         uses: actions/cache@v4
@@ -58,13 +43,9 @@ jobs:
           key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-
 
-      # --force so `turbo run init` actually executes: init has no cached
-      # outputs, so a turbo cache hit replays its logs without recreating the
-      # .venv directories. On this cache-miss path the venvs must really exist
-      # before actions/cache saves them, or the next run restores empty dirs.
       - name: Install deps (cache miss only)
-        if: steps.cache-node.outputs.cache-hit != 'true' || steps.cache-venv.outputs.cache-hit != 'true'
-        run: pnpm install && pnpm exec turbo run init --force
+        if: steps.cache-node.outputs.cache-hit != 'true'
+        run: pnpm install
 
       - run: pnpm run typecheck
       - run: pnpm run lint
@@ -143,6 +124,9 @@ jobs:
             node_modules
             frontend/node_modules
             services/core/node_modules
+            services/odds/node_modules
+            services/stats/node_modules
+            services/notifications/node_modules
           key: node-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install deps

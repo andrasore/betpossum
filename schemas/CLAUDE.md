@@ -10,9 +10,7 @@ schema documents live in `schemas/json/`:
 
 Every service generates its own bindings from these; nothing here is
 service-specific. The codegen reads the whole `schemas/json/` directory, so a
-new `schemas/json/<name>.json` is picked up with **no script change** — keep the
-directory free of non-schema files (the folder guide lives at `schemas/`, one
-level up, on purpose: `datamodel-codegen` tries to parse every file it finds).
+new `schemas/json/<name>.json` is picked up with **no script change**.
 
 ## The golden rule
 
@@ -20,7 +18,7 @@ Each `$def` in `schemas/json/*.json` **is** a contract. After editing one,
 regenerate every service's bindings from the **repo root**:
 
 ```bash
-pnpm schema:gen   # regenerates core, odds, notifications (and frontend) bindings
+pnpm schema:gen   # regenerates every service's bindings (and the frontend's)
 ```
 
 Generated output (`services/*/src/generated`, `frontend/src/generated`) is
@@ -35,22 +33,16 @@ hand-edit generated files; re-run `schema:gen` and stage the result.
 
 ## Codegen
 
-Both generators consume the whole `schemas/json/` directory:
-
-- **TS (core, frontend):** `tools/gen-zod.mjs` (wraps `json-schema-to-zod`)
-  merges every `$def` across all files into a single `src/generated/events.ts`
-  with a `<Name>Schema` + `type <Name>` per `$def`.
-- **Python (odds, notifications):** `datamodel-codegen` runs in directory mode,
-  emitting one Pydantic v2 module per input file (`src/generated/events.py`,
-  `src/generated/rest.py`, plus an `__init__.py`) — runtime validation **and**
-  type stubs in one. This is why the schema files have plain `.json` names: the
-  module is named after the file, so `events.json` → `events.py`.
+One generator, consuming the whole `schemas/json/` directory:
+`tools/gen-zod.mjs` (wraps `json-schema-to-zod`) merges every `$def` across all
+files into a single `src/generated/events.ts` per workspace, with a
+`<Name>Schema` + `type <Name>` per `$def` — runtime validation **and** types in
+one. `additionalProperties: false` becomes `.strict()`.
 
 ## Conventions
 
 - All inter-service messages are JSON, **camelCase keys** on the wire — no
-  protobuf, no snake_case. (Python generated fields keep the camelCase property
-  names.)
+  protobuf, no snake_case.
 - Add a notification type by adding a `$def` for the message, a `NotificationKind`
   enum value, then wiring it in the publisher (Core) and the `SOCKET_EVENT` map
   (Notifications).

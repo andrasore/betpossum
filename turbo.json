@@ -1,13 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "//": "NOTE: pnpm install and venv is managed separately from \"init\" because it collides with Github Actions' cache",
   "tasks": {
-    "init": {
-      "inputs": ["pyproject.toml"],
-      "outputs": []
-    },
     "build": {
-      "dependsOn": ["init"],
       "inputs": ["src/**"],
       "outputs": ["dist/**", ".next/**"]
     },
@@ -17,25 +11,12 @@
     },
     "typecheck": {
       "dependsOn": ["build"],
-      "inputs": [
-        "**/*.ts",
-        "**/*.tsx",
-        "**/*.py",
-        "tsconfig.json",
-        "pyproject.toml"
-      ],
+      "inputs": ["**/*.ts", "**/*.tsx", "tsconfig.json"],
       "outputs": []
     },
     "lint": {
       "dependsOn": ["build"],
-      "inputs": [
-        "**/*.ts",
-        "**/*.tsx",
-        "**/*.py",
-        "tsconfig.json",
-        "pyproject.toml",
-        "biome.jsonc"
-      ],
+      "inputs": ["**/*.ts", "**/*.tsx", "tsconfig.json", "biome.jsonc"],
       "outputs": []
     },
     "test": {
