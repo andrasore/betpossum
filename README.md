@@ -13,10 +13,10 @@
 ## Overview
 
 BetPossum is a demonstration sports-betting application built as a small
-Node.js microservice system. A NestJS core handles bets and the wallet, two more
-NestJS services ingest odds and serve a stats read model, a NestJS + Socket.IO
-service fans real-time events out to browsers, and a Next.js SPA is served as a
-pure static export. Services never call each other's databases — they
+Node.js microservice system. The core service handles bets and the wallet, two
+more ingest odds and serve a stats read model, a Socket.IO service fans
+real-time events out to browsers, and a Next.js SPA is served as a pure static
+export. Services never call each other's databases — they
 communicate asynchronously over RabbitMQ fanout exchanges using JSON messages
 validated against a shared JSON Schema, and the whole stack sits behind a single
 Nginx origin so the browser never deals with CORS or runtime config injection.
@@ -33,10 +33,10 @@ see [ARCHITECTURE.md](ARCHITECTURE.md).
 ### Distributed by design
 
 - Four independent backend services, each owning its own data:
-  - **Core** — NestJS: bets, wallet, settlement.
-  - **Odds** — NestJS: pluggable odds ingestion.
-  - **Stats** — NestJS: read model over settled bets.
-  - **Notifications** — NestJS + Socket.IO: real-time event fan-out.
+  - **Core** — bets, wallet, settlement.
+  - **Odds** — pluggable odds ingestion.
+  - **Stats** — read model over settled bets.
+  - **Notifications** — real-time event fan-out over Socket.IO.
 - **Pub/sub over RabbitMQ fanout** — each subscriber binds its own queue, so
   services stay decoupled and independently deployable.
 - **One JSON Schema contract** — the same schema is the cross-service contract
@@ -82,10 +82,10 @@ betpossum/
 ├── frontend/            # Next.js static-export SPA (OIDC + PKCE, runtime-config-free)
 ├── nginx/               # Single-origin edge proxy (SPA + APIs + Keycloak)
 ├── services/
-│   ├── core/            # NestJS API: bets, wallet/ledger, settlement
-│   ├── odds/            # NestJS: pluggable odds ingestion + normalisation
-│   ├── stats/           # NestJS: read model over settled bets
-│   └── notifications/   # NestJS + Socket.IO real-time event fan-out
+│   ├── core/            # API: bets, wallet/ledger, settlement
+│   ├── odds/            # Pluggable odds ingestion + normalisation
+│   ├── stats/           # Read model over settled bets
+│   └── notifications/   # Socket.IO real-time event fan-out
 ├── schemas/             # Shared JSON Schema contracts → generated Zod bindings
 ├── keycloak/            # Realm, roles, clients
 ├── bots/                # Synthetic players that place bets to populate the demo
