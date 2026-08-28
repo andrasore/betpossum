@@ -10,17 +10,20 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json ./frontend/
 COPY services/core/package.json ./services/core/
 COPY services/notifications/package.json ./services/notifications/
+COPY services/stats/package.json ./services/stats/
 RUN pnpm install --frozen-lockfile --filter '@betting/frontend...' --filter '@betting/core...' \
-      --filter '@betting/notifications...'
+      --filter '@betting/notifications...' --filter '@betting/stats...'
 COPY schemas/ ./schemas/
 COPY services/core/ ./services/core/
 COPY services/notifications/ ./services/notifications/
+COPY services/stats/ ./services/stats/
 COPY frontend/ ./frontend/
 RUN pnpm --filter '@betting/core' --filter '@betting/notifications' \
-      --filter '@betting/frontend' run build
+      --filter '@betting/stats' --filter '@betting/frontend' run build
 # pnpm deploy is used to generate a copiable directory per node service
 RUN pnpm --filter '@betting/core' deploy --prod services/core/pruned
 RUN pnpm --filter '@betting/notifications' deploy --prod services/notifications/pruned
+RUN pnpm --filter '@betting/stats' deploy --prod services/stats/pruned
 
 # Stage 2: Next.js static export packaged into nginx. The same image is served
 # on dev (8080) and e2e (18080) with no per-environment config: Keycloak is
@@ -59,16 +62,14 @@ COPY --chown=appuser:appgroup --from=builder-node /app/services/notifications/pr
 USER appuser
 CMD ["node", "./dist/main.js"]
 
-# Stage 6: Stats service runtime — FastAPI read model + durable consumer.
-FROM python:3.14-alpine AS stats
+# Stage 6: Stats service runtime — NestJS read model + durable consumer.
+FROM node:25-alpine AS stats
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
-COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
-COPY services/stats/pyproject.toml services/stats/uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
-COPY services/stats/src/ ./src/
+ENV NODE_ENV=production
+COPY --chown=appuser:appgroup --from=builder-node /app/services/stats/pruned/ ./
 USER appuser
-CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn app:app --app-dir src --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["node", "./dist/main.js"]
 
 # Stage 7: Bots — dev-only play-data daemon, run straight from TS via tsx. Not
 # part of the e2e stack (excluded there via a compose profile).

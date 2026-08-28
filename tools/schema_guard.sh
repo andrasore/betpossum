@@ -18,6 +18,7 @@ GENERATED=(
   services/core/src/generated
   services/odds/src/generated
   services/notifications/src/generated
+  services/stats/src/generated
 )
 
 dirty=()
