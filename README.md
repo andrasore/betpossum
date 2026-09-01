@@ -24,7 +24,9 @@ Nginx origin so the browser never deals with CORS or runtime config injection.
 For the full design rationale — settlement semantics, durable channels, the
 canonical odds model, observability, and the known
 [production gaps & trade-offs](ARCHITECTURE.md#production-gaps--trade-offs) —
-see [ARCHITECTURE.md](ARCHITECTURE.md).
+see [ARCHITECTURE.md](ARCHITECTURE.md). For the request-level reference — every
+HTTP endpoint, socket event, OIDC hop and RabbitMQ message, with its auth and
+payload — see [docs/API.md](docs/API.md).
 
 ![The BetPossum dashboard: live markets, wallet balance, and recent bets](docs/Screenshot.jpg)
 

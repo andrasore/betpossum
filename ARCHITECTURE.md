@@ -123,9 +123,8 @@ The primary application service. Responsibilities:
 - Wallet / ledger operations against TigerBeetle (in-process module)
 - Subscribes to the `events.resolved` exchange (durable queue
   `core.events.resolved`) and settles any held bets on the resolved event
-- Publishes per-user UI events (bet held / settled, balance updated,
-  insufficient balance) to the `notifications` exchange for the notifications
-  service to deliver
+- Publishes per-user UI events (bet held / settled, balance updated) to the
+  `notifications` exchange for the notifications service to deliver
 
 Internally the wallet logic lives as a Nest module within the core service and
 is invoked by the bets module via direct method calls — no broker hop for
@@ -252,6 +251,11 @@ trade-offs" — a conscious trade, not an accident of the split.
 
 ## Inter-service Communication
 
+> For the endpoint-by-endpoint inventory — every HTTP route with its auth,
+> request and response shapes, every socket and OIDC exchange, and every
+> message contract — see [`docs/API.md`](docs/API.md). This section covers the
+> shape of the communication; that document covers the traffic itself.
+
 Cross-process traffic flows over RabbitMQ fanout exchanges with JSON
 payloads — the schemas in `schemas/json/` serve as the contract (`events.json`
 for the pubsub messages, `rest.json` for the HTTP resource shapes), from which
@@ -272,22 +276,23 @@ messages sent while no subscriber is connected are dropped.
 
 ### Exchanges and event types
 
-| Exchange          | Publisher           | Subscribers   | Payload              |
-|-------------------|---------------------|---------------|----------------------|
-| `odds.updated`    | Odds Service        | —             | `OddsUpdatedEvent`   |
-| `events.resolved` | Odds Service        | Core API      | `EventResolvedEvent` |
-| `bets.settled`    | Core API            | Stats Service | `BetSettledEvent`    |
-| `notifications`   | Core + Odds Service | Notifications | `NotificationEvent`  |
+| Exchange          | Durable | Publisher           | Subscribers   | Payload              |
+|-------------------|---------|---------------------|---------------|----------------------|
+| `odds.updated`    | no      | Odds Service        | Core API      | `OddsUpdatedEvent`   |
+| `events.resolved` | **yes** | Odds Service        | Core API      | `EventResolvedEvent` |
+| `bets.settled`    | **yes** | Core API            | Stats Service | `BetSettledEvent`    |
+| `notifications`   | no      | Core + Odds Service | Notifications | `NotificationEvent`  |
 
 `bets.settled` is durable + persistent (like `events.resolved`): the stats
 read model must not drop settlements, so it cannot ride the fire-and-forget
 `notifications` exchange.
 
 The browser's live odds updates do not flow over `odds.updated`: the Odds
-Service separately broadcasts an `oddsUpdated` `NotificationEvent` (empty
-`userId`) on the `notifications` exchange, which the Notifications service
-relays. `odds.updated` carries the raw `OddsUpdatedEvent` and currently has no
-in-process subscriber. Core consumes `events.resolved` to settle held bets.
+Service publishes every tick twice — the raw `OddsUpdatedEvent` on
+`odds.updated`, which Core's `OddsCacheService` consumes to price bets, and an
+`oddsUpdated` `NotificationEvent` (empty `userId`) on the `notifications`
+exchange, which the Notifications service relays to browsers. Core consumes
+`events.resolved` to settle held bets.
 
 `NotificationEvent` is a flat envelope: `userId` (empty = broadcast), `kind`
 (discriminator mapped to a socket.io event name), and `payload` (the inner
