@@ -8,18 +8,12 @@
 
 <img width="218" height="134" alt="BetPossum logo" src="https://github.com/user-attachments/assets/02a5095f-6c46-4dad-906c-8c944e3a6f9f" />
 
-**🔗 Live demo: [betpossum.win](https://betpossum.win)**
-
 ## Overview
 
 BetPossum is a demonstration sports-betting application built as a small
 Node.js microservice system. The core service handles bets and the wallet, two
 more ingest odds and serve a stats read model, a Socket.IO service fans
-real-time events out to browsers, and a Next.js SPA is served as a pure static
-export. Services never call each other's databases — they
-communicate asynchronously over RabbitMQ fanout exchanges using JSON messages
-validated against a shared JSON Schema, and the whole stack sits behind a single
-Nginx origin so the browser never deals with CORS or runtime config injection.
+real-time events out to browsers.
 
 For the full design rationale — settlement semantics, durable channels, the
 canonical odds model, observability, and the known
@@ -52,9 +46,6 @@ payload — see [docs/API.md](docs/API.md).
 - **TigerBeetle ledger** — money lives in a double-entry ledger; every
   debit/credit is an immutable transfer with strong consistency, not a mutable
   balance column.
-- **Durable, persistent queues** — settlement rides `events.resolved` and
-  `bets.settled` with manual ack and idempotent, `betId`-keyed upserts, so a
-  redelivery never double-settles or drops a result.
 - **Playwright end-to-end tests** — drive the full stack through the browser.
 - **Per-service unit tests** — plus a pre-push gate (typecheck, lint, test, e2e,
   schema guard) that protects `main`.
@@ -71,11 +62,6 @@ payload — see [docs/API.md](docs/API.md).
 - **Docker Compose** — dev stack with explicit, named overlays
   (`dev` / `ci` / `e2e`).
 - **GitHub Actions** — CI pipeline: typecheck → build → e2e.
-- **Image promotion** — e2e-validated `:<sha>` images are promoted to `:latest`
-  on `main` by digest — a manifest copy, not a rebuild.
-- **Coolify** — production runs as a single Docker Compose resource on a
-  self-hosted server, pulling the promoted GHCR images behind a TLS-terminating
-  proxy.
 
 ## Repository layout
 
